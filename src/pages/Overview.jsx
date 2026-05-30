@@ -9,6 +9,7 @@ import { addMonth } from '../lib/dates.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
 import Bars from '../components/Bars.jsx'
+import TodayPanel from '../components/TodayPanel.jsx'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
 
 const ORDER = ['fitness', 'money', 'study', 'career']
@@ -48,6 +49,8 @@ export default function Overview({ onNavigate }) {
           </div>
         </div>
       </div>
+
+      <TodayPanel />
 
       <VicesWidget onNavigate={onNavigate} />
 

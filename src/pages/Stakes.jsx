@@ -6,6 +6,7 @@ import {
 } from '../lib/stakes.js'
 import { toKey } from '../lib/dates.js'
 import { pct } from '../lib/format.js'
+import { confetti } from '../lib/confetti.js'
 import Modal from '../components/Modal.jsx'
 import { Card, SectionTitle } from '../components/ui.jsx'
 
@@ -25,7 +26,7 @@ export default function Stakes() {
   const resolve = (c, outcome) => {
     const bonus = outcome === 'succeeded' ? (Number(c.virtuePointsOnSuccess) || 0) : 0
     actions.resolveContract(c.id, outcome, bonus)
-    if (outcome === 'succeeded') toast({ icon: '🎯', title: 'Stake survived!', sub: bonus ? `+${bonus} pts banked` : 'Virtue intact', color: '#22c55e' })
+    if (outcome === 'succeeded') { confetti(); toast({ icon: '🎯', title: 'Stake survived!', sub: bonus ? `+${bonus} pts banked` : 'Virtue intact', color: '#22c55e' }) }
     else { toast({ icon: '💀', title: 'Stake failed', sub: 'Own it, reset, go again.', color: ACCENT }); setCardFor(c) }
   }
 

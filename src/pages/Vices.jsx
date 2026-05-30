@@ -7,6 +7,7 @@ import {
 } from '../lib/vices.js'
 import { thisMonth } from '../lib/dates.js'
 import { pct } from '../lib/format.js'
+import { confetti } from '../lib/confetti.js'
 import Modal from '../components/Modal.jsx'
 import { Card, SectionTitle, StatTile } from '../components/ui.jsx'
 
@@ -29,6 +30,7 @@ export default function Vices() {
   const doRedeem = (vice) => {
     actions.redeemVice(vice)
     setRedeeming(null)
+    confetti()
     toast({ icon: vice.emoji, title: `${vice.name} redeemed`, sub: "Enjoy it — you earned this.", color: ACCENT })
   }
 
