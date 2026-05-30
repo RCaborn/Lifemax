@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
-import DomainPage from './pages/DomainPage.jsx'
+import Money from './pages/Money.jsx'
+import Fitness from './pages/Fitness.jsx'
+import Study from './pages/Study.jsx'
+import Career from './pages/Career.jsx'
+import Business from './pages/Business.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
+
+const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business }
 
 export default function App() {
   const { state, actions } = useStore()
@@ -87,7 +93,7 @@ export default function App() {
         <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6">
           {current === 'overview'
             ? <Overview onNavigate={setRoute} />
-            : <DomainPage key={current} domainId={current} />}
+            : (() => { const Page = PAGES[current]; return <Page key={current} /> })()}
         </main>
 
         <footer className="px-6 py-4 text-center text-[11px] text-slate-600">
