@@ -8,12 +8,21 @@ const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
 const rid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
 
+// Backfill keys added after a user's data was first saved, so upgrades don't
+// wipe existing logs. Returns the (possibly mutated) state.
+function migrate(state) {
+  const seed = buildSeedState()
+  if (!state.stakes) state.stakes = seed.stakes
+  if (!state.vices) state.vices = seed.vices
+  return state
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed && parsed.version === 2) return parsed
+      if (parsed && parsed.version === 2) return migrate(parsed)
     }
   } catch { /* fall through to seed */ }
   return buildSeedState()
@@ -39,7 +48,30 @@ export function StoreProvider({ children }) {
     update,
     setProfileName: (name) => update((d) => { d.profile.name = name }),
     resetAll: () => setState(buildSeedState()),
-    importState: (obj) => { if (obj && obj.version === 2) setState(obj); else alert('That file is not a Lifemax v2 backup.') },
+    importState: (obj) => { if (obj && obj.version === 2) setState(migrate(obj)); else alert('That file is not a Lifemax v2 backup.') },
+
+    // ---------- Stakes ----------
+    addContract: (c) => update((d) => { d.stakes.contracts.push({ id: rid(), status: 'active', createdAt: todayKey(), resolvedAt: null, ...c }) }),
+    resolveContract: (id, outcome, bonus = 0) => update((d) => {
+      const c = d.stakes.contracts.find((x) => x.id === id)
+      if (!c) return
+      c.status = outcome
+      c.resolvedAt = todayKey()
+      // Award stake bonus into the vices ledger (once — guarded by resolvedAt flip).
+      if (outcome === 'succeeded' && bonus > 0) {
+        d.vices.ledger.push({ id: rid(), type: 'earn', source: 'stake', points: bonus, date: todayKey(), note: c.name })
+      }
+    }),
+    deleteContract: (id) => update((d) => { d.stakes.contracts = d.stakes.contracts.filter((x) => x.id !== id) }),
+
+    // ---------- Vices ----------
+    addVice: (v) => update((d) => { d.vices.vices.push({ id: rid(), emoji: '🎁', cooldownDays: 0, category: 'other', isActive: true, ...v, pointCost: Number(v.pointCost) || 0 }) }),
+    updateVice: (id, patch) => update((d) => { const v = d.vices.vices.find((x) => x.id === id); if (v) Object.assign(v, patch) }),
+    deleteVice: (id) => update((d) => { d.vices.vices = d.vices.vices.filter((x) => x.id !== id) }),
+    redeemVice: (vice) => update((d) => {
+      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, date: todayKey() })
+    }),
+    setEarnRates: (rates) => update((d) => { d.vices.earnRates = rates }),
 
     // ---------- Fitness ----------
     setFitnessDay: (dateKey, patch) => update((d) => {

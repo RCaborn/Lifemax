@@ -4,6 +4,8 @@ import { useStore } from '../lib/store.jsx'
 import { lifeScore, scoreHistory } from '../lib/score.js'
 import { thisMonth, monthShort, monthLabel } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
+import { balance, earnedInMonth } from '../lib/vices.js'
+import { addMonth } from '../lib/dates.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
 import Bars from '../components/Bars.jsx'
@@ -46,6 +48,8 @@ export default function Overview({ onNavigate }) {
           </div>
         </div>
       </div>
+
+      <VicesWidget onNavigate={onNavigate} />
 
       {/* Domain score cards */}
       <div>
@@ -103,4 +107,40 @@ function summary(ls) {
   if (p >= 80) return 'Every domain is firing. Keep the streak alive.'
   if (p >= 50) return `Solid month. Your biggest lever right now is ${DOMAIN_MAP[weakest.id].name}.`
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most love.`
+}
+
+function VicesWidget({ onNavigate }) {
+  const { state } = useStore()
+  const bal = balance(state)
+  const thisM = earnedInMonth(state, thisMonth())
+  const lastM = earnedInMonth(state, addMonth(thisMonth(), -1))
+  const delta = thisM - lastM
+  const vices = (state.vices?.vices || []).filter((v) => v.isActive !== false).sort((a, b) => a.pointCost - b.pointCost)
+  const next = vices.find((v) => v.pointCost > bal) || vices[vices.length - 1]
+
+  return (
+    <button onClick={() => onNavigate('vices')}
+      className="glass group flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-left transition hover:border-white/20">
+      <div className="flex items-center gap-4">
+        <span className="grid h-12 w-12 place-items-center rounded-xl text-2xl" style={{ background: '#ec489922' }}>🍺</span>
+        <div>
+          <div className="text-xs uppercase tracking-wide text-slate-400">Virtue points</div>
+          <div className="text-2xl font-bold text-white">{bal} pts</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-6 text-sm">
+        <div>
+          <div className="text-xs text-slate-500">This month</div>
+          <div className="font-semibold text-white">+{thisM} <span className={delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}>({delta >= 0 ? '+' : ''}{delta})</span></div>
+        </div>
+        {next && (
+          <div>
+            <div className="text-xs text-slate-500">{bal >= next.pointCost ? 'Top vice' : 'Next vice'}</div>
+            <div className="font-semibold text-white">{next.emoji} {next.name} · {next.pointCost}</div>
+          </div>
+        )}
+        <span className="text-slate-500 transition group-hover:translate-x-0.5">→</span>
+      </div>
+    </button>
+  )
 }

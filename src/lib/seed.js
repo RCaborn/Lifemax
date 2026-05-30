@@ -108,6 +108,41 @@ function seedBusiness() {
   }
 }
 
+function seedStakes() {
+  const today = new Date()
+  const ago = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return toKey(d) }
+  const ahead = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return toKey(d) }
+  return {
+    contracts: [
+      {
+        id: rid(), name: '3 runs a week', description: 'Marathon prep block',
+        stake: '£30 to my flatmate if I miss', linkedTarget: 'runs_per_week', targetValue: 3,
+        startDate: ago(10), endDate: ahead(18), durationDays: 28,
+        status: 'active', virtuePointsOnSuccess: 60, createdAt: ago(10), resolvedAt: null,
+      },
+      {
+        id: rid(), name: 'Read every day', description: '',
+        stake: 'No takeaways for a week', linkedTarget: 'pages_daily', targetValue: 20,
+        startDate: ago(5), endDate: ahead(9), durationDays: 14,
+        status: 'active', virtuePointsOnSuccess: 30, createdAt: ago(5), resolvedAt: null,
+      },
+    ],
+  }
+}
+
+function seedVices() {
+  return {
+    earnRates: null, // null = use defaults (DEFAULT_EARN_RATES)
+    vices: [
+      { id: rid(), name: 'Night out', emoji: '🍺', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true },
+      { id: rid(), name: 'Takeaway', emoji: '🍕', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true },
+      { id: rid(), name: 'Gaming evening', emoji: '🎮', description: 'A full evening of games', pointCost: 25, cooldownDays: 2, category: 'entertainment', isActive: true },
+      { id: rid(), name: 'Lie-in', emoji: '😴', description: 'No alarm, sleep in', pointCost: 20, cooldownDays: 5, category: 'other', isActive: true },
+    ],
+    ledger: [], // explicit spends + stake bonuses; earned points are derived
+  }
+}
+
 export function buildSeedState() {
   return {
     version: 2,
@@ -117,5 +152,7 @@ export function buildSeedState() {
     study: seedStudy(),
     career: seedCareer(),
     business: seedBusiness(),
+    stakes: seedStakes(),
+    vices: seedVices(),
   }
 }

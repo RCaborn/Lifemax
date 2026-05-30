@@ -32,16 +32,17 @@ After that, every time changes are pushed, the site rebuilds itself automaticall
 
 ## ✨ What's inside
 
-- **Overview page** — a single "Life Score" ring, plus a card per domain showing progress at a glance.
-- **Per-domain pages** with:
-  - **Key metrics** — click any stat to log today's value; it updates the chart.
-  - **History chart** — switch between metrics to see trends over time.
-  - **Goals** — progress bars with quick +/- buttons; add your own goals.
-  - **Daily accountability** — tick off habits each day and build 🔥 streaks.
+- **Overview** — a single "Life Score" with a letter grade, a 6-month trend, a breakdown of each domain, and your Virtue-points balance.
+- **💰 Money** — multiple income sources (donut), transactions tagged spending / saving / investment with a credit-card flag, spending-by-category, and a live savings rate.
+- **🏋️ Fitness** — log runs, workouts, stretch and steps each day against your targets (3 runs/wk, 3 workouts/wk, stretch daily, 10k steps); weekly rings + a monthly steps heatmap.
+- **📚 Study** — a prioritised to-do list with deadlines, a daily reading tracker (20-page goal), study-hours logging, and a monthly pages heatmap.
+- **🚀 Career** — a job-application pipeline (Applied → Interview → Offer/Rejected) and per-skill hour tracking.
+- **🎯 Stakes** — commitment contracts: put something on the line, link it to a target, and Lifemax auto-checks whether you hit it. Failed stakes generate a downloadable accountability card.
+- **🍺 Vices** — a points economy. Logging activity earns Virtue points automatically; spend them to "unlock" the indulgences you define. Winning a stake banks bonus points.
 - **Export / Import** your data as a backup file, or **Reset** to the demo sample.
 - **Installable app** — pin it to your laptop and keep it always visible.
 
-> On first launch it's filled with realistic **sample data** so the charts look alive. Hit **Reset** (top-right) any time, or just edit the numbers to make it yours.
+> On first launch it's filled with realistic **sample data** so everything looks alive. Hit **Reset** (top-right) any time, or just edit the numbers to make it yours.
 
 ---
 

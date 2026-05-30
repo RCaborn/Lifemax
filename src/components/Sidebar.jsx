@@ -1,7 +1,12 @@
 import { DOMAINS } from '../lib/domains.js'
 
 export default function Sidebar({ current, onNavigate, open, onClose }) {
-  const items = [{ id: 'overview', name: 'Overview', icon: '🧭' }, ...DOMAINS]
+  const items = [
+    { id: 'overview', name: 'Overview', icon: '🧭' },
+    ...DOMAINS,
+    { id: 'stakes', name: 'Stakes', icon: '🎯', color: '#f43f5e' },
+    { id: 'vices', name: 'Vices', icon: '🍺', color: '#ec4899' },
+  ]
 
   return (
     <>

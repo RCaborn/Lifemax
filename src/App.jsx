@@ -6,10 +6,14 @@ import Fitness from './pages/Fitness.jsx'
 import Study from './pages/Study.jsx'
 import Career from './pages/Career.jsx'
 import Business from './pages/Business.jsx'
+import Stakes from './pages/Stakes.jsx'
+import Vices from './pages/Vices.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
+import { dueResolutions } from './lib/stakes.js'
 
-const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business }
+const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices }
+const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' } }
 
 export default function App() {
   const { state, actions } = useStore()
@@ -33,7 +37,14 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
   }, [])
 
-  const valid = route === 'overview' || DOMAIN_MAP[route]
+  // Auto-resolve any stakes whose window has ended (once on load).
+  useEffect(() => {
+    const due = dueResolutions(state)
+    for (const r of due) actions.resolveContract(r.id, r.outcome, r.bonus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const valid = route === 'overview' || DOMAIN_MAP[route] || PAGES[route]
   const current = valid ? route : 'overview'
 
   const exportData = () => {
@@ -72,7 +83,7 @@ export default function App() {
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/10 bg-[#0b0f1a]/80 px-4 backdrop-blur">
           <button className="md:hidden text-slate-300" onClick={() => setNavOpen(true)}>☰</button>
           <div className="text-sm text-slate-400">
-            {current === 'overview' ? 'Overview' : DOMAIN_MAP[current]?.name}
+            {current === 'overview' ? 'Overview' : (DOMAIN_MAP[current]?.name || EXTRA[current]?.name)}
           </div>
           <div className="ml-auto flex items-center gap-2">
             {installEvent && (
