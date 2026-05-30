@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vite
+
+# Generated PWA assets
+dev-dist
+
+# Generated icons (created by scripts/gen-icons.mjs)
+public/icon-192.png
+public/icon-512.png
