@@ -10,6 +10,26 @@ Everything you see is editable, and **all your data stays on your own device** (
 
 ---
 
+## 🌐 Use it online (no install needed)
+
+The app deploys automatically to **GitHub Pages**. Once it's live you just open a link — on your laptop *or* your phone — and bookmark it. Whenever the code is updated, you simply refresh the page.
+
+**👉 Live site: https://rcaborn.github.io/Lifemax/**
+
+### One-time setup to turn the live site on
+
+This only needs doing **once**:
+
+1. Go to your repo on GitHub → **Settings** (top menu) → **Pages** (left sidebar).
+2. Under **"Build and deployment" → Source**, choose **GitHub Actions**.
+3. That's it. Within a couple of minutes the site builds and goes live at the link above.
+
+After that, every time changes are pushed, the site rebuilds itself automatically — open the **Actions** tab on GitHub to watch it deploy (a green tick = live).
+
+> 💡 Your data still lives privately in *your* browser (localStorage). Opening the site on a new device starts fresh — use **⤓ Export** / **⤴ Import** to carry your data across, or just keep using the same browser.
+
+---
+
 ## ✨ What's inside
 
 - **Overview page** — a single "Life Score" ring, plus a card per domain showing progress at a glance.

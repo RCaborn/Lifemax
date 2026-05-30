@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+# Builds the app and publishes it to GitHub Pages on every push.
+# One-time setup: in the repo, go to Settings → Pages → "Build and deployment"
+# and set Source to "GitHub Actions". After that, every push redeploys the site.
+on:
+  push:
+    branches:
+      - main
+      - claude/intelligent-franklin-MGcJp
+  workflow_dispatch:
+
+# Permissions the deploy job needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only run one deployment at a time; cancel stale runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
