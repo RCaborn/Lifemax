@@ -15,6 +15,7 @@ function migrate(state) {
   if (!state.business) state.business = seed.business
   if (!state.business.todos) state.business.todos = []
   if (state.vices.debtPenaltyRate == null) state.vices.debtPenaltyRate = seed.vices.debtPenaltyRate
+  if (!state.quickWins) state.quickWins = seed.quickWins
   return state
 }
 
@@ -117,6 +118,15 @@ export function StoreProvider({ children }) {
     updateCareerTodo: (id, patch) => update((d) => { const t = d.career.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
     toggleCareerTodo: (id) => update((d) => { const t = d.career.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
     deleteCareerTodo: (id) => update((d) => { d.career.todos = d.career.todos.filter((x) => x.id !== id) }),
+
+    // ---------- Quick Wins ----------
+    toggleQuickWin: (dateKey, winId) => update((d) => {
+      const day = (d.quickWins.days[dateKey] ||= [])
+      const idx = day.indexOf(winId)
+      if (idx >= 0) day.splice(idx, 1); else day.push(winId)
+    }),
+    addQuickWin: (item) => update((d) => { d.quickWins.items.push({ id: rid(), ...item }) }),
+    deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
 
     // ---------- Business ----------
     addBusinessTodo: (todo) => update((d) => { d.business.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),

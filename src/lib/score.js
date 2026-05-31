@@ -88,9 +88,27 @@ export const SCORERS = {
   career: careerScore,
 }
 
+// Quick-win completion rate for a month — scored against 3/day as a comfortable target.
+// Returns 0..1; used as a small life-score bonus so quick wins help but never dominate.
+function quickWinsMonthRate(state, ym) {
+  const qw = state.quickWins || { items: [], days: {} }
+  const elapsed = daysElapsed(ym)
+  const DAILY_TARGET = 3
+  const possible = DAILY_TARGET * elapsed
+  if (!possible) return 0
+  const completions = Object.entries(qw.days || {})
+    .filter(([k]) => k.startsWith(ym + '-'))
+    .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
+  return clamp01(completions / possible)
+}
+
 export function lifeScore(state, ym = monthKey(new Date())) {
   const domains = Object.entries(SCORERS).map(([id, fn]) => ({ id, ...fn(state, ym) }))
-  const score = avg(domains.map((d) => d.score))
+  const domainAvg = avg(domains.map((d) => d.score))
+  // Quick wins add at most +5 points (0.05) to the 0-100 life score.
+  // They boost without ever replacing domain effort.
+  const qwBonus = quickWinsMonthRate(state, ym) * 0.05
+  const score = clamp01(domainAvg + qwBonus)
   return { score, domains, ym }
 }
 

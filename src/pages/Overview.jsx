@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, monthLabel, daysUntil } from '../lib/dates.js'
+import { thisMonth, monthLabel, daysUntil, todayKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
+import { useToast } from '../components/Toast.jsx'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
@@ -53,6 +54,8 @@ export default function Overview({ onNavigate }) {
       </div>
 
       <TodayPanel />
+
+      <QuickWinsPanel />
 
       <VicesWidget onNavigate={onNavigate} />
 
@@ -209,6 +212,103 @@ function MasterTodoList({ onNavigate }) {
           })}
         </div>
       )}
+    </Card>
+  )
+}
+
+function QuickWinsPanel() {
+  const { state, actions } = useStore()
+  const toast = useToast()
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newEmoji, setNewEmoji] = useState('⚡')
+  const [newPts, setNewPts] = useState('1')
+
+  const today = todayKey()
+  const items = state.quickWins?.items || []
+  const todayWins = state.quickWins?.days?.[today] || []
+
+  const todayPts = items
+    .filter((item) => todayWins.includes(item.id))
+    .reduce((a, item) => a + (item.points || 1), 0)
+
+  const toggle = (item) => {
+    const wasDone = todayWins.includes(item.id)
+    actions.toggleQuickWin(today, item.id)
+    if (!wasDone) {
+      toast({ icon: item.emoji, title: item.name, sub: `+${item.points} pt${item.points !== 1 ? 's' : ''}`, color: '#ffffff' })
+    }
+  }
+
+  const addWin = (e) => {
+    e.preventDefault()
+    if (!newName.trim()) return
+    actions.addQuickWin({ name: newName.trim(), emoji: newEmoji, points: Math.max(1, Math.min(5, Number(newPts) || 1)) })
+    setNewName(''); setNewEmoji('⚡'); setNewPts('1'); setAdding(false)
+  }
+
+  return (
+    <Card>
+      <SectionTitle right={
+        <div className="flex items-center gap-3">
+          {todayPts > 0 && (
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>+{todayPts} pts today</span>
+          )}
+          <button onClick={() => setAdding((v) => !v)}
+            className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
+        </div>
+      }>
+        Quick Wins
+      </SectionTitle>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {items.map((item) => {
+          const done = todayWins.includes(item.id)
+          return (
+            <div key={item.id} className="relative group">
+              <button onClick={() => toggle(item)}
+                className="flex w-full items-center gap-2 rounded px-3 py-2.5 text-left text-sm transition"
+                style={{
+                  background: done ? '#ffffff' : 'rgba(255,255,255,0.04)',
+                  color: done ? '#050505' : '#888',
+                  border: `1px solid ${done ? '#fff' : 'rgba(255,255,255,0.08)'}`,
+                }}>
+                <span className="text-base">{item.emoji}</span>
+                <span className="flex-1 text-xs leading-tight">{item.name}</span>
+                <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'Courier New, monospace', color: done ? '#050505' : '#555' }}>
+                  {done ? '✓' : `+${item.points}`}
+                </span>
+              </button>
+              <button onClick={() => actions.deleteQuickWin(item.id)}
+                className="absolute -right-1.5 -top-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[10px] text-slate-600 hover:text-rose-400">
+                ✕
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      {adding && (
+        <form onSubmit={addWin} className="mt-3 flex gap-2 items-center border-t border-white/8 pt-3">
+          <input value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)}
+            className="w-10 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-center text-white outline-none"
+            maxLength={2} />
+          <input value={newName} onChange={(e) => setNewName(e.target.value)}
+            placeholder="Win name…" autoFocus
+            className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+          <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
+            className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
+            style={{ fontFamily: 'Courier New, monospace' }}>
+            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
+          </select>
+          <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+            style={{ fontFamily: 'Courier New, monospace' }}>Add</button>
+        </form>
+      )}
+
+      <p className="mt-2.5 text-[11px] text-slate-600">
+        Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
+      </p>
     </Card>
   )
 }

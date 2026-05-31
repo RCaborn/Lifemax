@@ -28,6 +28,22 @@ function seedStakes() {
   return { contracts: [] }
 }
 
+function seedQuickWins() {
+  return {
+    items: [
+      { id: 'meditate',    name: 'Meditate',        emoji: '🧘', points: 1 },
+      { id: 'walk',        name: 'Walk',             emoji: '🚶', points: 1 },
+      { id: 'finish_book', name: 'Finish a book',    emoji: '📚', points: 2 },
+      { id: 'maths',       name: 'Maths problem',    emoji: '🔢', points: 1 },
+      { id: 'spanish',     name: 'Practice Spanish', emoji: '🇪🇸', points: 1 },
+      { id: 'sea_dip',     name: 'Sea dip',          emoji: '🏊', points: 2 },
+      { id: 'golf',        name: 'Golf practice',    emoji: '⛳', points: 2 },
+      { id: 'clean',       name: 'Clean',            emoji: '🧹', points: 1 },
+    ],
+    days: {},
+  }
+}
+
 function seedVices() {
   return {
     earnRates: null,
@@ -53,5 +69,6 @@ export function buildSeedState() {
     business: seedBusiness(),
     stakes: seedStakes(),
     vices: seedVices(),
+    quickWins: seedQuickWins(),
   }
 }

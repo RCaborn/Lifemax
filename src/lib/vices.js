@@ -73,6 +73,16 @@ export function earnedEvents(state) {
     }
   }
 
+  // Quick wins — each item toggled on a day earns its fixed point value
+  const qwState = state.quickWins || { items: [], days: {} }
+  const qwMap = Object.fromEntries((qwState.items || []).map((i) => [i.id, i]))
+  for (const [date, winIds] of Object.entries(qwState.days || {})) {
+    for (const winId of winIds || []) {
+      const item = qwMap[winId]
+      if (item) out.push({ date, source: `qw_${item.id}`, qty: 1, points: item.points || 1 })
+    }
+  }
+
   // Stake bonuses are stored in the ledger as type 'earn' with source 'stake'.
   for (const e of state.vices?.ledger || []) {
     if (e.type === 'earn' && e.source === 'stake') out.push({ date: e.date, source: 'stake', qty: 1, points: e.points, note: e.note })
@@ -129,11 +139,19 @@ export function earnedInMonth(state, ym) {
 
 // Combined, time-sorted ledger for display: earned events + spends.
 export function fullLedger(state) {
-  const earned = earnedEvents(state).map((e) => ({
-    ...e, type: 'earn', signed: e.points,
-    label: (EARN_LABELS[e.source]?.label || e.source) + (e.qty > 1 ? ` ×${e.qty}` : ''),
-    icon: EARN_LABELS[e.source]?.icon || '✨',
-  }))
+  const qwMap = Object.fromEntries((state.quickWins?.items || []).map((i) => [i.id, i]))
+  const earned = earnedEvents(state).map((e) => {
+    let label, icon
+    if (e.source.startsWith('qw_')) {
+      const item = qwMap[e.source.slice(3)]
+      label = item?.name || 'Quick win'
+      icon = item?.emoji || '⚡'
+    } else {
+      label = (EARN_LABELS[e.source]?.label || e.source) + (e.qty > 1 ? ` ×${e.qty}` : '')
+      icon = EARN_LABELS[e.source]?.icon || '✨'
+    }
+    return { ...e, type: 'earn', signed: e.points, label, icon }
+  })
   const spent = []
   for (const e of spends(state)) {
     spent.push({
