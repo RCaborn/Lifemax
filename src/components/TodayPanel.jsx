@@ -50,6 +50,7 @@ export default function TodayPanel() {
           if (n && offset === 0) toast({ icon: '🧘', title: '+stretch logged', color: '#f97316' })
         }} />
         <Num icon="👟" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
+        <Num icon="🛌" label="Sleep (h)" value={f.sleep || 0} color="#f97316" step="0.5" onChange={(v) => setF({ sleep: v })} placeholder="8" />
         <Num icon="📖" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <Num icon="⏱️" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
       </div>

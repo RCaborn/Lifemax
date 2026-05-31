@@ -2,7 +2,7 @@ const rid = () => Math.random().toString(36).slice(2, 10)
 
 function seedFitness() {
   return {
-    targets: { runsPerWeek: 3, workoutsPerWeek: 3, stepsDaily: 10000, stretchDaily: true },
+    targets: { runsPerWeek: 3, workoutsPerWeek: 3, stepsDaily: 10000, stretchDaily: true, sleepHours: 8 },
     days: {},
     todos: [],
   }
@@ -21,7 +21,11 @@ function seedCareer() {
 }
 
 function seedBusiness() {
-  return { revenue: [], customers: 0, days: {}, todos: [] }
+  return {
+    projects: [],            // each side hustle: { id, name, emoji, status, createdAt, revenue:[], milestones:[] }
+    monthlyIncomeTarget: 500, // £/mo goal across all hustles
+    todos: [],
+  }
 }
 
 function seedStakes() {

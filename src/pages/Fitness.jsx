@@ -21,7 +21,7 @@ export default function Fitness() {
   const [dayOffset, setDayOffset] = useState(0)
 
   const dateKey = (() => { const d = new Date(); d.setDate(d.getDate() + dayOffset); return toKey(d) })()
-  const todayLog = f.days[dateKey] || { runs: 0, workouts: 0, stretch: false, steps: 0 }
+  const todayLog = f.days[dateKey] || { runs: 0, workouts: 0, stretch: false, steps: 0, sleep: 0 }
   const set = (patch) => actions.setFitnessDay(dateKey, patch)
   const logDate = new Date(); logDate.setDate(logDate.getDate() + dayOffset)
   const logDateStr = logDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -32,6 +32,8 @@ export default function Fitness() {
   const weekStretch = week.filter((d) => d.stretch).length
   const weekStepArr = week.filter((d) => d.steps).map((d) => d.steps)
   const weekAvgSteps = weekStepArr.length ? Math.round(weekStepArr.reduce((a, b) => a + b) / weekStepArr.length) : 0
+  const weekSleepArr = week.filter((d) => d.sleep).map((d) => d.sleep)
+  const weekAvgSleep = weekSleepArr.length ? weekSleepArr.reduce((a, b) => a + b) / weekSleepArr.length : 0
 
   const sc = fitnessScore(state, ym)
   const mkeys = monthDayKeys(ym)
@@ -41,6 +43,8 @@ export default function Fitness() {
   const mStretch = mDays.filter((d) => d.stretch).length
   const stepDays = mDays.filter((d) => d.steps)
   const mAvgSteps = stepDays.length ? Math.round(stepDays.reduce((a, d) => a + d.steps, 0) / stepDays.length) : 0
+  const sleepDays = mDays.filter((d) => d.sleep)
+  const mAvgSleep = sleepDays.length ? sleepDays.reduce((a, d) => a + d.sleep, 0) / sleepDays.length : 0
 
   const stepsLineData = buildStepsLineData(f)
 
@@ -73,16 +77,18 @@ export default function Fitness() {
           <Stepper label="🏋️ Workouts" value={todayLog.workouts || 0} onChange={(v) => set({ workouts: v })} />
           <Toggle label="🧘 Stretch" on={!!todayLog.stretch} onToggle={() => set({ stretch: !todayLog.stretch })} />
           <NumberField label="👟 Steps" value={todayLog.steps || 0} onChange={(v) => set({ steps: v })} placeholder="e.g. 10000" />
+          <NumberField label="🛌 Sleep (hours)" value={todayLog.sleep || 0} onChange={(v) => set({ sleep: v })} placeholder="e.g. 8" step="0.5" />
         </div>
       </Card>
 
       <section>
         <SectionTitle>This week (Mon–Sun)</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <RingCard label="Runs" value={weekRuns / (t.runsPerWeek || 3)} center={`${weekRuns}/${t.runsPerWeek}`} />
           <RingCard label="Workouts" value={weekWorkouts / (t.workoutsPerWeek || 3)} center={`${weekWorkouts}/${t.workoutsPerWeek}`} />
           <RingCard label="Stretch days" value={weekStretch / 7} center={`${weekStretch}/7`} />
           <RingCard label="Avg steps" value={weekAvgSteps / (t.stepsDaily || 10000)} center={compact(weekAvgSteps)} />
+          <RingCard label="Avg sleep" value={weekAvgSleep / (t.sleepHours || 8)} center={weekAvgSleep ? `${weekAvgSleep.toFixed(1)}h` : '—'} />
         </div>
       </section>
 
@@ -100,8 +106,8 @@ export default function Fitness() {
             <div className="mb-4 grid grid-cols-2 gap-3">
               <StatTile label="Runs" value={mRuns} sub={`target ~${Math.round((t.runsPerWeek || 3) * (daysElapsed(ym) / 7))}`} color={C.color} />
               <StatTile label="Workouts" value={mWorkouts} sub={`target ~${Math.round((t.workoutsPerWeek || 3) * (daysElapsed(ym) / 7))}`} color={C.color} />
-              <StatTile label="Stretch days" value={mStretch} color={C.color} />
               <StatTile label="Avg steps" value={compact(mAvgSteps)} sub={`target ${compact(t.stepsDaily)}`} color={C.color} />
+              <StatTile label="Avg sleep" value={mAvgSleep ? `${mAvgSleep.toFixed(1)}h` : '—'} sub={`target ${t.sleepHours || 8}h`} color={C.color} />
             </div>
             <ScoreBars parts={sc.parts} color={C.color} />
           </div>
@@ -275,11 +281,11 @@ function Toggle({ label, on, onToggle }) {
   )
 }
 
-function NumberField({ label, value, onChange, placeholder }) {
+function NumberField({ label, value, onChange, placeholder, step = '1' }) {
   return (
     <div className="glass rounded-xl p-4">
       <div className="text-sm text-slate-400">{label}</div>
-      <input type="number" value={value || ''} placeholder={placeholder}
+      <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mt-3 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30" />
     </div>

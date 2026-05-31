@@ -13,7 +13,7 @@ import { useToast } from '../components/Toast.jsx'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
-const ORDER = ['fitness', 'money', 'study', 'career']
+const ORDER = ['fitness', 'money', 'study', 'career', 'business']
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
 
@@ -62,7 +62,7 @@ export default function Overview({ onNavigate }) {
       {/* Domain cards */}
       <div>
         <SectionTitle>Domains · {monthLabel(ym)}</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {ORDER.map((id, i) => {
             const meta = DOMAIN_MAP[id]
             const d = byId[id]

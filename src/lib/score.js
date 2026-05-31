@@ -1,4 +1,4 @@
-import { clamp01 } from './format.js'
+import { clamp01, money } from './format.js'
 import { monthKey, toKey, daysElapsed, weeksElapsed } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
@@ -22,14 +22,18 @@ export function fitnessScore(state, ym) {
   const totalWorkouts = sum(days.map((d) => d.workouts || 0))
   const stretchDays = days.filter((d) => d.stretch).length
   const stepDaysHit = days.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
+  const sleepNights = days.map((d) => d.sleep || 0).filter((v) => v > 0)
+  const avgSleep = sleepNights.length ? sum(sleepNights) / sleepNights.length : 0
+  const sleepTarget = t.sleepHours || 8
 
   const parts = [
     { label: 'Runs', value: clamp01(totalRuns / ((t.runsPerWeek || 3) * weeks)), detail: `${totalRuns} this month` },
     { label: 'Workouts', value: clamp01(totalWorkouts / ((t.workoutsPerWeek || 3) * weeks)), detail: `${totalWorkouts} this month` },
     { label: 'Stretch', value: clamp01(stretchDays / elapsed), detail: `${stretchDays}/${elapsed} days` },
     { label: 'Steps', value: clamp01(stepDaysHit / elapsed), detail: `${stepDaysHit}/${elapsed} days ≥ target` },
+    { label: 'Sleep', value: clamp01(avgSleep / sleepTarget), detail: avgSleep ? `${avgSleep.toFixed(1)}h avg / ${sleepTarget}h` : 'Not logged' },
   ]
-  return { score: avg(parts.map((p) => p.value)), parts }
+  return { score: avg(parts.map((p) => p.value)), parts, avgSleep }
 }
 
 export function moneyScore(state, ym) {
@@ -81,11 +85,37 @@ export function careerScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, apps, skillHours }
 }
 
+// Side-hustle / business: earn money, ship things you're proud of, keep momentum.
+const SHIP_TARGET = 2 // milestones/month for a full "shipping" score
+export function businessScore(state, ym) {
+  const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
+  const projects = b.projects || []
+  const target = b.monthlyIncomeTarget || 500
+  const cur = state.money?.currency || '£'
+
+  const monthRevenue = sum(projects.flatMap((p) =>
+    (p.revenue || []).filter((r) => r.date?.startsWith(ym + '-')).map((r) => Number(r.amount) || 0)))
+  const milestonesThisMonth = sum(projects.map((p) =>
+    (p.milestones || []).filter((m) => m.done && m.doneAt?.startsWith(ym + '-')).length))
+  const active = projects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
+  const touched = active.filter((p) =>
+    (p.revenue || []).some((r) => r.date?.startsWith(ym + '-')) ||
+    (p.milestones || []).some((m) => m.done && m.doneAt?.startsWith(ym + '-'))).length
+
+  const parts = [
+    { label: 'Income', value: clamp01(target ? monthRevenue / target : 0), detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
+    { label: 'Shipping', value: clamp01(milestonesThisMonth / SHIP_TARGET), detail: `${milestonesThisMonth} milestone${milestonesThisMonth !== 1 ? 's' : ''} shipped` },
+    { label: 'Momentum', value: active.length ? clamp01(touched / active.length) : 0, detail: active.length ? `${touched}/${active.length} hustles active` : 'No active projects' },
+  ]
+  return { score: avg(parts.map((p) => p.value)), parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
+}
+
 export const SCORERS = {
   fitness: fitnessScore,
   money: moneyScore,
   study: studyScore,
   career: careerScore,
+  business: businessScore,
 }
 
 // Quick-win completion rate for a month — scored against 3/day as a comfortable target.
@@ -143,11 +173,14 @@ function weekScore(state, weekStartDate) {
   const workouts = sum(fitDays.map((d) => d.workouts || 0))
   const stretchDays = fitDays.filter((d) => d.stretch).length
   const stepDaysHit = fitDays.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
+  const sleepNights = fitDays.map((d) => d.sleep || 0).filter((v) => v > 0)
+  const avgSleep = sleepNights.length ? sum(sleepNights) / sleepNights.length : 0
   const fitScore = avg([
     clamp01(runs / (t.runsPerWeek || 3)),
     clamp01(workouts / (t.workoutsPerWeek || 3)),
     clamp01(stretchDays / 7),
     clamp01(stepDaysHit / 7),
+    clamp01(avgSleep / (t.sleepHours || 8)),
   ])
 
   const studyDays = keys.map((k) => s.days[k] || {})
@@ -172,7 +205,23 @@ function weekScore(state, weekStartDate) {
   const ym = monthKey(new Date(keys[3]))
   const mScore = moneyScore(state, ym)
 
-  return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal])
+  // Business weekly: revenue vs weekly slice of the monthly target, milestones shipped, momentum.
+  const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
+  const bProjects = b.projects || []
+  const bTarget = (b.monthlyIncomeTarget || 500) / 4.33
+  const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
+  const weekMilestones = sum(bProjects.map((p) => (p.milestones || []).filter((m) => m.done && keySet.has(m.doneAt)).length))
+  const bActive = bProjects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
+  const bTouched = bActive.filter((p) =>
+    (p.revenue || []).some((r) => keySet.has(r.date)) ||
+    (p.milestones || []).some((m) => m.done && keySet.has(m.doneAt))).length
+  const businessScoreVal = avg([
+    clamp01(bTarget ? weekRevenue / bTarget : 0),
+    clamp01(weekMilestones / (SHIP_TARGET / 4.33)),
+    bActive.length ? clamp01(bTouched / bActive.length) : 0,
+  ])
+
+  return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal, businessScoreVal])
 }
 
 // 26 weeks (≈6 months) of weekly life scores for the trend chart

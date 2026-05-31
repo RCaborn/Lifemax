@@ -77,14 +77,13 @@ export default function Money() {
 
 function Header({ score, ym, setYm }) {
   return (
-    <div className="glass relative overflow-hidden rounded-3xl p-6">
-      <div className={`absolute inset-0 bg-gradient-to-br ${C.accent}`} />
+    <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
-            <p className="text-sm text-slate-400">{C.tagline}</p>
+            <p className="text-sm text-slate-500">{C.tagline}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -120,7 +119,7 @@ function IncomeEditor({ sources, cur, actions }) {
           className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
         <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`${cur}/mo`}
           className="w-24 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-        <button type="submit" className="rounded-lg px-3 py-1.5 text-sm font-medium" style={{ background: C.color, color: '#0b0f1a' }}>Add</button>
+        <button type="submit" className="rounded-lg px-3 py-1.5 text-sm font-medium" style={{ background: C.color, color: '#050505' }}>Add</button>
       </form>
     </div>
   )
@@ -171,7 +170,7 @@ function TxForm({ onAdd, cur }) {
           ))}
         </div>
       )}
-      <button type="submit" className="w-full rounded-lg py-2 font-medium" style={{ background: C.color, color: '#0b0f1a' }}>Add transaction</button>
+      <button type="submit" className="w-full rounded-lg py-2 font-medium" style={{ background: C.color, color: '#050505' }}>Add transaction</button>
     </form>
   )
 }

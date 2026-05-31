@@ -12,13 +12,15 @@
 import { parseKey, toKey } from './dates.js'
 
 export const DEFAULT_EARN_RATES = {
-  run: 6,        // per run logged
-  workout: 5,    // per workout logged
-  stretch: 2,    // per day stretched
-  steps_10k: 3,  // per day hitting the step target
-  pages_20: 4,   // per day hitting the reading target
-  study_hour: 3, // per hour studied
-  career_hour: 3,// per skill hour logged
+  run: 6,          // per run logged
+  workout: 5,      // per workout logged
+  stretch: 2,      // per day stretched
+  steps_10k: 3,    // per day hitting the step target
+  sleep_target: 3, // per night hitting the sleep target
+  pages_20: 4,     // per day hitting the reading target
+  study_hour: 3,   // per hour studied
+  career_hour: 3,  // per skill hour logged
+  milestone: 8,    // per side-hustle milestone shipped
 }
 
 export const EARN_LABELS = {
@@ -26,9 +28,11 @@ export const EARN_LABELS = {
   workout: { label: 'Workout logged', icon: '🏋️', domain: 'fitness' },
   stretch: { label: 'Stretch day', icon: '🧘', domain: 'fitness' },
   steps_10k: { label: 'Step goal hit', icon: '👟', domain: 'fitness' },
+  sleep_target: { label: 'Sleep goal hit', icon: '🛌', domain: 'fitness' },
   pages_20: { label: 'Reading goal hit', icon: '📖', domain: 'study' },
   study_hour: { label: 'Study hour', icon: '⏱️', domain: 'study' },
   career_hour: { label: 'Skill hour', icon: '🎓', domain: 'career' },
+  milestone: { label: 'Milestone shipped', icon: '🚩', domain: 'business' },
   stake: { label: 'Stake won', icon: '🎯', domain: 'stakes' },
 }
 
@@ -45,11 +49,13 @@ export function earnedEvents(state) {
   // Fitness
   const f = state.fitness || { days: {}, targets: {} }
   const stepTarget = f.targets?.stepsDaily || 10000
+  const sleepTarget = f.targets?.sleepHours || 8
   for (const [date, d] of Object.entries(f.days || {})) {
     if (d.runs) out.push({ date, source: 'run', qty: d.runs, points: d.runs * rates.run })
     if (d.workouts) out.push({ date, source: 'workout', qty: d.workouts, points: d.workouts * rates.workout })
     if (d.stretch) out.push({ date, source: 'stretch', qty: 1, points: rates.stretch })
     if ((d.steps || 0) >= stepTarget) out.push({ date, source: 'steps_10k', qty: 1, points: rates.steps_10k })
+    if ((d.sleep || 0) >= sleepTarget) out.push({ date, source: 'sleep_target', qty: 1, points: rates.sleep_target })
   }
 
   // Study
@@ -70,6 +76,13 @@ export function earnedEvents(state) {
     for (const [date, hours] of Object.entries(byDate)) {
       const whole = Math.floor(hours)
       if (whole > 0) out.push({ date, source: 'career_hour', qty: whole, points: whole * rates.career_hour })
+    }
+  }
+
+  // Side-hustle milestones — each one shipped earns a chunky reward
+  for (const p of state.business?.projects || []) {
+    for (const m of p.milestones || []) {
+      if (m.done && m.doneAt) out.push({ date: m.doneAt, source: 'milestone', qty: 1, points: rates.milestone, note: m.title })
     }
   }
 

@@ -14,8 +14,11 @@ function migrate(state) {
   if (!state.career.todos) state.career.todos = []
   if (!state.business) state.business = seed.business
   if (!state.business.todos) state.business.todos = []
+  if (!state.business.projects) state.business.projects = []
+  if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
   if (state.vices.debtPenaltyRate == null) state.vices.debtPenaltyRate = seed.vices.debtPenaltyRate
   if (!state.quickWins) state.quickWins = seed.quickWins
+  if (state.fitness.targets.sleepHours == null) state.fitness.targets.sleepHours = seed.fitness.targets.sleepHours
   return state
 }
 
@@ -128,7 +131,34 @@ export function StoreProvider({ children }) {
     addQuickWin: (item) => update((d) => { d.quickWins.items.push({ id: rid(), ...item }) }),
     deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
 
-    // ---------- Business ----------
+    // ---------- Business / side-hustle projects ----------
+    addProject: (p) => update((d) => { d.business.projects.push({ id: rid(), emoji: '🚀', status: 'building', createdAt: todayKey(), revenue: [], milestones: [], ...p }) }),
+    updateProject: (id, patch) => update((d) => { const p = d.business.projects.find((x) => x.id === id); if (p) Object.assign(p, patch) }),
+    deleteProject: (id) => update((d) => { d.business.projects = d.business.projects.filter((x) => x.id !== id) }),
+    addRevenue: (projectId, entry) => update((d) => {
+      const p = d.business.projects.find((x) => x.id === projectId)
+      if (p) p.revenue.push({ id: rid(), date: todayKey(), note: '', ...entry, amount: Number(entry.amount) || 0 })
+    }),
+    deleteRevenue: (projectId, entryId) => update((d) => {
+      const p = d.business.projects.find((x) => x.id === projectId)
+      if (p) p.revenue = p.revenue.filter((r) => r.id !== entryId)
+    }),
+    addMilestone: (projectId, title) => update((d) => {
+      const p = d.business.projects.find((x) => x.id === projectId)
+      if (p) p.milestones.push({ id: rid(), title, done: false, doneAt: null })
+    }),
+    toggleMilestone: (projectId, milestoneId) => update((d) => {
+      const p = d.business.projects.find((x) => x.id === projectId)
+      const m = p?.milestones.find((x) => x.id === milestoneId)
+      if (m) { m.done = !m.done; m.doneAt = m.done ? todayKey() : null }
+    }),
+    deleteMilestone: (projectId, milestoneId) => update((d) => {
+      const p = d.business.projects.find((x) => x.id === projectId)
+      if (p) p.milestones = p.milestones.filter((m) => m.id !== milestoneId)
+    }),
+    setBusinessIncomeTarget: (amount) => update((d) => { d.business.monthlyIncomeTarget = Number(amount) || 0 }),
+
+    // ---------- Business tasks ----------
     addBusinessTodo: (todo) => update((d) => { d.business.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
     updateBusinessTodo: (id, patch) => update((d) => { const t = d.business.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
     toggleBusinessTodo: (id) => update((d) => { const t = d.business.todos.find((x) => x.id === id); if (t) t.done = !t.done }),

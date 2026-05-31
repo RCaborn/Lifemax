@@ -26,7 +26,7 @@ export default function Heatmap({ ym, color = '#22c55e', intensity, valueLabel }
               className="aspect-square rounded-md text-[10px] grid place-items-center"
               style={{
                 background: future ? 'rgba(255,255,255,.02)' : v > 0 ? hexA(color, 0.15 + v * 0.85) : 'rgba(255,255,255,.05)',
-                color: v > 0.5 ? '#0b0f1a' : '#64748b',
+                color: v > 0.5 ? '#050505' : '#64748b',
                 outline: k === today ? `1px solid ${color}` : 'none',
               }}
             >

@@ -122,7 +122,7 @@ function ContractCard({ c, state, onResolve, onDelete }) {
       </div>
 
       <div className="mt-4 flex gap-2">
-        <button onClick={() => onResolve(c, 'succeeded')} className="flex-1 rounded-lg py-2 text-sm font-semibold" style={{ background: '#22c55e', color: '#0b0f1a' }}>I did it ✓</button>
+        <button onClick={() => onResolve(c, 'succeeded')} className="flex-1 rounded-lg py-2 text-sm font-semibold" style={{ background: '#22c55e', color: '#050505' }}>I did it ✓</button>
         <button onClick={() => onResolve(c, 'failed')} className="flex-1 rounded-lg bg-white/10 py-2 text-sm font-semibold text-white">I failed</button>
         <button onClick={onDelete} className="rounded-lg bg-white/5 px-3 text-slate-500 hover:text-rose-400">✕</button>
       </div>
