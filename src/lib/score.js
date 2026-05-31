@@ -1,8 +1,18 @@
 import { clamp01, money } from './format.js'
-import { monthKey, toKey, thisWeekKeys, daysElapsed, weeksElapsed } from './dates.js'
+import { monthKey, toKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
+
+// Average of each logged day's wake-up score (rewards consistency near target),
+// plus the mean wake time for display. days = array of day objects with optional .wake.
+function wakeAgg(days, target) {
+  const wakes = days.map((d) => d.wake).filter(Boolean)
+  if (!wakes.length) return { score: 0, label: 'Not logged', logged: 0 }
+  const score = avg(wakes.map((w) => wakeScore(w, target)))
+  const avgMin = avg(wakes.map((w) => timeToMin(w)))
+  return { score, label: `${minToTime(avgMin)} avg`, logged: wakes.length }
+}
 
 function daysOfMonth(daysObj = {}, ym) {
   return Object.entries(daysObj).filter(([k]) => k.startsWith(ym + '-')).map(([, v]) => v)
@@ -27,18 +37,17 @@ export function fitnessScore(state, ym) {
   const totalWorkouts = sum(days.map((d) => d.workouts || 0))
   const stretchDays = days.filter((d) => d.stretch).length
   const stepDaysHit = days.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
-  const sleepNights = days.map((d) => d.sleep || 0).filter((v) => v > 0)
-  const avgSleep = sleepNights.length ? sum(sleepNights) / sleepNights.length : 0
-  const sleepTarget = t.sleepHours || 8
+  const wakeTarget = t.wakeTarget || DEFAULT_WAKE_TARGET
+  const wake = wakeAgg(days, wakeTarget)
 
   const parts = [
     { label: 'Runs', value: clamp01(totalRuns / ((t.runsPerWeek || 3) * weeks)), detail: `${totalRuns} this month` },
     { label: 'Workouts', value: clamp01(totalWorkouts / ((t.workoutsPerWeek || 3) * weeks)), detail: `${totalWorkouts} this month` },
     { label: 'Stretch', value: clamp01(stretchDays / elapsed), detail: `${stretchDays}/${elapsed} days` },
     { label: 'Steps', value: clamp01(stepDaysHit / elapsed), detail: `${stepDaysHit}/${elapsed} days ≥ target` },
-    { label: 'Sleep', value: clamp01(avgSleep / sleepTarget), detail: avgSleep ? `${avgSleep.toFixed(1)}h avg / ${sleepTarget}h` : 'Not logged' },
+    { label: 'Wake-up', value: wake.score, detail: wake.logged ? `${wake.label} / ${wakeTarget} target` : 'Not logged' },
   ]
-  return { score: avg(parts.map((p) => p.value)), parts, avgSleep }
+  return { score: avg(parts.map((p) => p.value)), parts, wake }
 }
 
 export function moneyScore(state, ym) {
@@ -157,14 +166,14 @@ function weekDomainScores(state) {
   const wWorkouts = sum(fitDays.map((d) => d.workouts || 0))
   const wStretch = fitDays.filter((d) => d.stretch).length
   const wStepHit = fitDays.filter((d) => (d.steps || 0) >= (ft.stepsDaily || 10000)).length
-  const sleepLogs = fitDays.map((d) => d.sleep || 0).filter((v) => v > 0)
-  const wAvgSleep = sleepLogs.length ? sum(sleepLogs) / sleepLogs.length : 0
+  const wakeTarget = ft.wakeTarget || DEFAULT_WAKE_TARGET
+  const wWake = wakeAgg(fitDays, wakeTarget)
   const fitParts = [
     { label: 'Runs', value: clamp01(wRuns / (ft.runsPerWeek || 3)), detail: `${wRuns}/${ft.runsPerWeek || 3} this week` },
     { label: 'Workouts', value: clamp01(wWorkouts / (ft.workoutsPerWeek || 3)), detail: `${wWorkouts}/${ft.workoutsPerWeek || 3} this week` },
     { label: 'Stretch', value: clamp01(wStretch / 7), detail: `${wStretch}/7 days` },
     { label: 'Steps', value: clamp01(wStepHit / 7), detail: `${wStepHit}/7 days hit target` },
-    { label: 'Sleep', value: wAvgSleep ? clamp01(wAvgSleep / (ft.sleepHours || 8)) : 0, detail: wAvgSleep ? `${wAvgSleep.toFixed(1)}h avg` : 'Not logged' },
+    { label: 'Wake-up', value: wWake.score, detail: wWake.logged ? `${wWake.label} / ${wakeTarget}` : 'Not logged' },
   ]
 
   // Study — tasks are deadline-based (not weekly), so we only score activity here
@@ -261,14 +270,13 @@ function weekScore(state, weekStartDate) {
   const workouts = sum(fitDays.map((d) => d.workouts || 0))
   const stretchDays = fitDays.filter((d) => d.stretch).length
   const stepDaysHit = fitDays.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
-  const sleepNights = fitDays.map((d) => d.sleep || 0).filter((v) => v > 0)
-  const avgSleep = sleepNights.length ? sum(sleepNights) / sleepNights.length : 0
+  const wake = wakeAgg(fitDays, t.wakeTarget || DEFAULT_WAKE_TARGET)
   const fitScore = avg([
     clamp01(runs / (t.runsPerWeek || 3)),
     clamp01(workouts / (t.workoutsPerWeek || 3)),
     clamp01(stretchDays / 7),
     clamp01(stepDaysHit / 7),
-    clamp01(avgSleep / (t.sleepHours || 8)),
+    wake.score,
   ])
 
   const studyDays = keys.map((k) => s.days[k] || {})

@@ -2,7 +2,7 @@ const rid = () => Math.random().toString(36).slice(2, 10)
 
 function seedFitness() {
   return {
-    targets: { runsPerWeek: 3, workoutsPerWeek: 3, stepsDaily: 10000, stretchDaily: true, sleepHours: 8 },
+    targets: { runsPerWeek: 3, workoutsPerWeek: 3, stepsDaily: 10000, stretchDaily: true, wakeTarget: '06:30' },
     days: {},
     todos: [],
   }

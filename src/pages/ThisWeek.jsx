@@ -1,5 +1,5 @@
 import { useStore } from '../lib/store.jsx'
-import { toKey, thisWeekKeys, startOfWeek } from '../lib/dates.js'
+import { toKey, thisWeekKeys, startOfWeek, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from '../lib/dates.js'
 import { compact } from '../lib/format.js'
 import { SectionTitle } from '../components/ui.jsx'
 
@@ -20,8 +20,10 @@ export default function ThisWeek() {
   const weekStretch = fitDays.filter((d) => d.stretch).length
   const weekStepsArr = fitDays.map((d) => d.steps || 0).filter((v) => v > 0)
   const weekAvgSteps = weekStepsArr.length ? Math.round(weekStepsArr.reduce((a, b) => a + b) / weekStepsArr.length) : 0
-  const weekSleepArr = fitDays.map((d) => d.sleep || 0).filter((v) => v > 0)
-  const weekAvgSleep = weekSleepArr.length ? weekSleepArr.reduce((a, b) => a + b) / weekSleepArr.length : 0
+  const wakeTarget = t.wakeTarget || DEFAULT_WAKE_TARGET
+  const weekWakes = fitDays.map((d) => d.wake).filter(Boolean)
+  const weekWakeScore = weekWakes.length ? weekWakes.reduce((a, w) => a + wakeScore(w, wakeTarget), 0) / weekWakes.length : 0
+  const weekAvgWake = weekWakes.length ? minToTime(weekWakes.reduce((a, w) => a + timeToMin(w), 0) / weekWakes.length) : null
   const weekPages = studyDays.reduce((a, d) => a + (d.pages || 0), 0)
   const weekHours = studyDays.reduce((a, d) => a + (d.hours || 0), 0)
 
@@ -41,7 +43,7 @@ export default function ThisWeek() {
           <WeekStat label="Workouts" value={`${weekWorkouts}/${t.workoutsPerWeek || 3}`} hit={weekWorkouts >= (t.workoutsPerWeek || 3)} />
           <WeekStat label="Stretch" value={`${weekStretch}/7`} hit={weekStretch >= 5} />
           <WeekStat label="Avg steps" value={compact(weekAvgSteps)} hit={weekAvgSteps >= (t.stepsDaily || 10000)} />
-          <WeekStat label="Avg sleep" value={weekAvgSleep ? `${weekAvgSleep.toFixed(1)}h` : '—'} hit={weekAvgSleep >= (t.sleepHours || 8)} />
+          <WeekStat label="Avg wake" value={weekAvgWake || '—'} hit={weekWakeScore >= 0.8} />
           <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesDaily || 20) * 5} />
           <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursMonthly || 40) / 4.33} />
         </div>
@@ -68,7 +70,7 @@ function WeekStat({ label, value, hit }) {
 function DayCard({ dateKey, dayName, isToday, state, actions }) {
   const f = state.fitness.days[dateKey] || {}
   const s = state.study.days[dateKey] || {}
-  const hasData = f.runs || f.workouts || f.stretch || f.steps || f.sleep || s.pages || s.hours
+  const hasData = f.runs || f.workouts || f.stretch || f.steps || f.wake || s.pages || s.hours
 
   const setF = (patch) => actions.setFitnessDay(dateKey, patch)
   const setS = (patch) => actions.setStudyDay(dateKey, patch)
@@ -97,7 +99,7 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
         <DayCounter icon="🏋️" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
         <DayToggle icon="🧘" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => setF({ stretch: !f.stretch })} />
         <DayNum icon="👟" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
-        <DayNum icon="🛌" label="Sleep" value={f.sleep || 0} color="#f97316" onChange={(v) => setF({ sleep: v })} placeholder="8" step="0.5" />
+        <DayTime icon="⏰" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
         <DayNum icon="📖" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <DayNum icon="⏱️" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
       </div>
@@ -139,6 +141,18 @@ function DayNum({ icon, label, value, color, onChange, placeholder, step = '1' }
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="w-16 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-sm font-semibold text-white outline-none focus:border-white/30"
         style={{ caretColor: color }} />
+    </div>
+  )
+}
+
+function DayTime({ icon, label, value, color, onChange }) {
+  return (
+    <div className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
+      <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
+      <input type="time" value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-24 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-sm font-semibold text-white outline-none focus:border-white/30"
+        style={{ caretColor: color, colorScheme: 'dark' }} />
     </div>
   )
 }

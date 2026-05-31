@@ -9,14 +9,14 @@
 // Spends (redeeming a vice) and stake bonuses are the only things stored
 // explicitly, in the ledger. Balance = earned − spent + bonuses.
 
-import { parseKey, toKey } from './dates.js'
+import { parseKey, toKey, wakeScore, DEFAULT_WAKE_TARGET } from './dates.js'
 
 export const DEFAULT_EARN_RATES = {
   run: 6,          // per run logged
   workout: 5,      // per workout logged
   stretch: 2,      // per day stretched
   steps_10k: 3,    // per day hitting the step target
-  sleep_target: 3, // per night hitting the sleep target
+  wake_target: 4,  // max per day for waking at target time (scaled by how close)
   pages_20: 4,     // per day hitting the reading target
   study_hour: 3,   // per hour studied
   career_hour: 3,  // per skill hour logged
@@ -28,7 +28,7 @@ export const EARN_LABELS = {
   workout: { label: 'Workout logged', icon: '🏋️', domain: 'fitness' },
   stretch: { label: 'Stretch day', icon: '🧘', domain: 'fitness' },
   steps_10k: { label: 'Step goal hit', icon: '👟', domain: 'fitness' },
-  sleep_target: { label: 'Sleep goal hit', icon: '🛌', domain: 'fitness' },
+  wake_target: { label: 'Woke on time', icon: '⏰', domain: 'fitness' },
   pages_20: { label: 'Reading goal hit', icon: '📖', domain: 'study' },
   study_hour: { label: 'Study hour', icon: '⏱️', domain: 'study' },
   career_hour: { label: 'Skill hour', icon: '🎓', domain: 'career' },
@@ -49,13 +49,18 @@ export function earnedEvents(state) {
   // Fitness
   const f = state.fitness || { days: {}, targets: {} }
   const stepTarget = f.targets?.stepsDaily || 10000
-  const sleepTarget = f.targets?.sleepHours || 8
+  const wakeTarget = f.targets?.wakeTarget || DEFAULT_WAKE_TARGET
   for (const [date, d] of Object.entries(f.days || {})) {
     if (d.runs) out.push({ date, source: 'run', qty: d.runs, points: d.runs * rates.run })
     if (d.workouts) out.push({ date, source: 'workout', qty: d.workouts, points: d.workouts * rates.workout })
     if (d.stretch) out.push({ date, source: 'stretch', qty: 1, points: rates.stretch })
     if ((d.steps || 0) >= stepTarget) out.push({ date, source: 'steps_10k', qty: 1, points: rates.steps_10k })
-    if ((d.sleep || 0) >= sleepTarget) out.push({ date, source: 'sleep_target', qty: 1, points: rates.sleep_target })
+    // Wake-up: points scale with how close you woke to target (0 beyond ±2h)
+    const ws = wakeScore(d.wake, wakeTarget)
+    if (ws != null) {
+      const pts = Math.round(ws * rates.wake_target)
+      if (pts > 0) out.push({ date, source: 'wake_target', qty: 1, points: pts })
+    }
   }
 
   // Study

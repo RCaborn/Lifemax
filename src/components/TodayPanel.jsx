@@ -50,7 +50,10 @@ export default function TodayPanel() {
           if (n && offset === 0) toast({ icon: '🧘', title: '+stretch logged', color: '#f97316' })
         }} />
         <Num icon="👟" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
-        <Num icon="🛌" label="Sleep (h)" value={f.sleep || 0} color="#f97316" step="0.5" onChange={(v) => setF({ sleep: v })} placeholder="8" />
+        <TimeField icon="⏰" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => {
+          setF({ wake: v })
+          if (v && offset === 0) toast({ icon: '⏰', title: `Up at ${v}`, color: '#f97316' })
+        }} />
         <Num icon="📖" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <Num icon="⏱️" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
       </div>
@@ -91,6 +94,18 @@ function Num({ icon, label, value, color, onChange, placeholder, step = '1' }) {
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-right font-semibold text-white outline-none focus:border-white/30"
         style={{ caretColor: color }} />
+    </div>
+  )
+}
+
+function TimeField({ icon, label, value, color, onChange }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5">
+      <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
+      <input type="time" value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-28 rounded border border-white/10 bg-white/5 px-2 py-1 text-right font-semibold text-white outline-none focus:border-white/30"
+        style={{ caretColor: color, colorScheme: 'dark' }} />
     </div>
   )
 }

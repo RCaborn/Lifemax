@@ -18,7 +18,7 @@ function migrate(state) {
   if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
   if (state.vices.debtPenaltyRate == null) state.vices.debtPenaltyRate = seed.vices.debtPenaltyRate
   if (!state.quickWins) state.quickWins = seed.quickWins
-  if (state.fitness.targets.sleepHours == null) state.fitness.targets.sleepHours = seed.fitness.targets.sleepHours
+  if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
   return state
 }
 

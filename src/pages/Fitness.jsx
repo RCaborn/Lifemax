@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { fitnessScore } from '../lib/score.js'
-import { toKey, thisWeekKeys, thisMonth, monthDayKeys, daysElapsed, daysUntil } from '../lib/dates.js'
+import { toKey, thisWeekKeys, thisMonth, monthDayKeys, daysElapsed, daysUntil, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from '../lib/dates.js'
 import { pct, compact } from '../lib/format.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
@@ -21,7 +21,8 @@ export default function Fitness() {
   const [dayOffset, setDayOffset] = useState(0)
 
   const dateKey = (() => { const d = new Date(); d.setDate(d.getDate() + dayOffset); return toKey(d) })()
-  const todayLog = f.days[dateKey] || { runs: 0, workouts: 0, stretch: false, steps: 0, sleep: 0 }
+  const todayLog = f.days[dateKey] || { runs: 0, workouts: 0, stretch: false, steps: 0, wake: '' }
+  const wakeTarget = t.wakeTarget || DEFAULT_WAKE_TARGET
   const set = (patch) => actions.setFitnessDay(dateKey, patch)
   const logDate = new Date(); logDate.setDate(logDate.getDate() + dayOffset)
   const logDateStr = logDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -32,8 +33,9 @@ export default function Fitness() {
   const weekStretch = week.filter((d) => d.stretch).length
   const weekStepArr = week.filter((d) => d.steps).map((d) => d.steps)
   const weekAvgSteps = weekStepArr.length ? Math.round(weekStepArr.reduce((a, b) => a + b) / weekStepArr.length) : 0
-  const weekSleepArr = week.filter((d) => d.sleep).map((d) => d.sleep)
-  const weekAvgSleep = weekSleepArr.length ? weekSleepArr.reduce((a, b) => a + b) / weekSleepArr.length : 0
+  const weekWakes = week.map((d) => d.wake).filter(Boolean)
+  const weekWakeScore = weekWakes.length ? weekWakes.reduce((a, w) => a + wakeScore(w, wakeTarget), 0) / weekWakes.length : 0
+  const weekAvgWake = weekWakes.length ? minToTime(weekWakes.reduce((a, w) => a + timeToMin(w), 0) / weekWakes.length) : null
 
   const sc = fitnessScore(state, ym)
   const mkeys = monthDayKeys(ym)
@@ -43,8 +45,8 @@ export default function Fitness() {
   const mStretch = mDays.filter((d) => d.stretch).length
   const stepDays = mDays.filter((d) => d.steps)
   const mAvgSteps = stepDays.length ? Math.round(stepDays.reduce((a, d) => a + d.steps, 0) / stepDays.length) : 0
-  const sleepDays = mDays.filter((d) => d.sleep)
-  const mAvgSleep = sleepDays.length ? sleepDays.reduce((a, d) => a + d.sleep, 0) / sleepDays.length : 0
+  const mWakes = mDays.map((d) => d.wake).filter(Boolean)
+  const mAvgWake = mWakes.length ? minToTime(mWakes.reduce((a, w) => a + timeToMin(w), 0) / mWakes.length) : null
 
   const stepsLineData = buildStepsLineData(f)
 
@@ -77,7 +79,7 @@ export default function Fitness() {
           <Stepper label="🏋️ Workouts" value={todayLog.workouts || 0} onChange={(v) => set({ workouts: v })} />
           <Toggle label="🧘 Stretch" on={!!todayLog.stretch} onToggle={() => set({ stretch: !todayLog.stretch })} />
           <NumberField label="👟 Steps" value={todayLog.steps || 0} onChange={(v) => set({ steps: v })} placeholder="e.g. 10000" />
-          <NumberField label="🛌 Sleep (hours)" value={todayLog.sleep || 0} onChange={(v) => set({ sleep: v })} placeholder="e.g. 8" step="0.5" />
+          <WakeField label={`⏰ Wake-up (target ${wakeTarget})`} value={todayLog.wake || ''} onChange={(v) => set({ wake: v })} />
         </div>
       </Card>
 
@@ -88,7 +90,7 @@ export default function Fitness() {
           <RingCard label="Workouts" value={weekWorkouts / (t.workoutsPerWeek || 3)} center={`${weekWorkouts}/${t.workoutsPerWeek}`} />
           <RingCard label="Stretch days" value={weekStretch / 7} center={`${weekStretch}/7`} />
           <RingCard label="Avg steps" value={weekAvgSteps / (t.stepsDaily || 10000)} center={compact(weekAvgSteps)} />
-          <RingCard label="Avg sleep" value={weekAvgSleep / (t.sleepHours || 8)} center={weekAvgSleep ? `${weekAvgSleep.toFixed(1)}h` : '—'} />
+          <RingCard label="Wake-up" value={weekWakeScore} center={weekAvgWake || '—'} />
         </div>
       </section>
 
@@ -107,7 +109,7 @@ export default function Fitness() {
               <StatTile label="Runs" value={mRuns} sub={`target ~${Math.round((t.runsPerWeek || 3) * (daysElapsed(ym) / 7))}`} color={C.color} />
               <StatTile label="Workouts" value={mWorkouts} sub={`target ~${Math.round((t.workoutsPerWeek || 3) * (daysElapsed(ym) / 7))}`} color={C.color} />
               <StatTile label="Avg steps" value={compact(mAvgSteps)} sub={`target ${compact(t.stepsDaily)}`} color={C.color} />
-              <StatTile label="Avg sleep" value={mAvgSleep ? `${mAvgSleep.toFixed(1)}h` : '—'} sub={`target ${t.sleepHours || 8}h`} color={C.color} />
+              <StatTile label="Avg wake-up" value={mAvgWake || '—'} sub={`target ${wakeTarget}`} color={C.color} />
             </div>
             <ScoreBars parts={sc.parts} color={C.color} />
           </div>
@@ -288,6 +290,18 @@ function NumberField({ label, value, onChange, placeholder, step = '1' }) {
       <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mt-3 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30" />
+    </div>
+  )
+}
+
+function WakeField({ label, value, onChange }) {
+  return (
+    <div className="glass rounded-xl p-4">
+      <div className="text-sm text-slate-400">{label}</div>
+      <input type="time" value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-3 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30"
+        style={{ colorScheme: 'dark' }} />
     </div>
   )
 }

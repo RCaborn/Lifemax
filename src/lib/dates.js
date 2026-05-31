@@ -10,6 +10,31 @@ export function toKey(d) {
 export function todayKey() { return toKey(new Date()) }
 export function parseKey(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d) }
 
+// --- Wake-up time helpers ("HH:MM" 24h strings) ---------------------------
+export const DEFAULT_WAKE_TARGET = '06:30'
+export const WAKE_MAX_DEV_MIN = 120 // ±2h from target = 0 points
+
+export function timeToMin(s) {
+  if (!s || typeof s !== 'string') return null
+  const [h, m] = s.split(':').map(Number)
+  if (Number.isNaN(h)) return null
+  return h * 60 + (m || 0)
+}
+export function minToTime(min) {
+  if (min == null || Number.isNaN(min)) return null
+  const total = Math.round(min)
+  const h = Math.floor(total / 60) % 24
+  const m = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+// 1.0 at target, decaying linearly to 0 at ±WAKE_MAX_DEV_MIN. null if not logged.
+export function wakeScore(wake, target = DEFAULT_WAKE_TARGET, maxDev = WAKE_MAX_DEV_MIN) {
+  const w = timeToMin(wake)
+  if (w == null) return null
+  const dev = Math.abs(w - timeToMin(target))
+  return Math.max(0, Math.min(1, 1 - dev / maxDev))
+}
+
 // Month keys are "YYYY-MM".
 export function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 export function thisMonth() { return monthKey(new Date()) }
