@@ -14,6 +14,7 @@ function migrate(state) {
   if (!state.career.todos) state.career.todos = []
   if (!state.business) state.business = seed.business
   if (!state.business.todos) state.business.todos = []
+  if (state.vices.debtPenaltyRate == null) state.vices.debtPenaltyRate = seed.vices.debtPenaltyRate
   return state
 }
 
@@ -67,10 +68,11 @@ export function StoreProvider({ children }) {
     addVice: (v) => update((d) => { d.vices.vices.push({ id: rid(), emoji: '🎁', cooldownDays: 0, category: 'other', isActive: true, ...v, pointCost: Number(v.pointCost) || 0 }) }),
     updateVice: (id, patch) => update((d) => { const v = d.vices.vices.find((x) => x.id === id); if (v) Object.assign(v, patch) }),
     deleteVice: (id) => update((d) => { d.vices.vices = d.vices.vices.filter((x) => x.id !== id) }),
-    redeemVice: (vice) => update((d) => {
-      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, date: todayKey() })
+    redeemVice: (vice, penalty = 0) => update((d) => {
+      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, penalty: Number(penalty) || 0, date: todayKey() })
     }),
     setEarnRates: (rates) => update((d) => { d.vices.earnRates = rates }),
+    setDebtPenaltyRate: (rate) => update((d) => { d.vices.debtPenaltyRate = rate }),
 
     // ---------- Fitness ----------
     setFitnessDay: (dateKey, patch) => update((d) => {

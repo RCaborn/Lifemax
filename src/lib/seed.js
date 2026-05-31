@@ -31,6 +31,7 @@ function seedStakes() {
 function seedVices() {
   return {
     earnRates: null,
+    debtPenaltyRate: 0.5,
     vices: [
       { id: rid(), name: 'Night out', emoji: '🍺', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true },
       { id: rid(), name: 'Takeaway', emoji: '🍕', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true },
