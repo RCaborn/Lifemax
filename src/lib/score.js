@@ -1,16 +1,9 @@
-// The Life Score engine.
-//
-// Each domain is graded 0..1 for a given month from a handful of transparent
-// sub-scores measured against your own targets. The overall Life Score is the
-// weighted blend of the active domains. Everything returns its breakdown so the
-// UI can show *why* you got the score — that's what makes it motivating.
 import { clamp01 } from './format.js'
-import { monthKey, parseKey, daysElapsed, weeksElapsed, daysInMonth, isCurrentMonth } from './dates.js'
+import { monthKey, toKey, daysElapsed, weeksElapsed } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
 
-// --- per-month aggregation helpers ---
 function daysOfMonth(daysObj = {}, ym) {
   return Object.entries(daysObj).filter(([k]) => k.startsWith(ym + '-')).map(([, v]) => v)
 }
@@ -28,7 +21,6 @@ export function fitnessScore(state, ym) {
   const totalRuns = sum(days.map((d) => d.runs || 0))
   const totalWorkouts = sum(days.map((d) => d.workouts || 0))
   const stretchDays = days.filter((d) => d.stretch).length
-  const stepsDays = days.filter((d) => d.steps)
   const stepDaysHit = days.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
 
   const parts = [
@@ -66,7 +58,6 @@ export function studyScore(state, ym) {
   const totalHours = sum(days.map((d) => d.hours || 0))
   const avgPages = totalPages / elapsed
 
-  // To-dos due in (or completed in) this month
   const due = (s.todos || []).filter((td) => (td.deadline && td.deadline.startsWith(ym + '-')) || (td.done))
   const completion = due.length ? due.filter((td) => td.done).length / due.length : (s.todos?.length ? 0 : 1)
 
@@ -97,14 +88,12 @@ export const SCORERS = {
   career: careerScore,
 }
 
-// Overall life score for a month, with each domain's contribution.
 export function lifeScore(state, ym = monthKey(new Date())) {
   const domains = Object.entries(SCORERS).map(([id, fn]) => ({ id, ...fn(state, ym) }))
   const score = avg(domains.map((d) => d.score))
   return { score, domains, ym }
 }
 
-// 6-month history of the overall score, for the trend chart.
 export function scoreHistory(state, months = 6) {
   const out = []
   const now = new Date()
@@ -114,4 +103,73 @@ export function scoreHistory(state, months = 6) {
     out.push({ month: ym, value: Math.round(lifeScore(state, ym).score * 100) })
   }
   return out
+}
+
+// Compute a score for a single 7-day week window
+function weekScore(state, weekStartDate) {
+  const keys = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStartDate)
+    d.setDate(weekStartDate.getDate() + i)
+    return toKey(d)
+  })
+  const keySet = new Set(keys)
+
+  const f = state.fitness || { targets: {}, days: {} }
+  const t = f.targets || {}
+  const s = state.study || { targets: {}, days: {} }
+  const st = s.targets || {}
+  const c = state.career || { jobs: [], skills: [] }
+
+  const fitDays = keys.map((k) => f.days[k] || {})
+  const runs = sum(fitDays.map((d) => d.runs || 0))
+  const workouts = sum(fitDays.map((d) => d.workouts || 0))
+  const stretchDays = fitDays.filter((d) => d.stretch).length
+  const stepDaysHit = fitDays.filter((d) => (d.steps || 0) >= (t.stepsDaily || 10000)).length
+  const fitScore = avg([
+    clamp01(runs / (t.runsPerWeek || 3)),
+    clamp01(workouts / (t.workoutsPerWeek || 3)),
+    clamp01(stretchDays / 7),
+    clamp01(stepDaysHit / 7),
+  ])
+
+  const studyDays = keys.map((k) => s.days[k] || {})
+  const totalPages = sum(studyDays.map((d) => d.pages || 0))
+  const totalHours = sum(studyDays.map((d) => d.hours || 0))
+  const studyScoreVal = avg([
+    clamp01((totalPages / 7) / (st.pagesDaily || 20)),
+    clamp01(totalHours / ((st.hoursMonthly || 40) / 4.33)),
+  ])
+
+  const weekApps = (c.jobs || []).filter((j) => keySet.has(j.date)).length
+  const weekSkillHours = sum(
+    (c.skills || []).flatMap((sk) =>
+      (sk.sessions || []).filter((se) => keySet.has(se.date)).map((se) => se.hours || 0)
+    )
+  )
+  const careerScoreVal = avg([
+    clamp01(weekApps / ((c.monthlyApplyTarget || 8) / 4.33)),
+    clamp01(weekSkillHours / ((c.monthlySkillTarget || 10) / 4.33)),
+  ])
+
+  const ym = monthKey(new Date(keys[3]))
+  const mScore = moneyScore(state, ym)
+
+  return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal])
+}
+
+// 26 weeks (≈6 months) of weekly life scores for the trend chart
+export function weeklyScoreHistory(state, weeks = 26) {
+  const today = new Date()
+  const startDate = new Date(today)
+  startDate.setDate(today.getDate() - (weeks - 1) * 7)
+  const dow = (startDate.getDay() + 6) % 7
+  startDate.setDate(startDate.getDate() - dow)
+
+  return Array.from({ length: weeks }, (_, i) => {
+    const weekStart = new Date(startDate)
+    weekStart.setDate(startDate.getDate() + i * 7)
+    const label = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    const value = Math.round(weekScore(state, weekStart) * 100)
+    return { label, value }
+  })
 }

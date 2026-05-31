@@ -1,5 +1,3 @@
-// Global app state backed by localStorage. No backend, no accounts —
-// everything lives in the browser on your machine.
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
 import { todayKey } from './dates.js'
@@ -8,12 +6,14 @@ const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
 const rid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
 
-// Backfill keys added after a user's data was first saved, so upgrades don't
-// wipe existing logs. Returns the (possibly mutated) state.
 function migrate(state) {
   const seed = buildSeedState()
   if (!state.stakes) state.stakes = seed.stakes
   if (!state.vices) state.vices = seed.vices
+  if (!state.fitness.todos) state.fitness.todos = []
+  if (!state.career.todos) state.career.todos = []
+  if (!state.business) state.business = seed.business
+  if (!state.business.todos) state.business.todos = []
   return state
 }
 
@@ -57,7 +57,6 @@ export function StoreProvider({ children }) {
       if (!c) return
       c.status = outcome
       c.resolvedAt = todayKey()
-      // Award stake bonus into the vices ledger (once — guarded by resolvedAt flip).
       if (outcome === 'succeeded' && bonus > 0) {
         d.vices.ledger.push({ id: rid(), type: 'earn', source: 'stake', points: bonus, date: todayKey(), note: c.name })
       }
@@ -79,6 +78,10 @@ export function StoreProvider({ children }) {
       Object.assign(day, patch)
     }),
     setFitnessTargets: (patch) => update((d) => { Object.assign(d.fitness.targets, patch) }),
+    addFitnessTodo: (todo) => update((d) => { d.fitness.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
+    updateFitnessTodo: (id, patch) => update((d) => { const t = d.fitness.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
+    toggleFitnessTodo: (id) => update((d) => { const t = d.fitness.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
+    deleteFitnessTodo: (id) => update((d) => { d.fitness.todos = d.fitness.todos.filter((x) => x.id !== id) }),
 
     // ---------- Money ----------
     addIncomeSource: (name, amount) => update((d) => { d.money.incomeSources.push({ id: rid(), name, amount: Number(amount) || 0 }) }),
@@ -108,6 +111,16 @@ export function StoreProvider({ children }) {
       const sk = d.career.skills.find((x) => x.id === id)
       if (sk) sk.sessions.push({ date: dateKey, hours: Number(hours) || 0 })
     }),
+    addCareerTodo: (todo) => update((d) => { d.career.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
+    updateCareerTodo: (id, patch) => update((d) => { const t = d.career.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
+    toggleCareerTodo: (id) => update((d) => { const t = d.career.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
+    deleteCareerTodo: (id) => update((d) => { d.career.todos = d.career.todos.filter((x) => x.id !== id) }),
+
+    // ---------- Business ----------
+    addBusinessTodo: (todo) => update((d) => { d.business.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
+    updateBusinessTodo: (id, patch) => update((d) => { const t = d.business.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
+    toggleBusinessTodo: (id) => update((d) => { const t = d.business.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
+    deleteBusinessTodo: (id) => update((d) => { d.business.todos = d.business.todos.filter((x) => x.id !== id) }),
   }
 
   return <StoreCtx.Provider value={{ state, actions }}>{children}</StoreCtx.Provider>

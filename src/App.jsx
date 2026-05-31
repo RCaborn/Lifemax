@@ -8,12 +8,13 @@ import Career from './pages/Career.jsx'
 import Business from './pages/Business.jsx'
 import Stakes from './pages/Stakes.jsx'
 import Vices from './pages/Vices.jsx'
+import ThisWeek from './pages/ThisWeek.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
 
-const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices }
-const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' } }
+const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices, thisweek: ThisWeek }
+const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' } }
 
 export default function App() {
   const { state, actions } = useStore()
@@ -22,7 +23,6 @@ export default function App() {
   const [installEvent, setInstallEvent] = useState(null)
   const fileRef = useRef(null)
 
-  // keep URL hash in sync so refresh keeps your place
   useEffect(() => { location.hash = route }, [route])
   useEffect(() => {
     const onHash = () => setRoute(location.hash.replace('#', '') || 'overview')
@@ -30,14 +30,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // capture the PWA install prompt
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstallEvent(e) }
     window.addEventListener('beforeinstallprompt', onPrompt)
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
   }, [])
 
-  // Auto-resolve any stakes whose window has ended (once on load).
   useEffect(() => {
     const due = dueResolutions(state)
     for (const r of due) actions.resolveContract(r.id, r.outcome, r.bonus)
@@ -47,13 +45,13 @@ export default function App() {
   const valid = route === 'overview' || DOMAIN_MAP[route] || PAGES[route]
   const current = valid ? route : 'overview'
 
+  const pageName = current === 'overview' ? 'Overview' : (DOMAIN_MAP[current]?.name || EXTRA[current]?.name || '')
+
   const exportData = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = `lifemax-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
+    a.href = url; a.download = `lifemax-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click()
     URL.revokeObjectURL(url)
   }
   const importData = (e) => {
@@ -64,8 +62,7 @@ export default function App() {
       try { actions.importState(JSON.parse(reader.result)) }
       catch { alert('That file could not be read as a Lifemax backup.') }
     }
-    reader.readAsText(file)
-    e.target.value = ''
+    reader.readAsText(file); e.target.value = ''
   }
   const doInstall = async () => {
     if (!installEvent) return
@@ -79,24 +76,22 @@ export default function App() {
       <Sidebar current={current} onNavigate={setRoute} open={navOpen} onClose={() => setNavOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/10 bg-[#0b0f1a]/80 px-4 backdrop-blur">
-          <button className="md:hidden text-slate-300" onClick={() => setNavOpen(true)}>☰</button>
-          <div className="text-sm text-slate-400">
-            {current === 'overview' ? 'Overview' : (DOMAIN_MAP[current]?.name || EXTRA[current]?.name)}
-          </div>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-white/8 bg-[#050505]/90 px-4 backdrop-blur">
+          <button className="md:hidden text-slate-400" onClick={() => setNavOpen(true)}>☰</button>
+          <span className="text-xs uppercase tracking-widest text-slate-500" style={{ fontFamily: 'Courier New, monospace' }}>{pageName}</span>
           <div className="ml-auto flex items-center gap-2">
             {installEvent && (
               <button onClick={doInstall}
-                className="rounded-lg bg-gradient-to-r from-emerald-400 to-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-900">
-                ⤓ Install app
+                className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+                style={{ fontFamily: 'Courier New, monospace' }}>
+                ⤓ Install
               </button>
             )}
             <button onClick={exportData} className="topbtn" title="Download a backup">⤓ Export</button>
             <button onClick={() => fileRef.current?.click()} className="topbtn" title="Restore from backup">⤴ Import</button>
             <button
-              onClick={() => confirm('Reset ALL data back to the demo sample? This cannot be undone.') && actions.resetAll()}
-              className="topbtn" title="Reset to sample data">↺ Reset</button>
+              onClick={() => confirm('Reset ALL data to blank? This cannot be undone.') && actions.resetAll()}
+              className="topbtn" title="Reset all data">↺ Reset</button>
             <input ref={fileRef} type="file" accept="application/json" onChange={importData} className="hidden" />
           </div>
         </header>
@@ -107,12 +102,12 @@ export default function App() {
             : (() => { const Page = PAGES[current]; return <Page key={current} /> })()}
         </main>
 
-        <footer className="px-6 py-4 text-center text-[11px] text-slate-600">
-          Lifemax · your data never leaves this device · {new Date().getFullYear()}
+        <footer className="px-6 py-3 text-center text-[10px] uppercase tracking-widest text-slate-700" style={{ fontFamily: 'Courier New, monospace' }}>
+          LIFEMAX · DATA STORED LOCALLY · {new Date().getFullYear()}
         </footer>
       </div>
 
-      <style>{`.topbtn{border-radius:.5rem;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);padding:.375rem .625rem;font-size:.8rem;color:#cbd5e1;transition:.15s}.topbtn:hover{background:rgba(255,255,255,.1);color:#fff}`}</style>
+      <style>{`.topbtn{border-radius:4px;border:1px solid rgba(255,255,255,.1);background:transparent;padding:.3rem .55rem;font-size:.7rem;color:#555;transition:.15s;font-family:'Courier New',monospace;letter-spacing:.05em;text-transform:uppercase}.topbtn:hover{border-color:rgba(255,255,255,.3);color:#fff}`}</style>
     </div>
   )
 }

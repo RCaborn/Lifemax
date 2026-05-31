@@ -1,42 +1,39 @@
 import { pct } from '../lib/format.js'
 
 export function Card({ children, className = '' }) {
-  return <div className={`glass rounded-2xl p-5 ${className}`}>{children}</div>
+  return <div className={`glass rounded-xl p-5 ${className}`}>{children}</div>
 }
 
 export function SectionTitle({ children, right }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{children}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400" style={{ fontFamily: 'Courier New, monospace' }}>{children}</h2>
       {right}
     </div>
   )
 }
 
-// Compact number tile with label and optional sub-line / colour.
 export function StatTile({ label, value, sub, color = '#e2e8f0' }) {
   return (
-    <div className="glass rounded-2xl p-4">
-      <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-1 text-2xl font-bold" style={{ color }}>{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+    <div className="glass rounded-xl p-4">
+      <div className="op-label">{label}</div>
+      <div className="mt-1.5 text-2xl font-bold" style={{ color, fontFamily: 'Courier New, monospace' }}>{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-slate-600">{sub}</div>}
     </div>
   )
 }
 
-// Horizontal sub-score bars (used by the Life Score breakdown and domain headers).
-export function ScoreBars({ parts = [], color = '#38bdf8' }) {
+export function ScoreBars({ parts = [], color = '#ffffff' }) {
   return (
     <div className="space-y-2.5">
       {parts.map((p) => (
         <div key={p.label}>
           <div className="mb-1 flex items-center justify-between text-xs">
-            <span className="text-slate-300">{p.label}</span>
-            <span className="text-slate-500">{p.detail}</span>
+            <span className="text-slate-400">{p.label}</span>
+            <span className="text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>{p.detail}</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct(p.value)}%`, background: color }} />
+          <div className="h-1.5 w-full overflow-hidden bg-white/8">
+            <div className="h-full transition-all duration-700" style={{ width: `${pct(p.value)}%`, background: color }} />
           </div>
         </div>
       ))}
@@ -44,7 +41,6 @@ export function ScoreBars({ parts = [], color = '#38bdf8' }) {
   )
 }
 
-// Small inline button used across pages.
 export function btnStyle(color) {
-  return { background: color, color: '#0b0f1a' }
+  return { background: color, color: '#050505' }
 }

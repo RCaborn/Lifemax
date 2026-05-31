@@ -10,25 +10,40 @@ html, body, #root {
 
 body {
   margin: 0;
-  background: #0b0f1a;
-  color: #e2e8f0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #050505;
+  color: #d0d0d0;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-attachment: fixed;
 }
 
-/* subtle scrollbar */
-* { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
+/* scrollbar */
+* { scrollbar-width: thin; scrollbar-color: #1c1c1c transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-fadeUp { animation: fadeUp .35s ease both; }
+.animate-fadeUp { animation: fadeUp .3s ease both; }
 
+/* Sharp intel card */
 .glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  background: #0d0d0d;
   border: 1px solid rgba(255,255,255,0.08);
-  backdrop-filter: blur(8px);
+}
+
+/* Classified / mission-briefing label */
+.op-label {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #444;
 }
