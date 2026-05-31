@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, monthLabel, daysUntil, todayKey } from '../lib/dates.js'
+import { thisMonth, daysUntil, todayKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
 import ProgressRing from '../components/ProgressRing.jsx'
-import MonthNav from '../components/MonthNav.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
@@ -19,9 +18,8 @@ const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
 
 export default function Overview({ onNavigate }) {
   const { state } = useStore()
-  const [ym, setYm] = useState(thisMonth())
 
-  const ls = lifeScore(state, ym)
+  const ls = lifeScore(state)
   const grade = gradeFor(ls.score)
   const weeklyHistory = weeklyScoreHistory(state)
   const byId = Object.fromEntries(ls.domains.map((d) => [d.id, d]))
@@ -36,7 +34,7 @@ export default function Overview({ onNavigate }) {
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="op-label">{greeting}, {state.profile.name}</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score · {monthLabel(ym)}</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score · This Week</h1>
             <div className="mt-3 flex items-center gap-3">
               <span className="grid h-12 w-12 place-items-center border font-black text-2xl"
                 style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'Courier New, monospace' }}>{grade.letter}</span>
@@ -45,7 +43,9 @@ export default function Overview({ onNavigate }) {
                 <div className="text-sm text-slate-500">{summary(ls)}</div>
               </div>
             </div>
-            <div className="mt-4"><MonthNav ym={ym} onChange={setYm} accent={grade.color} /></div>
+            <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>
+              80% of weekly targets = score 100 · resets Monday
+            </p>
           </div>
           <div className="shrink-0 self-center">
             <ProgressRing value={ls.score} size={150} stroke={12} color={grade.color} label="Life Score" />
@@ -61,32 +61,37 @@ export default function Overview({ onNavigate }) {
 
       {/* Domain cards */}
       <div>
-        <SectionTitle>Domains · {monthLabel(ym)}</SectionTitle>
+        <SectionTitle>Domains · This Week</SectionTitle>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {ORDER.map((id, i) => {
             const meta = DOMAIN_MAP[id]
             const d = byId[id]
+            const isActive = d.active !== false
             return (
               <button key={id} onClick={() => onNavigate(id)}
                 className="glass group rounded-xl p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20 animate-fadeUp"
-                style={{ animationDelay: `${i * 60}ms` }}>
+                style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55 }}>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span className="text-xl">{meta.icon}</span>
                     <span className="font-semibold text-white">{meta.name}</span>
                   </span>
-                  <ProgressRing value={d.score} size={48} stroke={5} color={meta.color} label="" />
+                  <ProgressRing value={isActive ? Math.min(1, d.score / 0.8) : 0} size={48} stroke={5} color={isActive ? meta.color : '#333'} label="" />
                 </div>
-                <div className="mt-3 space-y-1">
-                  {d.parts.slice(0, 3).map((p) => (
-                    <div key={p.label} className="flex items-center gap-2 text-xs">
-                      <span className="w-20 shrink-0 text-slate-500">{p.label}</span>
-                      <span className="h-1 flex-1 overflow-hidden bg-white/8">
-                        <span className="block h-full" style={{ width: `${pct(p.value)}%`, background: meta.color }} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {isActive ? (
+                  <div className="mt-3 space-y-1">
+                    {d.parts.slice(0, 3).map((p) => (
+                      <div key={p.label} className="flex items-center gap-2 text-xs">
+                        <span className="w-20 shrink-0 text-slate-500">{p.label}</span>
+                        <span className="h-1 flex-1 overflow-hidden bg-white/8">
+                          <span className="block h-full transition-all duration-700" style={{ width: `${Math.min(100, pct(p.value / 0.8))}%`, background: meta.color }} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[11px] text-slate-600">Not yet configured → tap to set up</p>
+                )}
               </button>
             )
           })}
@@ -100,11 +105,11 @@ export default function Overview({ onNavigate }) {
           <WeeklyScoreChart data={weeklyHistory} />
         </Card>
         <Card>
-          <SectionTitle>Score breakdown</SectionTitle>
+          <SectionTitle>This week breakdown</SectionTitle>
           <p className="mb-3 text-xs text-slate-600">
-            Each domain is graded against <span className="text-slate-400">your own targets</span> — consistency beats intensity.
+            Bars fill based on <span className="text-slate-400">this week's activity</span>. 80% = full score for each domain.
           </p>
-          <ScoreBars parts={ls.domains.map((d) => ({ label: DOMAIN_MAP[d.id].name, value: d.score, detail: `${pct(d.score)}%` }))} color="#ffffff" />
+          <ScoreBars parts={ls.domains.filter((d) => d.active !== false).map((d) => ({ label: DOMAIN_MAP[d.id].name, value: Math.min(1, d.score / 0.8), detail: `${pct(d.score / 0.8)}%` }))} color="#ffffff" />
         </Card>
       </div>
 
@@ -316,8 +321,8 @@ function QuickWinsPanel() {
 function summary(ls) {
   const p = pct(ls.score)
   const weakest = [...ls.domains].sort((a, b) => a.score - b.score)[0]
-  if (p >= 80) return 'Every domain is firing. Keep the streak alive.'
-  if (p >= 50) return `Solid month. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
+  if (p >= 90) return 'On fire this week. Keep the streak alive.'
+  if (p >= 65) return `Strong week. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
 }
 
