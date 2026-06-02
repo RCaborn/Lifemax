@@ -46,10 +46,16 @@ function ConflictStage({ onClose, sync, toast }) {
 function ConfigStage({ onClose, sync, toast }) {
   const [url, setUrl] = useState('')
   const [key, setKey] = useState('')
+  const [err, setErr] = useState('')
   const save = (e) => {
     e.preventDefault()
-    if (!url.trim() || !key.trim()) return
-    sync.saveConfig(url, key)
+    const trimmedUrl = url.trim()
+    const trimmedKey = key.trim()
+    if (!trimmedUrl || !trimmedKey) return
+    if (!trimmedUrl.startsWith('https://')) { setErr('URL must start with https://'); return }
+    try { new URL(trimmedUrl) } catch { setErr('Please enter a valid project URL (e.g. https://abcd1234.supabase.co)'); return }
+    setErr('')
+    sync.saveConfig(trimmedUrl, trimmedKey)
     toast({ icon: '☁️', title: 'Sync connected', sub: 'Now sign in with your email.', color: '#38bdf8' })
   }
   return (
@@ -65,7 +71,7 @@ function ConfigStage({ onClose, sync, toast }) {
       <form onSubmit={save} className="space-y-3">
         <label className="block">
           <span className="mb-1 block op-label">Project URL</span>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.supabase.co"
+          <input value={url} onChange={(e) => { setUrl(e.target.value); setErr('') }} placeholder="https://xxxx.supabase.co"
             className="sinp" autoFocus />
         </label>
         <label className="block">
@@ -74,6 +80,7 @@ function ConfigStage({ onClose, sync, toast }) {
             className="sinp" />
           <span className="mt-1 block text-[11px] text-slate-600">This key is safe to store on your device — Row Level Security protects your data.</span>
         </label>
+        {err && <p className="text-xs text-rose-400">{err}</p>}
         <button type="submit" className="sbtn-primary">Connect</button>
       </form>
       <style>{styles}</style>
@@ -93,7 +100,15 @@ function SignInStage({ onClose, sync, toast }) {
     if (!email.trim()) return
     setBusy(true); setErr('')
     try { await sync.sendCode(email); setSent(true); toast({ icon: '📧', title: 'Code sent', sub: 'Check your email.', color: '#38bdf8' }) }
-    catch (e) { setErr(e.message || 'Could not send the code.') }
+    catch (ex) {
+      const msg = ex.message || ''
+      if (msg.includes('supabaseUrl') || msg.includes('valid HTTP') || msg.includes('invalid URL') || msg.includes('Failed to fetch')) {
+        sync.clearConfig()
+        setErr('Your project URL is invalid. Re-enter your Supabase URL and key below.')
+      } else {
+        setErr(msg || 'Could not send the code.')
+      }
+    }
     finally { setBusy(false) }
   }
   const verify = async (e) => {
