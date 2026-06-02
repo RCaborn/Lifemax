@@ -10,6 +10,7 @@ import Stakes from './pages/Stakes.jsx'
 import Vices from './pages/Vices.jsx'
 import ThisWeek from './pages/ThisWeek.jsx'
 import WeeklyReview from './pages/WeeklyReview.jsx'
+import SyncModal from './components/SyncModal.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
@@ -18,10 +19,11 @@ const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, bu
 const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' }, review: { name: 'Weekly Review' } }
 
 export default function App() {
-  const { state, actions } = useStore()
+  const { state, actions, sync } = useStore()
   const [route, setRoute] = useState(() => location.hash.replace('#', '') || 'overview')
   const [navOpen, setNavOpen] = useState(false)
   const [installEvent, setInstallEvent] = useState(null)
+  const [showSync, setShowSync] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => { location.hash = route }, [route])
@@ -42,6 +44,9 @@ export default function App() {
     for (const r of due) actions.resolveContract(r.id, r.outcome, r.bonus)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Surface a first-connect data clash immediately so it's never resolved silently.
+  useEffect(() => { if (sync.hasConflict) setShowSync(true) }, [sync.hasConflict])
 
   const valid = route === 'overview' || DOMAIN_MAP[route] || PAGES[route]
   const current = valid ? route : 'overview'
@@ -88,6 +93,15 @@ export default function App() {
                 ⤓ Install
               </button>
             )}
+            <button onClick={() => setShowSync(true)} className="topbtn" title="Cloud sync across devices">
+              <span className="relative">
+                ☁ {sync.session ? 'Synced' : 'Sync'}
+                {sync.configured && (
+                  <span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full"
+                    style={{ background: sync.status === 'error' ? '#f43f5e' : sync.status === 'syncing' ? '#38bdf8' : sync.session ? '#22c55e' : '#eab308' }} />
+                )}
+              </span>
+            </button>
             <button onClick={exportData} className="topbtn" title="Download a backup">⤓ Export</button>
             <button onClick={() => fileRef.current?.click()} className="topbtn" title="Restore from backup">⤴ Import</button>
             <button
@@ -107,6 +121,8 @@ export default function App() {
           LIFEMAX · DATA STORED LOCALLY · {new Date().getFullYear()}
         </footer>
       </div>
+
+      {showSync && <SyncModal onClose={() => setShowSync(false)} />}
 
       <style>{`.topbtn{border-radius:4px;border:1px solid rgba(255,255,255,.1);background:transparent;padding:.3rem .55rem;font-size:.7rem;color:#555;transition:.15s;font-family:'Courier New',monospace;letter-spacing:.05em;text-transform:uppercase}.topbtn:hover{border-color:rgba(255,255,255,.3);color:#fff}`}</style>
     </div>

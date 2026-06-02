@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
 import { todayKey } from './dates.js'
+import * as sync from './sync.js'
 
 const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
@@ -35,6 +36,21 @@ function migrate(state) {
   return state
 }
 
+// Does this state contain anything the user actually logged (vs. a fresh seed)?
+// Used to avoid silently clobbering real data on a device's first sync.
+function hasUserData(s) {
+  if (!s) return false
+  if (Object.keys(s.fitness?.days || {}).length || Object.keys(s.study?.days || {}).length) return true
+  if ((s.money?.tx?.length) || (s.money?.incomeSources?.length)) return true
+  if ((s.career?.jobs?.length) || (s.career?.skills?.length)) return true
+  if (s.business?.projects?.length) return true
+  if (s.reviews?.length) return true
+  if (Object.keys(s.quickWins?.days || {}).length) return true
+  if (s.vices?.ledger?.length) return true
+  if (s.stakes?.contracts?.length) return true
+  return [s.fitness, s.study, s.career, s.business].reduce((n, d) => n + (d?.todos?.length || 0), 0) > 0
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY)
@@ -50,6 +66,16 @@ export function StoreProvider({ children }) {
   const [state, setState] = useState(load)
   const timer = useRef(null)
 
+  // --- Cloud sync (optional) ---
+  const [session, setSession] = useState(null)
+  const [syncStatus, setSyncStatus] = useState(sync.isSyncConfigured() ? 'idle' : 'off') // off|idle|syncing|error
+  const [conflict, setConflict] = useState(null) // first-connect clash: { remoteData, remoteAt }
+  const stateRef = useRef(state)
+  const applyingRemote = useRef(false) // suppresses the echo push when we adopt a remote blob
+  const pushTimer = useRef(null)
+  useEffect(() => { stateRef.current = state }, [state])
+
+  // Local cache — always on, keeps the app instant + offline-capable.
   useEffect(() => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -57,6 +83,64 @@ export function StoreProvider({ children }) {
     }, 200)
     return () => clearTimeout(timer.current)
   }, [state])
+
+  // Pull the remote blob and adopt it if it's newer than what we last saw.
+  const pullAndMaybeAdopt = useCallback(async () => {
+    if (!sync.isSyncConfigured()) return
+    try {
+      setSyncStatus('syncing')
+      const remote = await sync.pullState()
+      if (remote) {
+        if (remote.updatedAt !== sync.getLastRemoteAt() && remote.data?.version === 2) {
+          // First sync on this device AND we already have local data → don't guess,
+          // ask the user which copy to keep.
+          if (!sync.getLastRemoteAt() && hasUserData(stateRef.current)) {
+            setConflict({ remoteData: remote.data, remoteAt: remote.updatedAt })
+            setSyncStatus('idle')
+            return
+          }
+          applyingRemote.current = true
+          setState(migrate(structuredClone(remote.data)))
+          sync.setLastRemoteAt(remote.updatedAt)
+        }
+      } else {
+        // First device for this account — seed the remote with what we have.
+        const at = await sync.pushState(stateRef.current)
+        sync.setLastRemoteAt(at)
+      }
+      setSyncStatus('idle')
+    } catch { setSyncStatus('error') }
+  }, [])
+
+  // Establish session, listen for auth changes, and re-pull on focus / reconnect.
+  useEffect(() => {
+    if (!sync.isSyncConfigured()) return
+    let cancelled = false
+    let unsub = () => {}
+    sync.getSession().then((s) => { if (!cancelled) { setSession(s); if (s) pullAndMaybeAdopt() } })
+    sync.onAuthChange((s) => { setSession(s); if (s) pullAndMaybeAdopt() })
+      .then((fn) => { if (cancelled) fn(); else unsub = fn })
+    const onWake = () => { if (sync.isSyncConfigured()) pullAndMaybeAdopt() }
+    window.addEventListener('focus', onWake)
+    window.addEventListener('online', onWake)
+    return () => { cancelled = true; unsub(); window.removeEventListener('focus', onWake); window.removeEventListener('online', onWake) }
+  }, [pullAndMaybeAdopt])
+
+  // Push local edits up (debounced). Skips the render that came from adopting remote.
+  useEffect(() => {
+    if (applyingRemote.current) { applyingRemote.current = false; return }
+    if (!session || !sync.isSyncConfigured()) return
+    clearTimeout(pushTimer.current)
+    pushTimer.current = setTimeout(async () => {
+      try {
+        setSyncStatus('syncing')
+        const at = await sync.pushState(stateRef.current)
+        sync.setLastRemoteAt(at)
+        setSyncStatus('idle')
+      } catch { setSyncStatus('error') }
+    }, 1200)
+    return () => clearTimeout(pushTimer.current)
+  }, [state, session])
 
   const update = useCallback((fn) => {
     setState((s) => { const d = structuredClone(s); fn(d); return d })
@@ -192,7 +276,36 @@ export function StoreProvider({ children }) {
     deleteBusinessTodo: (id) => update((d) => { d.business.todos = d.business.todos.filter((x) => x.id !== id) }),
   }
 
-  return <StoreCtx.Provider value={{ state, actions }}>{children}</StoreCtx.Provider>
+  const resolveConflict = (choice) => {
+    if (!conflict) return
+    if (choice === 'remote') {
+      applyingRemote.current = true
+      setState(migrate(structuredClone(conflict.remoteData)))
+      sync.setLastRemoteAt(conflict.remoteAt)
+    } else {
+      // Keep this device's data: push it up as the new source of truth.
+      sync.pushState(stateRef.current).then((at) => sync.setLastRemoteAt(at)).catch(() => {})
+    }
+    setConflict(null)
+  }
+
+  const syncApi = {
+    configured: sync.isSyncConfigured(),
+    configSource: sync.getSyncConfig()?.source || null,
+    session,
+    email: session?.user?.email || null,
+    status: session ? syncStatus : (sync.isSyncConfigured() ? 'idle' : 'off'),
+    hasConflict: !!conflict,
+    saveConfig: (url, key) => { sync.setSyncConfig(url, key); setSyncStatus('idle') },
+    clearConfig: () => { sync.clearSyncConfig(); setSession(null); setConflict(null); setSyncStatus('off') },
+    sendCode: (email) => sync.sendCode(email),
+    verifyCode: async (email, code) => { const s = await sync.verifyCode(email, code); setSession(s); await pullAndMaybeAdopt(); return s },
+    signOut: async () => { await sync.signOut(); setSession(null); setConflict(null); setSyncStatus(sync.isSyncConfigured() ? 'idle' : 'off') },
+    syncNow: () => pullAndMaybeAdopt(),
+    resolveConflict,
+  }
+
+  return <StoreCtx.Provider value={{ state, actions, sync: syncApi }}>{children}</StoreCtx.Provider>
 }
 
 export function useStore() {
