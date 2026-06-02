@@ -49,8 +49,11 @@ Lifemax signs you in with a 6-digit email code — no passwords, no clicking lin
 wrong device. Tell Supabase to put the code in the email:
 
 1. Go to **Authentication → Emails → Templates** (some dashboards: **Auth → Email Templates**).
-2. Select the **Magic Link** template.
-3. Replace its body with:
+2. You need to edit **TWO** templates — **Magic Link** *and* **Confirm signup**. (Your
+   first-ever sign-in uses the *Confirm signup* template; every sign-in after uses
+   *Magic Link*. If you only edit one, your first login will email you a confirmation
+   *link* instead of a code.)
+3. For **each** of those two templates, replace its body with:
 
    ```html
    <h2>Your Lifemax sign-in code</h2>
@@ -59,7 +62,14 @@ wrong device. Tell Supabase to put the code in the email:
    <p>It expires in an hour. If you didn't request it, ignore this email.</p>
    ```
 
-4. Save.
+4. Save each one.
+
+> The magic ingredient is `{{ .Token }}` — that renders the 6-digit code. The default
+> templates use `{{ .ConfirmationURL }}` (a link) instead, which is what you're replacing.
+>
+> **Alternative:** if you'd rather not edit the Confirm signup template, go to
+> **Authentication → Providers → Email** and turn **off** "Confirm email". New users then
+> skip straight to the Magic Link (code) template.
 
 > While you're in **Authentication → Providers → Email**, make sure **Email** is enabled
 > (it is by default). You do **not** need to configure any redirect URLs — the code flow
@@ -106,6 +116,9 @@ URL, key, and email. After you sign in, that device pulls your data automaticall
 - **"That code didn't work"** — codes expire after ~1 hour and are single-use; send a
   fresh one. Make sure you edited the Magic Link template (step 3) so the email actually
   contains a code.
+- **Email has a "Confirm email address" link, not a code** — you only edited the Magic
+  Link template. Your *first* sign-in uses the **Confirm signup** template; edit that one
+  too (step 3), or turn off "Confirm email" under Auth → Providers → Email.
 - **No email arrives** — check spam. Supabase's built-in email has a low daily limit on
   the free tier; for heavy use, add a custom SMTP provider under Auth settings.
 - **Nothing syncs** — open **☁ Sync**; if the dot is red, you're signed in but the table
