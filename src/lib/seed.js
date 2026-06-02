@@ -51,16 +51,21 @@ function seedQuickWins() {
 function seedVices() {
   return {
     earnRates: null,
-    debtPenaltyRate: 0.5,
     vices: [
-      { id: rid(), name: 'Night out', emoji: '🍺', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true },
-      { id: rid(), name: 'Takeaway', emoji: '🍕', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true },
-      { id: rid(), name: 'Gaming evening', emoji: '🎮', description: 'A full evening of games', pointCost: 25, cooldownDays: 2, category: 'entertainment', isActive: true },
-      { id: rid(), name: 'Lie-in', emoji: '😴', description: 'No alarm, sleep in', pointCost: 20, cooldownDays: 5, category: 'other', isActive: true },
+      { id: rid(), name: 'Night out', emoji: '🍺', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true, substitution: 'Sparkling water + early night' },
+      { id: rid(), name: 'Takeaway', emoji: '🍕', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true, substitution: '' },
+      { id: rid(), name: 'Gaming evening', emoji: '🎮', description: 'A full evening of games', pointCost: 25, cooldownDays: 2, category: 'entertainment', isActive: true, substitution: '' },
+      { id: rid(), name: 'Lie-in', emoji: '😴', description: 'No alarm, sleep in', pointCost: 20, cooldownDays: 5, category: 'other', isActive: true, substitution: '' },
     ],
     ledger: [],
   }
 }
+
+// Weekly review reflections + the 1–3 active priorities for the current week.
+// Focus.weekKey is the Monday date key (toKey(startOfWeek())); priorities/ticked
+// reset whenever the week rolls over.
+function seedReviews() { return [] }
+function seedFocus() { return { weekKey: '', priorities: [], ticked: [] } }
 
 export function buildSeedState() {
   return {
@@ -74,5 +79,7 @@ export function buildSeedState() {
     stakes: seedStakes(),
     vices: seedVices(),
     quickWins: seedQuickWins(),
+    reviews: seedReviews(),
+    focus: seedFocus(),
   }
 }

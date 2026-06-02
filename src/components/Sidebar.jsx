@@ -4,6 +4,7 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
   const items = [
     { id: 'overview', name: 'Overview', icon: '🧭' },
     { id: 'thisweek', name: 'This Week', icon: '📋', color: '#fff' },
+    { id: 'review', name: 'Weekly Review', icon: '📝', color: '#fff' },
     ...DOMAINS,
     { id: 'stakes', name: 'Stakes', icon: '🎯', color: '#f43f5e' },
     { id: 'vices', name: 'Vices', icon: '🍺', color: '#ec4899' },

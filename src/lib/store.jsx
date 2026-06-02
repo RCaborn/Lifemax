@@ -16,9 +16,22 @@ function migrate(state) {
   if (!state.business.todos) state.business.todos = []
   if (!state.business.projects) state.business.projects = []
   if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
-  if (state.vices.debtPenaltyRate == null) state.vices.debtPenaltyRate = seed.vices.debtPenaltyRate
   if (!state.quickWins) state.quickWins = seed.quickWins
   if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
+  // Weekly review + focus priorities
+  if (!state.reviews) state.reviews = seed.reviews
+  if (!state.focus) state.focus = seed.focus
+  if (!state.focus.ticked) state.focus.ticked = []
+  // Retire the old vice-debt mechanism: drop the penalty-rate setting and
+  // strip standalone penalty ledger rows (real vice spends keep a viceId).
+  if (state.vices) {
+    delete state.vices.debtPenaltyRate
+    if (Array.isArray(state.vices.ledger)) {
+      state.vices.ledger = state.vices.ledger
+        .filter((e) => e.type !== 'spend' || e.viceId)
+        .map((e) => { if (e.type === 'spend') delete e.penalty; return e })
+    }
+  }
   return state
 }
 
@@ -72,11 +85,10 @@ export function StoreProvider({ children }) {
     addVice: (v) => update((d) => { d.vices.vices.push({ id: rid(), emoji: '🎁', cooldownDays: 0, category: 'other', isActive: true, ...v, pointCost: Number(v.pointCost) || 0 }) }),
     updateVice: (id, patch) => update((d) => { const v = d.vices.vices.find((x) => x.id === id); if (v) Object.assign(v, patch) }),
     deleteVice: (id) => update((d) => { d.vices.vices = d.vices.vices.filter((x) => x.id !== id) }),
-    redeemVice: (vice, penalty = 0) => update((d) => {
-      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, penalty: Number(penalty) || 0, date: todayKey() })
+    redeemVice: (vice) => update((d) => {
+      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, date: todayKey() })
     }),
     setEarnRates: (rates) => update((d) => { d.vices.earnRates = rates }),
-    setDebtPenaltyRate: (rate) => update((d) => { d.vices.debtPenaltyRate = rate }),
 
     // ---------- Fitness ----------
     setFitnessDay: (dateKey, patch) => update((d) => {
@@ -130,6 +142,21 @@ export function StoreProvider({ children }) {
     }),
     addQuickWin: (item) => update((d) => { d.quickWins.items.push({ id: rid(), ...item }) }),
     deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
+    // Implementation intention: "After [cue], I will [win]." (Gollwitzer 2006)
+    setQuickWinCue: (id, cue) => update((d) => { const w = d.quickWins.items.find((x) => x.id === id); if (w) w.cue = cue }),
+
+    // ---------- Weekly review + focus ----------
+    addReview: (r) => update((d) => {
+      d.reviews.push({ id: rid(), ts: todayKey(), ...r })
+    }),
+    setFocus: (weekKey, priorities) => update((d) => {
+      d.focus = { weekKey, priorities: priorities.filter((p) => p && p.trim()).slice(0, 3), ticked: [] }
+    }),
+    toggleFocusPriority: (index) => update((d) => {
+      const t = (d.focus.ticked ||= [])
+      const i = t.indexOf(index)
+      if (i >= 0) t.splice(i, 1); else t.push(index)
+    }),
 
     // ---------- Business / side-hustle projects ----------
     addProject: (p) => update((d) => { d.business.projects.push({ id: rid(), emoji: '🚀', status: 'building', createdAt: todayKey(), revenue: [], milestones: [], ...p }) }),

@@ -47,6 +47,8 @@ export default function Fitness() {
   const mAvgSteps = stepDays.length ? Math.round(stepDays.reduce((a, d) => a + d.steps, 0) / stepDays.length) : 0
   const mWakes = mDays.map((d) => d.wake).filter(Boolean)
   const mAvgWake = mWakes.length ? minToTime(mWakes.reduce((a, w) => a + timeToMin(w), 0) / mWakes.length) : null
+  // Graceful consistency: days you trained at all this month (no punitive streak).
+  const mActiveDays = mDays.filter((d) => (d.runs || 0) > 0 || (d.workouts || 0) > 0 || d.stretch || (d.steps || 0) > 0 || d.wake).length
 
   const stepsLineData = buildStepsLineData(f)
 
@@ -102,7 +104,7 @@ export default function Fitness() {
       </Card>
 
       <Card>
-        <SectionTitle right={<span className="text-xs text-slate-500">Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
+        <SectionTitle right={<span className="text-xs text-slate-500">Active {mActiveDays} days · Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <div className="mb-4 grid grid-cols-2 gap-3">

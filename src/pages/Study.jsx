@@ -29,6 +29,8 @@ export default function Study() {
 
   const mkeys = monthDayKeys(ym)
   const hoursByWeek = buildWeekHours(mkeys, s.days)
+  // Graceful consistency: days you showed up at all this month (no punitive streak).
+  const mActiveDays = mkeys.filter((k) => { const d = s.days[k]; return d && ((d.pages || 0) > 0 || (d.hours || 0) > 0) }).length
 
   return (
     <div className="space-y-6">
@@ -83,7 +85,7 @@ export default function Study() {
       </div>
 
       <Card>
-        <SectionTitle right={<span className="text-xs text-slate-500">Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
+        <SectionTitle right={<span className="text-xs text-slate-500">Active {mActiveDays} days · Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <p className="mb-2 text-xs text-slate-500">Pages read each day</p>

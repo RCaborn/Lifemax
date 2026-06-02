@@ -9,12 +9,13 @@ import Business from './pages/Business.jsx'
 import Stakes from './pages/Stakes.jsx'
 import Vices from './pages/Vices.jsx'
 import ThisWeek from './pages/ThisWeek.jsx'
+import WeeklyReview from './pages/WeeklyReview.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
 
-const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices, thisweek: ThisWeek }
-const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' } }
+const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices, thisweek: ThisWeek, review: WeeklyReview }
+const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' }, review: { name: 'Weekly Review' } }
 
 export default function App() {
   const { state, actions } = useStore()

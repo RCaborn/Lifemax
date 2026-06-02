@@ -118,36 +118,15 @@ export function totalEarned(state) {
 export function spends(state) {
   return (state.vices?.ledger || []).filter((e) => e.type === 'spend')
 }
-// A spend costs its base points PLUS any debt penalty charged at redeem time.
 export function totalSpent(state) {
-  return spends(state).reduce((a, e) => a + e.points + (e.penalty || 0), 0)
+  return spends(state).reduce((a, e) => a + e.points, 0)
 }
 
-// Balance can go NEGATIVE — that's vice debt. You took a reward before earning it.
+// Balance = earned minus spent. A reward only unlocks once you've genuinely
+// earned it — there's no borrowing against future effort, so the points stay a
+// real commitment device rather than a credit line that can spiral into debt.
 export function balance(state) {
   return totalEarned(state) - totalSpent(state)
-}
-
-// --- Vice debt ---------------------------------------------------------------
-// Redeeming a vice you can't afford is allowed, but the shortfall is taxed:
-// you're charged extra points on top, so digging in deeper hurts more.
-export const DEFAULT_DEBT_PENALTY_RATE = 0.5
-
-export function debtPenaltyRate(state) {
-  const r = state.vices?.debtPenaltyRate
-  return r == null ? DEFAULT_DEBT_PENALTY_RATE : r
-}
-
-// How many extra points a vice would cost right now if taken on credit.
-export function debtPenaltyFor(state, vice) {
-  const bal = balance(state)
-  const shortfall = Math.max(0, (vice.pointCost || 0) - bal)
-  return Math.ceil(shortfall * debtPenaltyRate(state))
-}
-
-// Total outstanding debt (0 when you're in the black).
-export function debt(state) {
-  return Math.max(0, -balance(state))
 }
 
 // Points earned within a given "YYYY-MM" month.
@@ -170,19 +149,10 @@ export function fullLedger(state) {
     }
     return { ...e, type: 'earn', signed: e.points, label, icon }
   })
-  const spent = []
-  for (const e of spends(state)) {
-    spent.push({
-      date: e.date, type: 'spend', signed: -e.points, points: e.points,
-      label: e.viceName || 'Vice redeemed', icon: e.icon || '🎁',
-    })
-    if (e.penalty) {
-      spent.push({
-        date: e.date, type: 'spend', signed: -e.penalty, points: e.penalty,
-        label: `Debt penalty${e.viceName ? ` · ${e.viceName}` : ''}`, icon: '⚠️',
-      })
-    }
-  }
+  const spent = spends(state).map((e) => ({
+    date: e.date, type: 'spend', signed: -e.points, points: e.points,
+    label: e.viceName || 'Vice redeemed', icon: e.icon || '🎁',
+  }))
   return [...earned, ...spent].sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 

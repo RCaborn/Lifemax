@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, todayKey } from '../lib/dates.js'
+import { thisMonth, daysUntil, todayKey, weekKeyOf, lastNDays } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
@@ -52,6 +52,8 @@ export default function Overview({ onNavigate }) {
           </div>
         </div>
       </div>
+
+      <FocusWidget onNavigate={onNavigate} />
 
       <TodayPanel />
 
@@ -228,14 +230,28 @@ function QuickWinsPanel() {
   const [newName, setNewName] = useState('')
   const [newEmoji, setNewEmoji] = useState('⚡')
   const [newPts, setNewPts] = useState('1')
+  const [cueFor, setCueFor] = useState(null)
+  const [cueText, setCueText] = useState('')
 
   const today = todayKey()
   const items = state.quickWins?.items || []
   const todayWins = state.quickWins?.days?.[today] || []
+  const days = state.quickWins?.days || {}
+
+  // Graceful consistency: "active X of last 14 days" — no punitive streak reset.
+  const activeDays = lastNDays(14).filter((k) => (days[k]?.length || 0) > 0).length
 
   const todayPts = items
     .filter((item) => todayWins.includes(item.id))
     .reduce((a, item) => a + (item.points || 1), 0)
+
+  const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
+  const saveCue = (e) => {
+    e.preventDefault()
+    actions.setQuickWinCue(cueFor, cueText.trim())
+    setCueFor(null); setCueText('')
+  }
+  const cueItem = items.find((i) => i.id === cueFor)
 
   const toggle = (item) => {
     const wasDone = todayWins.includes(item.id)
@@ -284,14 +300,41 @@ function QuickWinsPanel() {
                   {done ? '✓' : `+${item.points}`}
                 </span>
               </button>
-              <button onClick={() => actions.deleteQuickWin(item.id)}
-                className="absolute -right-1.5 -top-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[10px] text-slate-600 hover:text-rose-400">
-                ✕
-              </button>
+              {item.cue && (
+                <p className="mt-1 px-1 text-[10px] leading-tight text-slate-600">
+                  <span className="text-slate-500">After</span> {item.cue}
+                </p>
+              )}
+              <div className="absolute -right-1.5 -top-1.5 hidden group-hover:flex gap-0.5">
+                <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
+                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[9px] text-slate-600 hover:text-white">
+                  ✎
+                </button>
+                <button onClick={() => actions.deleteQuickWin(item.id)}
+                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[10px] text-slate-600 hover:text-rose-400">
+                  ✕
+                </button>
+              </div>
             </div>
           )
         })}
       </div>
+
+      {cueItem && (
+        <form onSubmit={saveCue} className="mt-3 border-t border-white/8 pt-3">
+          <label className="mb-1.5 block op-label">When/where will you do "{cueItem.name}"?</label>
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-xs text-slate-500">After</span>
+            <input value={cueText} onChange={(e) => setCueText(e.target.value)} autoFocus
+              placeholder="e.g. my morning coffee / lunch / brushing teeth"
+              className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+            <span className="shrink-0 text-xs text-slate-500">→ {cueItem.emoji}</span>
+            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: 'Courier New, monospace' }}>Save</button>
+            <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
+          </div>
+          <p className="mt-1.5 text-[11px] text-slate-600">Anchoring a habit to an existing routine (an "if-then" plan) is one of the most reliable ways to make it stick.</p>
+        </form>
+      )}
 
       {adding && (
         <form onSubmit={addWin} className="mt-3 flex gap-2 items-center border-t border-white/8 pt-3">
@@ -311,9 +354,69 @@ function QuickWinsPanel() {
         </form>
       )}
 
-      <p className="mt-2.5 text-[11px] text-slate-600">
-        Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
-      </p>
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-slate-600">
+          Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
+        </p>
+        <span className="text-[11px] text-slate-500" style={{ fontFamily: 'Courier New, monospace' }}>
+          Active {activeDays}/14 days
+        </span>
+      </div>
+    </Card>
+  )
+}
+
+function FocusWidget({ onNavigate }) {
+  const { state, actions } = useStore()
+  const wk = weekKeyOf()
+  const focus = state.focus || { weekKey: '', priorities: [], ticked: [] }
+  const current = focus.weekKey === wk && (focus.priorities?.length > 0)
+  const ticked = focus.ticked || []
+
+  if (!current) {
+    return (
+      <button onClick={() => onNavigate('review')}
+        className="glass group flex w-full items-center justify-between gap-4 rounded-xl border-dashed border-white/15 p-5 text-left transition hover:border-white/30">
+        <div className="flex items-center gap-4">
+          <span className="grid h-11 w-11 place-items-center border border-white/10 text-xl">🎯</span>
+          <div>
+            <div className="op-label">This week's focus</div>
+            <div className="text-sm text-slate-400">Not set — run a 5-min weekly review to pick your 1–3 priorities.</div>
+          </div>
+        </div>
+        <span className="shrink-0 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'Courier New, monospace' }}>
+          Set focus →
+        </span>
+      </button>
+    )
+  }
+
+  const done = focus.priorities.filter((_, i) => ticked.includes(i)).length
+
+  return (
+    <Card>
+      <SectionTitle right={
+        <span className="flex items-center gap-3">
+          <span className="op-label">{done}/{focus.priorities.length} done</span>
+          <button onClick={() => onNavigate('review')} className="op-label hover:text-white transition">Edit</button>
+        </span>
+      }>
+        🎯 This week's focus
+      </SectionTitle>
+      <div className="space-y-1.5">
+        {focus.priorities.map((p, i) => {
+          const on = ticked.includes(i)
+          return (
+            <button key={i} onClick={() => actions.toggleFocusPriority(i)}
+              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.06]">
+              <span className="grid h-5 w-5 shrink-0 place-items-center border text-[11px] transition"
+                style={{ borderColor: on ? '#fff' : 'rgba(255,255,255,.18)', background: on ? '#fff' : 'transparent', color: on ? '#000' : 'transparent' }}>✓</span>
+              <span className={`flex-1 text-sm ${on ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{p}</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
     </Card>
   )
 }
@@ -321,7 +424,7 @@ function QuickWinsPanel() {
 function summary(ls) {
   const p = pct(ls.score)
   const weakest = [...ls.domains].sort((a, b) => a.score - b.score)[0]
-  if (p >= 90) return 'On fire this week. Keep the streak alive.'
+  if (p >= 90) return 'On fire this week. Stay consistent.'
   if (p >= 65) return `Strong week. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
 }
