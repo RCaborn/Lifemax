@@ -172,6 +172,9 @@ export function StoreProvider({ children }) {
     redeemVice: (vice) => update((d) => {
       d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: Number(vice.pointCost) || 0, date: todayKey() })
     }),
+    logViceUnearned: (vice) => update((d) => {
+      d.vices.ledger.push({ id: rid(), type: 'spend', viceId: vice.id, viceName: vice.name, icon: vice.emoji, points: 0, unearned: true, date: todayKey() })
+    }),
     setEarnRates: (rates) => update((d) => { d.vices.earnRates = rates }),
 
     // ---------- Fitness ----------
