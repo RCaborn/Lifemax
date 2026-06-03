@@ -182,7 +182,7 @@ function LedgerView({ state }) {
             <span>{r.icon}</span>
             <span className="w-14 shrink-0 text-xs text-slate-600" style={{ fontFamily: MONO }}>{r.date?.slice(5)}</span>
             <span className="flex-1 truncate text-slate-400">{r.label}</span>
-            <span className="font-semibold" style={{ color: r.unearned ? '#555' : r.signed >= 0 ? '#fff' : SPEND, fontFamily: MONO }}>{r.unearned ? '±0' : r.signed >= 0 ? '+' : ''}{r.unearned ? '' : r.signed}</span>
+            <span className="font-semibold" style={{ color: r.signed >= 0 ? '#fff' : SPEND, fontFamily: MONO, opacity: r.unearned ? 0.6 : 1 }}>{r.signed >= 0 ? '+' : ''}{r.signed}</span>
           </div>
         ))}
       </div>
@@ -251,9 +251,16 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
         <div className="text-5xl">{vice.emoji}</div>
 
         {unearned ? (
-          <div className="mt-4 border border-white/10 bg-white/[0.03] px-4 py-3 text-left">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500" style={{ fontFamily: MONO }}>Honest tracking</p>
-            <p className="mt-1 text-sm text-slate-300">This won't spend any points — it just records that it happened. No spiral, no penalty. Log it and move on.</p>
+          <div className="mt-4 space-y-3">
+            <div className="border border-white/10 bg-white/[0.03] px-4 py-3 text-left">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500" style={{ fontFamily: MONO }}>Points still come off</p>
+              <p className="mt-1 text-sm text-slate-300">Full cost deducted — that's the accountability. No extra penalty on top. Balance goes negative; earn your way back.</p>
+            </div>
+            <p className="text-sm text-slate-400">Spend <span className="font-bold text-white" style={{ fontFamily: MONO }}>{vice.pointCost} pts</span> on {vice.name}?</p>
+            <div className="flex justify-center gap-6 text-sm" style={{ fontFamily: MONO }}>
+              <div><div className="op-label">Now</div><div className="font-semibold text-white">{bal}</div></div>
+              <div><div className="op-label">After</div><div className="font-semibold" style={{ color: bal - vice.pointCost < 0 ? '#f43f5e' : '#fff' }}>{bal - vice.pointCost}</div></div>
+            </div>
           </div>
         ) : (
           <>
@@ -277,7 +284,7 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
         <button onClick={onConfirm}
           className="mt-5 w-full rounded py-2 font-semibold uppercase tracking-wider transition"
           style={{ fontFamily: MONO, background: unearned ? 'rgba(255,255,255,.1)' : ACCENT, color: unearned ? '#aaa' : '#000' }}>
-          {unearned ? 'Log it — no points spent' : 'Confirm — I earned this 🎉'}
+          {unearned ? `Log it — ${vice.pointCost} pts` : 'Confirm — I earned this 🎉'}
         </button>
       </div>
     </Modal>

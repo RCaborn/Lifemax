@@ -151,7 +151,7 @@ export function fullLedger(state) {
   })
   const spent = spends(state).map((e) => ({
     date: e.date, type: 'spend', signed: -e.points, points: e.points, unearned: e.unearned,
-    label: (e.unearned ? '(unearned) ' : '') + (e.viceName || 'Vice redeemed'), icon: e.icon || '🎁',
+    label: (e.unearned ? '(unearned) ' : '') + (e.viceName || 'Vice redeemed'), icon: e.unearned ? '⚠️' : (e.icon || '🎁'),
   }))
   return [...earned, ...spent].sort((a, b) => (a.date < b.date ? 1 : -1))
 }
