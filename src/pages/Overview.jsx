@@ -248,7 +248,7 @@ function QuickWinsPanel() {
     .reduce((a, item) => a + (item.points || 1), 0)
 
   // Habit-tracker strip: today first (always visible), scrolling right reveals history.
-  const track = [...lastNDays(28)].reverse()
+  const track = [...lastNDays(35)].reverse()
 
   const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
   const saveCue = (e) => {
@@ -329,21 +329,17 @@ function QuickWinsPanel() {
             )}
 
             <div className="mt-3 overflow-x-auto pb-1">
-              <div className="inline-flex items-center gap-1.5" style={{ minWidth: 'max-content' }}>
+              <div className="inline-flex items-center gap-1" style={{ minWidth: 'max-content' }}>
                 {track.map((k, i) => {
                   const done = (days[k] || []).includes(item.id)
                   const isToday = k === today
                   return (
                     <button key={k} onClick={() => toggle(item, k)} title={k}
-                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full transition hover:border-white/30 ${(i + 1) % 7 === 0 ? 'mr-2' : ''}`}
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full transition hover:opacity-70 ${(i + 1) % 7 === 0 ? 'mr-1.5' : ''}`}
                       style={{
-                        background: done ? '#ffffff' : 'rgba(255,255,255,0.02)',
-                        border: `1.5px solid ${done ? '#ffffff' : isToday ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)'}`,
-                      }}>
-                      {done
-                        ? <Check size={12} color="#050505" />
-                        : <span className="text-[9px]" style={{ fontFamily: 'var(--font-mono)', color: isToday ? '#fff' : '#3a3a3a' }}>{Number(k.slice(8))}</span>}
-                    </button>
+                        background: done ? '#ffffff' : 'rgba(255,255,255,0.08)',
+                        boxShadow: isToday ? '0 0 0 1.5px rgba(255,255,255,0.4)' : 'none',
+                      }} />
                   )
                 })}
               </div>
