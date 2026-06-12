@@ -222,6 +222,14 @@ function quickWinsWeekRate(state) {
   return clamp01(completions / (DAILY_TARGET * 7))
 }
 
+// Fraction of the last 7 days with a journal rating logged.
+function journalWeekRate(state) {
+  const days = state.journal?.days || {}
+  const keys = thisWeekKeys()
+  const logged = keys.filter((k) => days[k]?.mood != null).length
+  return clamp01(logged / keys.length)
+}
+
 // The headline Life Score — rolling 7-day, scaled so FULL_AT effort = 100.
 // Only active (configured) domains count toward the average.
 export function lifeScore(state) {
@@ -231,7 +239,9 @@ export function lifeScore(state) {
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
   // Quick wins: hitting 3/day all week adds up to +5 display points. Never dominates.
   const qwBonus = quickWinsWeekRate(state) * 0.05
-  const score = Math.min(1, (domainAvg + qwBonus) / FULL_AT)
+  // Journal: a full week of entries adds up to +3 display points.
+  const journalBonus = journalWeekRate(state) * 0.03
+  const score = Math.min(1, (domainAvg + qwBonus + journalBonus) / FULL_AT)
   return { score, domains }
 }
 

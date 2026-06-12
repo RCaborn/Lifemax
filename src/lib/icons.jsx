@@ -7,7 +7,7 @@ import {
   Gauge, AlarmClock, Timer, GraduationCap, Sparkles, TriangleAlert,
   Trophy, Skull, Banknote, Smartphone, Cloud, Mail, RefreshCw, Activity, CircleCheck,
   Briefcase, Lightbulb, Store, Globe, Code, Megaphone, Package, Coins, Camera,
-  Palette, Laptop, Gem, Building2, ShoppingCart,
+  Palette, Laptop, Gem, Building2, ShoppingCart, Feather,
 } from 'lucide-react'
 
 // Icon names usable anywhere an "icon" is stored as data: quick wins, vices,
@@ -23,7 +23,7 @@ export const ICONS = {
   Gauge, AlarmClock, Timer, GraduationCap, Sparkles, TriangleAlert,
   Trophy, Skull, Banknote, Smartphone, Cloud, Mail, RefreshCw, Activity, CircleCheck,
   Briefcase, Lightbulb, Store, Globe, Code, Megaphone, Package, Coins, Camera,
-  Palette, Laptop, Gem, Building2, ShoppingCart,
+  Palette, Laptop, Gem, Building2, ShoppingCart, Feather,
 }
 
 export const VICE_ICONS = [

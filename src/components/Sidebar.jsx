@@ -6,6 +6,7 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
     { id: 'overview', name: 'Overview', icon: 'LayoutDashboard' },
     { id: 'thisweek', name: 'This Week', icon: 'CalendarDays', color: '#fff' },
     { id: 'review', name: 'Weekly Review', icon: 'NotebookPen', color: '#fff' },
+    { id: 'journal', name: 'Journal', icon: 'Feather', color: '#06b6d4' },
     ...DOMAINS,
     { id: 'stakes', name: 'Stakes', icon: 'Target', color: '#f43f5e' },
     { id: 'vices', name: 'Vices', icon: 'Beer', color: '#ec4899' },

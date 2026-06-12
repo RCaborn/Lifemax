@@ -11,13 +11,14 @@ import Stakes from './pages/Stakes.jsx'
 import Vices from './pages/Vices.jsx'
 import ThisWeek from './pages/ThisWeek.jsx'
 import WeeklyReview from './pages/WeeklyReview.jsx'
+import Journal from './pages/Journal.jsx'
 import SyncModal from './components/SyncModal.jsx'
 import { DOMAIN_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
 
-const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices, thisweek: ThisWeek, review: WeeklyReview }
-const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' }, review: { name: 'Weekly Review' } }
+const PAGES = { money: Money, fitness: Fitness, study: Study, career: Career, business: Business, stakes: Stakes, vices: Vices, thisweek: ThisWeek, review: WeeklyReview, journal: Journal }
+const EXTRA = { stakes: { name: 'Stakes' }, vices: { name: 'Vices' }, thisweek: { name: 'This Week' }, review: { name: 'Weekly Review' }, journal: { name: 'Journal' } }
 
 export default function App() {
   const { state, actions, sync } = useStore()

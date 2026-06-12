@@ -21,6 +21,7 @@ export const DEFAULT_EARN_RATES = {
   study_hour: 3,   // per hour studied
   career_hour: 3,  // per skill hour logged
   milestone: 8,    // per side-hustle milestone shipped
+  journal: 3,      // per day's journal entry
 }
 
 export const EARN_LABELS = {
@@ -34,6 +35,7 @@ export const EARN_LABELS = {
   career_hour: { label: 'Skill hour', icon: 'GraduationCap', domain: 'career' },
   milestone: { label: 'Milestone shipped', icon: 'Flag', domain: 'business' },
   stake: { label: 'Stake won', icon: 'Target', domain: 'stakes' },
+  journal: { label: 'Journal entry', icon: 'Feather', domain: 'journal' },
 }
 
 function ratesOf(state) {
@@ -104,6 +106,11 @@ export function earnedEvents(state) {
       const item = qwMap[winId]
       if (item) out.push({ date, source: `qw_${item.id}`, qty: 1, points: item.points || 1 })
     }
+  }
+
+  // Journal — rating today's day is the action that earns XP (text fields are bonus reflection)
+  for (const [date, d] of Object.entries(state.journal?.days || {})) {
+    if (d.mood != null) out.push({ date, source: 'journal', qty: 1, points: rates.journal })
   }
 
   // Stake bonuses are stored in the ledger as type 'earn' with source 'stake'.

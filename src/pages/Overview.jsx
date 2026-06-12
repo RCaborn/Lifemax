@@ -3,10 +3,10 @@ import { Target, Beer, Check, X, Pencil, ArrowRight } from 'lucide-react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, toKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
-import { balance, earnedInMonth } from '../lib/vices.js'
-import { addMonth } from '../lib/dates.js'
+import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
+import { MOOD_COLORS, FOLLOW_OPTIONS } from './Journal.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -67,6 +67,8 @@ export default function Overview({ onNavigate }) {
       <TodayPanel />
 
       <QuickWinsPanel />
+
+      <JournalWidget onNavigate={onNavigate} />
 
       <VicesWidget onNavigate={onNavigate} />
 
@@ -454,6 +456,70 @@ function summary(ls) {
   if (p >= 90) return 'On fire this week. Stay consistent.'
   if (p >= 65) return `Strong week. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
+}
+
+function JournalWidget({ onNavigate }) {
+  const { state, actions } = useStore()
+  const toast = useToast()
+  const days = state.journal.days
+  const today = todayKey()
+  const yesterday = toKey(new Date(Date.now() - 86400000))
+  const entry = days[today] || {}
+  const prevEntry = days[yesterday]
+  const showFollowCheck = !!prevEntry?.tomorrow && entry.followThrough == null
+
+  const setMood = (n) => {
+    const had = entry.mood != null
+    actions.setJournalDay(today, { mood: n })
+    if (!had) toast({ icon: 'Feather', title: 'Journal logged', sub: `+${earnRate(state, 'journal')} XP`, color: '#06b6d4' })
+  }
+  const setFollowThrough = (val) => actions.setJournalDay(today, { followThrough: val })
+
+  return (
+    <div className="glass glass-hover rounded-2xl p-5" style={{ '--glow': '#06b6d4' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><ItemIcon icon="Feather" size={22} /></span>
+          <div>
+            <div className="op-label">Daily Loop</div>
+            <div className="text-sm text-slate-400">{entry.mood != null ? 'Logged today — tap to update' : 'One honest minute before you go'}</div>
+          </div>
+        </div>
+        <button onClick={() => onNavigate('journal')}
+          className="flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+          style={{ fontFamily: 'var(--font-mono)' }}>
+          Journal <ArrowRight size={12} />
+        </button>
+      </div>
+
+      {showFollowCheck && (
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="op-label mb-1">Yesterday you focused on</p>
+          <p className="mb-3 text-sm text-slate-200">&ldquo;{prevEntry.tomorrow}&rdquo;</p>
+          <div className="flex flex-wrap gap-2">
+            {FOLLOW_OPTIONS.map((o) => (
+              <button key={o.id} onClick={() => setFollowThrough(o.id)}
+                className="rounded px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+                style={{ border: `1px solid ${o.color}55`, color: o.color }}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center gap-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} onClick={() => setMood(n)}
+            className="grid h-10 w-10 place-items-center rounded-lg border text-sm font-bold transition"
+            style={{
+              borderColor: entry.mood === n ? MOOD_COLORS[n - 1] : 'rgba(255,255,255,.12)',
+              background: entry.mood === n ? MOOD_COLORS[n - 1] : 'rgba(255,255,255,.04)',
+              color: entry.mood === n ? '#000' : '#888',
+            }}>{n}</button>
+        ))}
+        <span className="ml-2 text-[11px] text-slate-600">How was today? 1 rough · 5 great</span>
+      </div>
+    </div>
+  )
 }
 
 function VicesWidget({ onNavigate }) {

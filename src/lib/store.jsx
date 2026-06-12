@@ -43,6 +43,8 @@ function migrate(state) {
   if (!state.reviews) state.reviews = seed.reviews
   if (!state.focus) state.focus = seed.focus
   if (!state.focus.ticked) state.focus.ticked = []
+  // Daily journal — "The Daily Loop"
+  if (!state.journal) state.journal = seed.journal
   // Retire the old vice-debt mechanism: drop the penalty-rate setting and
   // strip standalone penalty ledger rows (real vice spends keep a viceId).
   if (state.vices) {
@@ -71,6 +73,7 @@ function hasUserData(s) {
   if (s.business?.projects?.length) return true
   if (s.reviews?.length) return true
   if (Object.keys(s.quickWins?.days || {}).length) return true
+  if (Object.keys(s.journal?.days || {}).length) return true
   if (s.vices?.ledger?.length) return true
   if (s.stakes?.contracts?.length) return true
   return [s.fitness, s.study, s.career, s.business].reduce((n, d) => n + (d?.todos?.length || 0), 0) > 0
@@ -268,6 +271,12 @@ export function StoreProvider({ children }) {
       const t = (d.focus.ticked ||= [])
       const i = t.indexOf(index)
       if (i >= 0) t.splice(i, 1); else t.push(index)
+    }),
+
+    // ---------- Journal (The Daily Loop) ----------
+    setJournalDay: (dateKey, patch) => update((d) => {
+      const day = (d.journal.days[dateKey] ||= {})
+      Object.assign(day, patch)
     }),
 
     // ---------- Business / side-hustle projects ----------

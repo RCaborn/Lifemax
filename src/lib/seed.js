@@ -67,6 +67,10 @@ function seedVices() {
 function seedReviews() { return [] }
 function seedFocus() { return { weekKey: '', priorities: [], ticked: [] } }
 
+// Daily journal — "The Daily Loop". Each day: { mood, win, friction, tomorrow,
+// followThrough }. followThrough reflects on the PREVIOUS day's `tomorrow` plan.
+function seedJournal() { return { days: {} } }
+
 export function buildSeedState() {
   return {
     version: 2,
@@ -81,5 +85,6 @@ export function buildSeedState() {
     quickWins: seedQuickWins(),
     reviews: seedReviews(),
     focus: seedFocus(),
+    journal: seedJournal(),
   }
 }
