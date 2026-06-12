@@ -55,7 +55,7 @@ export default function Business() {
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
               Each project is scored on three things: <span className="text-slate-400">Income</span> (money in vs your monthly goal),
               <span className="text-slate-400"> Shipping</span> (milestones you complete — the things you'll be proud of), and
-              <span className="text-slate-400"> Momentum</span> (keeping every active hustle moving). Shipping a milestone earns Virtue points too.
+              <span className="text-slate-400"> Momentum</span> (keeping every active hustle moving). Shipping a milestone earns XP too.
             </p>
           </div>
         ) : (
@@ -157,7 +157,7 @@ function ProjectCard({ p, ym, cur, actions }) {
   const addMs = (e) => { e.preventDefault(); if (ms.trim()) { actions.addMilestone(p.id, ms.trim()); setMs('') } }
   const toggleMs = (m) => {
     actions.toggleMilestone(p.id, m.id)
-    if (!m.done) toast({ icon: 'Flag', title: 'Milestone shipped', sub: `${m.title} · +8 pts`, color: C.color })
+    if (!m.done) toast({ icon: 'Flag', title: 'Milestone shipped', sub: `${m.title} · +8 XP`, color: C.color })
   }
 
   return (

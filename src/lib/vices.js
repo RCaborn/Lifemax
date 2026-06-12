@@ -40,6 +40,11 @@ function ratesOf(state) {
   return { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
 }
 
+// The XP a given activity is currently worth, respecting user-configured rates.
+export function earnRate(state, key) {
+  return ratesOf(state)[key]
+}
+
 // Build the full list of *earned* point events from logged activity.
 // Each entry: { date, source, qty, points }
 export function earnedEvents(state) {

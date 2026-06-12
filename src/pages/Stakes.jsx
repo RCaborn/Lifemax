@@ -27,7 +27,7 @@ export default function Stakes() {
   const resolve = (c, outcome) => {
     const bonus = outcome === 'succeeded' ? (Number(c.virtuePointsOnSuccess) || 0) : 0
     actions.resolveContract(c.id, outcome, bonus)
-    if (outcome === 'succeeded') { confetti(); toast({ icon: 'Target', title: 'Stake survived!', sub: bonus ? `+${bonus} pts banked` : 'Virtue intact', color: '#22c55e' }) }
+    if (outcome === 'succeeded') { confetti(); toast({ icon: 'Target', title: 'Stake survived!', sub: bonus ? `+${bonus} XP banked` : 'Commitment kept', color: '#22c55e' }) }
     else { toast({ icon: 'Skull', title: 'Stake failed', sub: 'Own it, reset, go again.', color: ACCENT }); setCardFor(c) }
   }
 
@@ -121,7 +121,7 @@ function ContractCard({ c, state, onResolve, onDelete }) {
         <span className="flex items-center gap-1">
           {left > 0 ? <><Hourglass size={12} /> {left} days left</> : left === 0 ? <><Hourglass size={12} /> Ends today</> : <><AlarmClock size={12} /> Window ended</>}
         </span>
-        {c.virtuePointsOnSuccess > 0 && <span className="flex items-center gap-1" style={{ color: '#ec4899' }}><Gift size={12} /> +{c.virtuePointsOnSuccess} pts if won</span>}
+        {c.virtuePointsOnSuccess > 0 && <span className="flex items-center gap-1" style={{ color: '#ec4899' }}><Gift size={12} /> +{c.virtuePointsOnSuccess} XP if won</span>}
       </div>
 
       <div className="mt-4 flex gap-2">
@@ -186,7 +186,7 @@ function NewStakeModal({ onClose, onAdd }) {
           </div>
         </div>
 
-        <label className="block"><span className="mb-1 flex items-center gap-1 text-xs text-slate-400">Virtue points if you win <Gift size={12} /></span>
+        <label className="block"><span className="mb-1 flex items-center gap-1 text-xs text-slate-400">XP if you win <Gift size={12} /></span>
           <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} className="field" /></label>
 
         <button type="submit" className="w-full rounded-lg py-2 font-semibold" style={{ background: ACCENT, color: '#fff' }}>Set the stake</button>

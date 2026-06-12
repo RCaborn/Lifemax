@@ -53,7 +53,7 @@ export default function Vices() {
             <p className="op-label">Earn My Vices</p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-5xl font-black" style={{ color: '#fff', fontFamily: MONO }}>{bal}</span>
-              <span className="text-lg font-semibold" style={{ color: '#666' }}>pts</span>
+              <span className="text-lg font-semibold" style={{ color: '#666' }}>XP</span>
             </div>
             <p className="mt-1 text-sm text-slate-500">
               <span style={{ fontFamily: MONO }}>+{earnedMonth}</span> earned this month · <span style={{ fontFamily: MONO }}>{totalSpent(state)}</span> spent all-time
@@ -117,10 +117,10 @@ export default function Vices() {
                   <div className="mt-2 font-semibold text-white">{v.name}</div>
                   {v.description && <div className="text-xs text-slate-600">{v.description}</div>}
                   <div className="mt-3 flex items-center justify-between">
-                    <span className="text-lg font-bold text-white" style={{ fontFamily: MONO }}>{v.pointCost} pts</span>
+                    <span className="text-lg font-bold text-white" style={{ fontFamily: MONO }}>{v.pointCost} XP</span>
                     {afford
                       ? <span className="border border-white/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-slate-300" style={{ fontFamily: MONO }}>Unlocked</span>
-                      : <span className="px-2 py-0.5 text-[10px] uppercase tracking-widest text-slate-500" style={{ fontFamily: MONO }}>{short} pts to go</span>}
+                      : <span className="px-2 py-0.5 text-[10px] uppercase tracking-widest text-slate-500" style={{ fontFamily: MONO }}>{short} XP to go</span>}
                   </div>
                   <button
                     disabled={locked}
@@ -212,7 +212,7 @@ function AddViceModal({ onClose, onAdd }) {
           <span className="mt-1 block text-[11px] text-slate-600">Shown as a gentle nudge when you go to redeem — an approach swap, not a ban.</span>
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className="mb-1 block op-label">Cost (pts)</span>
+          <label className="block"><span className="mb-1 block op-label">Cost (XP)</span>
             <input type="number" value={pointCost} onChange={(e) => setPointCost(e.target.value)} placeholder="25" className="field" /></label>
           <label className="block"><span className="mb-1 block op-label">Cooldown (days)</span>
             <input type="number" value={cooldownDays} onChange={(e) => setCooldownDays(e.target.value)} placeholder="0" className="field" /></label>
@@ -248,7 +248,7 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500" style={{ fontFamily: MONO }}>Points still come off</p>
               <p className="mt-1 text-sm text-slate-300">Full cost deducted — that's the accountability. No extra penalty on top. Balance goes negative; earn your way back.</p>
             </div>
-            <p className="text-sm text-slate-400">Spend <span className="font-bold text-white" style={{ fontFamily: MONO }}>{vice.pointCost} pts</span> on {vice.name}?</p>
+            <p className="text-sm text-slate-400">Spend <span className="font-bold text-white" style={{ fontFamily: MONO }}>{vice.pointCost} XP</span> on {vice.name}?</p>
             <div className="flex justify-center gap-6 text-sm" style={{ fontFamily: MONO }}>
               <div><div className="op-label">Now</div><div className="font-semibold text-white">{bal}</div></div>
               <div><div className="op-label">After</div><div className="font-semibold" style={{ color: bal - vice.pointCost < 0 ? '#f43f5e' : '#fff' }}>{bal - vice.pointCost}</div></div>
@@ -264,7 +264,7 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
               </div>
             )}
             <div className="mt-3">
-              <p className="text-sm text-slate-400">Spend <span className="font-bold text-white" style={{ fontFamily: MONO }}>{vice.pointCost} pts</span> on {vice.name}?</p>
+              <p className="text-sm text-slate-400">Spend <span className="font-bold text-white" style={{ fontFamily: MONO }}>{vice.pointCost} XP</span> on {vice.name}?</p>
               <div className="mt-3 flex justify-center gap-6 text-sm" style={{ fontFamily: MONO }}>
                 <div><div className="op-label">Now</div><div className="font-semibold text-white">{bal}</div></div>
                 <div><div className="op-label">After</div><div className="font-semibold text-white">{after}</div></div>
@@ -276,7 +276,7 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
         <button onClick={onConfirm}
           className="mt-5 flex w-full items-center justify-center gap-1.5 rounded py-2 font-semibold uppercase tracking-wider transition"
           style={{ fontFamily: MONO, background: unearned ? 'rgba(255,255,255,.1)' : ACCENT, color: unearned ? '#aaa' : '#000' }}>
-          {unearned ? `Log it — ${vice.pointCost} pts` : <>Confirm — I earned this <PartyPopper size={14} /></>}
+          {unearned ? `Log it — ${vice.pointCost} XP` : <>Confirm — I earned this <PartyPopper size={14} /></>}
         </button>
       </div>
     </Modal>
@@ -287,7 +287,7 @@ function RatesModal({ state, onClose, onSave }) {
   const [rates, setRates] = useState({ ...DEFAULT_EARN_RATES, ...(state.vices.earnRates || {}) })
   return (
     <Modal title="Earn rates" onClose={onClose}>
-      <p className="mb-3 text-[11px] text-slate-600">How many Virtue Points each logged activity is worth.</p>
+      <p className="mb-3 text-[11px] text-slate-600">How many XP each logged activity is worth.</p>
       <div className="space-y-2">
         {Object.keys(DEFAULT_EARN_RATES).map((k) => (
           <div key={k} className="flex items-center justify-between gap-3">

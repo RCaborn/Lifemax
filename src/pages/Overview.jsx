@@ -260,7 +260,7 @@ function QuickWinsPanel() {
     const wasDone = dayWins.includes(item.id)
     actions.toggleQuickWin(dateKey, item.id)
     if (!wasDone && offset === 0) {
-      toast({ icon: item.emoji, title: item.name, sub: `+${item.points} pt${item.points !== 1 ? 's' : ''}`, color: '#ffffff' })
+      toast({ icon: item.emoji, title: item.name, sub: `+${item.points} XP`, color: '#ffffff' })
     }
   }
 
@@ -276,7 +276,7 @@ function QuickWinsPanel() {
       <SectionTitle right={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {dayPts > 0 && (
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} pts {offset === 0 ? 'today' : 'yesterday'}</span>
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} XP {offset === 0 ? 'today' : 'yesterday'}</span>
           )}
           <button onClick={() => setAdding((v) => !v)}
             className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
@@ -360,7 +360,7 @@ function QuickWinsPanel() {
             <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
               className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
               style={{ fontFamily: 'var(--font-mono)' }}>
-              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
+              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} XP</option>)}
             </select>
             <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
               style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
@@ -371,7 +371,7 @@ function QuickWinsPanel() {
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-slate-600">
-          Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
+          Each win earns XP instantly · doing 3/day adds a small bonus to your Life Score
         </p>
         <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
           Active {activeDays}/14 days
@@ -460,8 +460,8 @@ function VicesWidget({ onNavigate }) {
       <div className="flex items-center gap-4">
         <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Beer size={22} /></span>
         <div>
-          <div className="op-label">Virtue points</div>
-          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{bal} pts</div>
+          <div className="op-label">XP</div>
+          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{bal} XP</div>
         </div>
       </div>
       <div className="flex items-center gap-6 text-sm">

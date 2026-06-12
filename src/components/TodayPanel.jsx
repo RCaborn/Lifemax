@@ -3,6 +3,7 @@ import { Check as CheckIcon, Circle } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import { toKey } from '../lib/dates.js'
+import { earnRate } from '../lib/vices.js'
 import { Card, SectionTitle } from './ui.jsx'
 import { ItemIcon } from '../lib/icons.jsx'
 
@@ -44,14 +45,27 @@ export default function TodayPanel() {
       </SectionTitle>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Counter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
-        <Counter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
+        <Counter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => {
+          const prev = f.runs || 0
+          setF({ runs: v })
+          if (v > prev && offset === 0) toast({ icon: 'Activity', title: 'Run logged', sub: `+${earnRate(state, 'run')} XP`, color: '#f97316' })
+        }} />
+        <Counter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => {
+          const prev = f.workouts || 0
+          setF({ workouts: v })
+          if (v > prev && offset === 0) toast({ icon: 'Dumbbell', title: 'Workout logged', sub: `+${earnRate(state, 'workout')} XP`, color: '#f97316' })
+        }} />
         <Check icon="Flower2" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => {
           const n = !f.stretch
           setF({ stretch: n })
-          if (n && offset === 0) toast({ icon: 'Flower2', title: '+stretch logged', color: '#f97316' })
+          if (n && offset === 0) toast({ icon: 'Flower2', title: 'Stretch logged', sub: `+${earnRate(state, 'stretch')} XP`, color: '#f97316' })
         }} />
-        <Num icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
+        <Num icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => {
+          const target = state.fitness.targets?.stepsDaily || 10000
+          const prev = f.steps || 0
+          setF({ steps: v })
+          if (v >= target && prev < target && offset === 0) toast({ icon: 'Footprints', title: 'Step goal hit', sub: `+${earnRate(state, 'steps_10k')} XP`, color: '#f97316' })
+        }} placeholder="10000" />
         <TimeField icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => {
           setF({ wake: v })
           if (v && offset === 0) toast({ icon: 'AlarmClock', title: `Up at ${v}`, color: '#f97316' })
@@ -59,7 +73,7 @@ export default function TodayPanel() {
         <Num icon="BookOpen" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <Num icon="Timer" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
       </div>
-      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Life Score and earns Virtue points automatically.</p>
+      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Life Score and earns XP automatically.</p>
     </Card>
   )
 }
