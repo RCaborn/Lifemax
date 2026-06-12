@@ -3,7 +3,7 @@ import { Target, Beer, Check, X, Pencil, ArrowRight } from 'lucide-react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, toKey } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
@@ -228,7 +228,6 @@ function MasterTodoList({ onNavigate }) {
 function QuickWinsPanel() {
   const { state, actions } = useStore()
   const toast = useToast()
-  const [offset, setOffset] = useState(0)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('Zap')
@@ -236,10 +235,10 @@ function QuickWinsPanel() {
   const [cueFor, setCueFor] = useState(null)
   const [cueText, setCueText] = useState('')
 
-  const dateKey = (() => { const d = new Date(); d.setDate(d.getDate() + offset); return toKey(d) })()
   const items = state.quickWins?.items || []
-  const dayWins = state.quickWins?.days?.[dateKey] || []
   const days = state.quickWins?.days || {}
+  const today = todayKey()
+  const dayWins = days[today] || []
 
   // Graceful consistency: "active X of last 14 days" — no punitive streak reset.
   const activeDays = lastNDays(14).filter((k) => (days[k]?.length || 0) > 0).length
@@ -247,6 +246,9 @@ function QuickWinsPanel() {
   const dayPts = items
     .filter((item) => dayWins.includes(item.id))
     .reduce((a, item) => a + (item.points || 1), 0)
+
+  // Habit-tracker strip: today first (always visible), scrolling right reveals history.
+  const track = [...lastNDays(28)].reverse()
 
   const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
   const saveCue = (e) => {
@@ -256,10 +258,10 @@ function QuickWinsPanel() {
   }
   const cueItem = items.find((i) => i.id === cueFor)
 
-  const toggle = (item) => {
-    const wasDone = dayWins.includes(item.id)
+  const toggle = (item, dateKey) => {
+    const wasDone = (days[dateKey] || []).includes(item.id)
     actions.toggleQuickWin(dateKey, item.id)
-    if (!wasDone && offset === 0) {
+    if (!wasDone && dateKey === today) {
       toast({ icon: item.emoji, title: item.name, sub: `+${item.points} XP`, color: '#ffffff' })
     }
   }
@@ -276,64 +278,78 @@ function QuickWinsPanel() {
       <SectionTitle right={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {dayPts > 0 && (
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} XP {offset === 0 ? 'today' : 'yesterday'}</span>
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} XP today</span>
           )}
           <button onClick={() => setAdding((v) => !v)}
             className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
-          <div className="flex overflow-hidden rounded border border-white/10">
-            <button onClick={() => setOffset(0)}
-              className="px-2.5 py-1 text-xs font-medium transition"
-              style={{ background: offset === 0 ? 'rgba(255,255,255,0.12)' : 'transparent', color: offset === 0 ? '#fff' : '#555' }}>
-              Today
-            </button>
-            <button onClick={() => setOffset(-1)}
-              className="border-l border-white/10 px-2.5 py-1 text-xs font-medium transition"
-              style={{ background: offset === -1 ? 'rgba(255,255,255,0.12)' : 'transparent', color: offset === -1 ? '#fff' : '#555' }}>
-              Yesterday
-            </button>
-          </div>
         </div>
       }>
         Quick Wins
       </SectionTitle>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {items.map((item) => {
-          const done = dayWins.includes(item.id)
-          return (
-            <div key={item.id} className="relative group">
-              <button onClick={() => toggle(item)}
-                className="flex w-full items-center gap-2 rounded px-3 py-2.5 text-left text-sm transition"
-                style={{
-                  background: done ? '#ffffff' : 'rgba(255,255,255,0.04)',
-                  color: done ? '#050505' : '#888',
-                  border: `1px solid ${done ? '#fff' : 'rgba(255,255,255,0.08)'}`,
-                }}>
-                <ItemIcon icon={item.emoji} size={16} />
-                <span className="flex-1 text-xs leading-tight">{item.name}</span>
-                <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: done ? '#050505' : '#555' }}>
-                  {done ? <Check size={12} /> : `+${item.points}`}
-                </span>
-              </button>
-              {item.cue && (
-                <p className="mt-1 px-1 text-[10px] leading-tight text-slate-600">
-                  <span className="text-slate-500">After</span> {item.cue}
-                </p>
-              )}
-              <div className="absolute -right-1.5 -top-1.5 hidden group-hover:flex gap-0.5">
-                <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
-                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-white">
-                  <Pencil size={9} />
-                </button>
-                <button onClick={() => actions.deleteQuickWin(item.id)}
-                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-rose-400">
-                  <X size={10} />
-                </button>
-              </div>
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-600">No quick wins yet — add one below.</p>
+      ) : (
+        <div className="overflow-x-auto pb-1.5">
+          <div className="inline-flex flex-col gap-1" style={{ minWidth: 'max-content' }}>
+            {/* date header */}
+            <div className="flex items-center gap-1">
+              <div className="sticky left-0 z-10 w-[120px] shrink-0 bg-[#0e0e0e]" />
+              {track.map((k, i) => (
+                <div key={k}
+                  className={`grid h-5 w-6 shrink-0 place-items-center text-[9px] ${(i + 1) % 7 === 0 ? 'mr-1.5' : ''}`}
+                  style={{ fontFamily: 'var(--font-mono)', color: k === today ? '#fff' : '#3a3a3a', fontWeight: k === today ? 700 : 400 }}>
+                  {Number(k.slice(8))}
+                </div>
+              ))}
             </div>
-          )
-        })}
-      </div>
+
+            {items.map((item) => (
+              <div key={item.id} className="group flex items-center gap-1">
+                <div className="sticky left-0 z-10 relative flex w-[120px] shrink-0 items-center gap-1.5 rounded-lg bg-[#0e0e0e] py-1 pr-1.5">
+                  <ItemIcon icon={item.emoji} size={14} className="shrink-0 text-slate-400" />
+                  <span className="flex-1 truncate text-xs text-slate-300">{item.name}</span>
+                  <span className="shrink-0 text-[10px] font-bold text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>+{item.points || 1}</span>
+                  <div className="absolute -right-1 -top-1 hidden gap-0.5 group-hover:flex">
+                    <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
+                      className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-white">
+                      <Pencil size={9} />
+                    </button>
+                    <button onClick={() => actions.deleteQuickWin(item.id)}
+                      className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-rose-400">
+                      <X size={10} />
+                    </button>
+                  </div>
+                </div>
+                {track.map((k, i) => {
+                  const done = (days[k] || []).includes(item.id)
+                  const isToday = k === today
+                  return (
+                    <button key={k} onClick={() => toggle(item, k)} title={k}
+                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition hover:border-white/25 ${(i + 1) % 7 === 0 ? 'mr-1.5' : ''}`}
+                      style={{
+                        background: done ? '#ffffff' : 'rgba(255,255,255,0.035)',
+                        border: `1px solid ${done ? '#ffffff' : isToday ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                      }}>
+                      {done && <Check size={11} color="#050505" />}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {items.some((i) => i.cue) && (
+        <div className="mt-2 space-y-0.5">
+          {items.filter((i) => i.cue).map((i) => (
+            <p key={i.id} className="px-1 text-[10px] leading-tight text-slate-600">
+              <ItemIcon icon={i.emoji} size={10} className="mr-1 inline" />{i.name} — <span className="text-slate-500">after</span> {i.cue}
+            </p>
+          ))}
+        </div>
+      )}
 
       {cueItem && (
         <form onSubmit={saveCue} className="mt-3 border-t border-white/8 pt-3">
@@ -371,7 +387,7 @@ function QuickWinsPanel() {
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-slate-600">
-          Each win earns XP instantly · doing 3/day adds a small bonus to your Life Score
+          Each win earns XP instantly · tap any day to fill in your history · doing 3/day adds a small bonus to your Life Score
         </p>
         <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
           Active {activeDays}/14 days
