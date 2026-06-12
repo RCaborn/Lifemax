@@ -3,7 +3,7 @@ import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import Modal from './Modal.jsx'
 
-const MONO = 'Courier New, monospace'
+const MONO = 'var(--font-mono)'
 
 // Cloud sync setup + sign-in. Three stages:
 //   1. Not configured → paste Supabase URL + anon key (one-time, per device).
@@ -72,18 +72,17 @@ function ConfigStage({ onClose, sync, toast }) {
         <label className="block">
           <span className="mb-1 block op-label">Project URL</span>
           <input value={url} onChange={(e) => { setUrl(e.target.value); setErr('') }} placeholder="https://xxxx.supabase.co"
-            className="sinp" autoFocus />
+            className="field" autoFocus />
         </label>
         <label className="block">
           <span className="mb-1 block op-label">Anon (public) key</span>
           <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="eyJhbGci…"
-            className="sinp" />
+            className="field" />
           <span className="mt-1 block text-[11px] text-slate-600">This key is safe to store on your device — Row Level Security protects your data.</span>
         </label>
         {err && <p className="text-xs text-rose-400">{err}</p>}
-        <button type="submit" className="sbtn-primary">Connect</button>
+        <button type="submit" className="btn-primary">Connect</button>
       </form>
-      <style>{styles}</style>
     </Modal>
   )
 }
@@ -125,22 +124,21 @@ function SignInStage({ onClose, sync, toast }) {
       {!sent ? (
         <form onSubmit={send} className="space-y-3">
           <p className="text-sm text-slate-400">Enter your email and we’ll send a 6-digit code. No password.</p>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="sinp" autoFocus />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="field" autoFocus />
           {err && <p className="text-xs text-rose-400">{err}</p>}
-          <button type="submit" disabled={busy} className="sbtn-primary disabled:opacity-50">{busy ? 'Sending…' : 'Send code'}</button>
+          <button type="submit" disabled={busy} className="btn-primary disabled:opacity-50">{busy ? 'Sending…' : 'Send code'}</button>
         </form>
       ) : (
         <form onSubmit={verify} className="space-y-3">
           <p className="text-sm text-slate-400">Enter the 6-digit code sent to <span className="text-white">{email}</span>.</p>
           <input inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456"
-            className="sinp text-center text-lg tracking-[0.4em]" style={{ fontFamily: MONO }} autoFocus />
+            className="field text-center text-lg tracking-[0.4em]" style={{ fontFamily: MONO }} autoFocus />
           {err && <p className="text-xs text-rose-400">{err}</p>}
-          <button type="submit" disabled={busy} className="sbtn-primary disabled:opacity-50">{busy ? 'Verifying…' : 'Verify & sign in'}</button>
+          <button type="submit" disabled={busy} className="btn-primary disabled:opacity-50">{busy ? 'Verifying…' : 'Verify & sign in'}</button>
           <button type="button" onClick={() => { setSent(false); setCode(''); setErr('') }} className="op-label hover:text-white">← Use a different email</button>
         </form>
       )}
       <button onClick={() => sync.clearConfig()} className="mt-4 text-[11px] text-slate-600 hover:text-rose-400">Disconnect this Supabase project</button>
-      <style>{styles}</style>
     </Modal>
   )
 }
@@ -170,14 +168,6 @@ function ConnectedStage({ onClose, sync, toast }) {
         </div>
         <button onClick={() => { sync.clearConfig(); onClose() }} className="text-[11px] text-slate-600 hover:text-rose-400">Disconnect this Supabase project from this device</button>
       </div>
-      <style>{styles}</style>
     </Modal>
   )
 }
-
-const styles = `
-.sinp{width:100%;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:.55rem .75rem;color:#fff;outline:none}
-.sinp:focus{border-color:rgba(255,255,255,.3)}
-.sbtn-primary{width:100%;border-radius:6px;border:1px solid #fff;background:transparent;padding:.6rem;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#fff;transition:.15s;font-family:${MONO}}
-.sbtn-primary:hover{background:#fff;color:#000}
-`

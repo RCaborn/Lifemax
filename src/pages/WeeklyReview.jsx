@@ -8,7 +8,7 @@ import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
 import { useToast } from '../components/Toast.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 
-const MONO = 'Courier New, monospace'
+const MONO = 'var(--font-mono)'
 
 export default function WeeklyReview() {
   const { state, actions } = useStore()
@@ -117,7 +117,7 @@ export default function WeeklyReview() {
             <div className="space-y-2">
               {priorities.map((p, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center border border-white/15 text-xs text-slate-500" style={{ fontFamily: MONO }}>{i + 1}</span>
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-white/15 text-xs text-slate-500" style={{ fontFamily: MONO }}>{i + 1}</span>
                   <input value={p} onChange={(e) => setPriority(i, e.target.value)}
                     placeholder={i === 0 ? 'The one thing that matters most…' : 'Optional'}
                     className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-white/30" />

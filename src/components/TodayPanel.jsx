@@ -67,11 +67,10 @@ function Counter({ icon, label, value, color, onChange }) {
     <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5">
       <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
       <div className="flex items-center gap-2">
-        <button onClick={() => onChange(Math.max(0, value - 1))} className="cbtn">−</button>
+        <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon btn-icon-sm">−</button>
         <span className="w-5 text-center font-semibold text-white">{value}</span>
-        <button onClick={() => onChange(value + 1)} className="cbtn" style={{ background: color, color: '#050505' }}>+</button>
+        <button onClick={() => onChange(value + 1)} className="btn-icon btn-icon-sm" style={{ background: color, color: '#050505' }}>+</button>
       </div>
-      <style>{`.cbtn{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#888;font-size:16px;line-height:1}`}</style>
     </div>
   )
 }

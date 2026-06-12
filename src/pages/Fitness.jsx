@@ -210,7 +210,7 @@ function TodoList({ todos, actions }) {
                 style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
-              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
+              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
               <button onClick={() => actions.deleteFitnessTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
             </div>
           )
@@ -241,7 +241,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -258,25 +258,24 @@ function Header({ score, ym, setYm }) {
 
 function Stepper({ label, value, onChange }) {
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
       <div className="text-sm text-slate-400">{label}</div>
       <div className="mt-3 flex items-center justify-between">
-        <button onClick={() => onChange(Math.max(0, value - 1))} className="sbtn">−</button>
-        <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>{value}</span>
-        <button onClick={() => onChange(value + 1)} className="sbtn" style={{ background: C.color, color: '#000' }}>+</button>
+        <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon">−</button>
+        <span className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{value}</span>
+        <button onClick={() => onChange(value + 1)} className="btn-icon" style={{ background: C.color, color: '#000' }}>+</button>
       </div>
-      <style>{`.sbtn{width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#888;font-size:20px;line-height:1}`}</style>
     </div>
   )
 }
 
 function Toggle({ label, on, onToggle }) {
   return (
-    <button onClick={onToggle} className="glass rounded-xl p-4 text-left transition hover:border-white/20">
+    <button onClick={onToggle} className="glass glass-hover rounded-2xl p-4 text-left transition" style={{ '--glow': C.color }}>
       <div className="text-sm text-slate-400">{label}</div>
       <div className="mt-3 flex items-center justify-between">
         <span className="text-lg font-semibold" style={{ color: on ? C.color : '#444' }}>{on ? 'Done ✓' : 'Not yet'}</span>
-        <span className="grid h-9 w-9 place-items-center border text-lg"
+        <span className="grid h-9 w-9 place-items-center rounded-lg border text-lg"
           style={{ borderColor: on ? C.color : 'rgba(255,255,255,.08)', background: on ? C.color : 'transparent', color: on ? '#000' : '#444' }}>
           {on ? '✓' : '○'}
         </span>
@@ -287,7 +286,7 @@ function Toggle({ label, on, onToggle }) {
 
 function NumberField({ label, value, onChange, placeholder, step = '1' }) {
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
       <div className="text-sm text-slate-400">{label}</div>
       <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
@@ -298,7 +297,7 @@ function NumberField({ label, value, onChange, placeholder, step = '1' }) {
 
 function WakeField({ label, value, onChange }) {
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
       <div className="text-sm text-slate-400">{label}</div>
       <input type="time" value={value || ''}
         onChange={(e) => onChange(e.target.value)}
@@ -310,10 +309,10 @@ function WakeField({ label, value, onChange }) {
 
 function RingCard({ label, value, center }) {
   return (
-    <div className="glass flex flex-col items-center gap-2 rounded-xl p-4">
+    <div className="glass glass-hover flex flex-col items-center gap-2 rounded-2xl p-4" style={{ '--glow': C.color }}>
       <ProgressRing value={value} size={92} stroke={9} color={C.color} label="" sublabel="" />
       <div className="text-center">
-        <div className="font-semibold text-white" style={{ fontFamily: 'Courier New, monospace' }}>{center}</div>
+        <div className="font-semibold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{center}</div>
         <div className="text-xs text-slate-500">{label}</div>
       </div>
     </div>

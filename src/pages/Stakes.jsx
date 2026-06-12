@@ -91,7 +91,7 @@ function ContractCard({ c, state, onResolve, onDelete }) {
   const status = STAKE_STATUS[c.status]
 
   return (
-    <div className="glass rounded-2xl p-5" style={{ borderColor: (onTrack ? '#22c55e' : ACCENT) + '55' }}>
+    <div className="glass glass-hover rounded-2xl p-5" style={{ borderColor: (onTrack ? '#22c55e' : ACCENT) + '55', '--glow': onTrack ? '#22c55e' : ACCENT }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-semibold text-white">{c.name}</div>
@@ -157,18 +157,18 @@ function NewStakeModal({ onClose, onAdd }) {
   return (
     <Modal title="New stake" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. 3 runs a week)" className="sinp" />
-        <input value={stake} onChange={(e) => setStake(e.target.value)} placeholder="What's on the line? (e.g. £20 to a mate)" className="sinp" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="sinp" />
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. 3 runs a week)" className="field" />
+        <input value={stake} onChange={(e) => setStake(e.target.value)} placeholder="What's on the line? (e.g. £20 to a mate)" className="field" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="field" />
 
         <label className="block"><span className="mb-1 block text-xs text-slate-400">Link to a target (auto-checked)</span>
-          <select value={linkedTarget} onChange={(e) => setLinkedTarget(e.target.value)} className="sinp">
+          <select value={linkedTarget} onChange={(e) => setLinkedTarget(e.target.value)} className="field">
             {Object.entries(LINK_TARGETS).map(([k, v]) => <option key={k} value={k} className="bg-slate-900">{v.label}</option>)}
           </select>
         </label>
         {linked && (
           <label className="block"><span className="mb-1 block text-xs text-slate-400">Target value ({LINK_TARGETS[linkedTarget].unit.trim() || 'amount'})</span>
-            <input type="number" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="3" className="sinp" /></label>
+            <input type="number" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="3" className="field" /></label>
         )}
 
         <div>
@@ -184,11 +184,10 @@ function NewStakeModal({ onClose, onAdd }) {
         </div>
 
         <label className="block"><span className="mb-1 block text-xs text-slate-400">Virtue points if you win 🎁</span>
-          <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} className="sinp" /></label>
+          <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} className="field" /></label>
 
         <button type="submit" className="w-full rounded-lg py-2 font-semibold" style={{ background: ACCENT, color: '#fff' }}>Set the stake</button>
       </form>
-      <style>{`.sinp{width:100%;border-radius:.5rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:.5rem .75rem;color:#fff;outline:none}.sinp:focus{border-color:rgba(255,255,255,.3)}`}</style>
     </Modal>
   )
 }

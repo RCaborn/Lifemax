@@ -70,7 +70,7 @@ export default function Study() {
           </div>
           <div className="mt-4 rounded bg-white/[0.03] p-3">
             <div className="mb-1 flex justify-between text-xs text-slate-500">
-              <span>Today's reading goal</span><span style={{ fontFamily: 'Courier New, monospace' }}>{todayLog.pages}/{t.pagesDaily} pages</span>
+              <span>Today's reading goal</span><span style={{ fontFamily: 'var(--font-mono)' }}>{todayLog.pages}/{t.pagesDaily} pages</span>
             </div>
             <div className="h-1.5 overflow-hidden bg-white/8">
               <div className="h-full transition-all" style={{ width: `${pct(todayLog.pages / t.pagesDaily)}%`, background: C.color }} />
@@ -119,7 +119,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -172,7 +172,7 @@ function TodoList({ todos, actions }) {
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} title={PRIO[td.priority].label} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
               {td.deadline && (
-                <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>
+                <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>
                   {overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}
                 </span>
               )}

@@ -29,26 +29,32 @@ export default function Overview({ onNavigate }) {
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
-      <div className="glass relative overflow-hidden rounded-2xl p-6 sm:p-8">
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="op-label">{greeting}, {state.profile.name}</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score · This Week</h1>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center border font-black text-2xl"
-                style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'Courier New, monospace' }}>{grade.letter}</span>
-              <div>
-                <div className="font-semibold" style={{ color: grade.color }}>{grade.label}</div>
-                <div className="text-sm text-slate-500">{summary(ls)}</div>
+      {/* Hero — Life Score, centre stage */}
+      <div className="glass glass-hover relative overflow-hidden rounded-2xl p-6 sm:p-8" style={{ '--glow': grade.color }}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between lg:w-56 lg:shrink-0 lg:flex-col lg:items-stretch lg:justify-center lg:gap-6">
+            <div>
+              <p className="op-label">{greeting}, {state.profile.name}</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score</h1>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center rounded-lg border font-black text-2xl"
+                  style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'var(--font-mono)' }}>{grade.letter}</span>
+                <div>
+                  <div className="font-semibold" style={{ color: grade.color }}>{grade.label}</div>
+                  <div className="text-sm text-slate-500">{summary(ls)}</div>
+                </div>
               </div>
+              <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
+                80% of weekly targets = score 100 · resets Monday
+              </p>
             </div>
-            <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>
-              80% of weekly targets = score 100 · resets Monday
-            </p>
+            <div className="shrink-0 self-center lg:self-start">
+              <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Life Score" />
+            </div>
           </div>
-          <div className="shrink-0 self-center">
-            <ProgressRing value={ls.score} size={150} stroke={12} color={grade.color} label="Life Score" />
+          <div className="min-w-0 flex-1 lg:border-l lg:border-white/8 lg:pl-8">
+            <SectionTitle>Life Score — 6 months weekly</SectionTitle>
+            <WeeklyScoreChart data={weeklyHistory} />
           </div>
         </div>
       </div>
@@ -71,8 +77,8 @@ export default function Overview({ onNavigate }) {
             const isActive = d.active !== false
             return (
               <button key={id} onClick={() => onNavigate(id)}
-                className="glass group rounded-xl p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20 animate-fadeUp"
-                style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55 }}>
+                className="glass glass-hover group rounded-2xl p-4 text-left transition animate-fadeUp"
+                style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55, '--glow': meta.color }}>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span className="text-xl">{meta.icon}</span>
@@ -100,20 +106,14 @@ export default function Overview({ onNavigate }) {
         </div>
       </div>
 
-      {/* Weekly score trend + breakdown */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <SectionTitle>Life Score — 6 months weekly</SectionTitle>
-          <WeeklyScoreChart data={weeklyHistory} />
-        </Card>
-        <Card>
-          <SectionTitle>This week breakdown</SectionTitle>
-          <p className="mb-3 text-xs text-slate-600">
-            Bars fill based on <span className="text-slate-400">this week's activity</span>. 80% = full score for each domain.
-          </p>
-          <ScoreBars parts={ls.domains.filter((d) => d.active !== false).map((d) => ({ label: DOMAIN_MAP[d.id].name, value: Math.min(1, d.score / 0.8), detail: `${pct(d.score / 0.8)}%` }))} color="#ffffff" />
-        </Card>
-      </div>
+      {/* This week breakdown */}
+      <Card>
+        <SectionTitle>This week breakdown</SectionTitle>
+        <p className="mb-3 text-xs text-slate-600">
+          Bars fill based on <span className="text-slate-400">this week's activity</span>. 80% = full score for each domain.
+        </p>
+        <ScoreBars parts={ls.domains.filter((d) => d.active !== false).map((d) => ({ label: DOMAIN_MAP[d.id].name, value: Math.min(1, d.score / 0.8), detail: `${pct(d.score / 0.8)}%` }))} color="#ffffff" />
+      </Card>
 
       <MasterTodoList onNavigate={onNavigate} />
     </div>
@@ -206,11 +206,11 @@ function MasterTodoList({ onNavigate }) {
                 <span className={`flex-1 truncate ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
                 <button onClick={() => onNavigate(td.domain)}
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-widest transition hover:opacity-80"
-                  style={{ background: `${conf.color}20`, color: conf.color, fontFamily: 'Courier New, monospace' }}>
+                  style={{ background: `${conf.color}20`, color: conf.color, fontFamily: 'var(--font-mono)' }}>
                   {conf.name}
                 </button>
                 {td.deadline && (
-                  <span className="shrink-0 text-[11px]" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>
+                  <span className="shrink-0 text-[11px]" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>
                     {overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}
                   </span>
                 )}
@@ -273,7 +273,7 @@ function QuickWinsPanel() {
       <SectionTitle right={
         <div className="flex items-center gap-3">
           {todayPts > 0 && (
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>+{todayPts} pts today</span>
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{todayPts} pts today</span>
           )}
           <button onClick={() => setAdding((v) => !v)}
             className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
@@ -296,7 +296,7 @@ function QuickWinsPanel() {
                 }}>
                 <span className="text-base">{item.emoji}</span>
                 <span className="flex-1 text-xs leading-tight">{item.name}</span>
-                <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'Courier New, monospace', color: done ? '#050505' : '#555' }}>
+                <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: done ? '#050505' : '#555' }}>
                   {done ? '✓' : `+${item.points}`}
                 </span>
               </button>
@@ -329,7 +329,7 @@ function QuickWinsPanel() {
               placeholder="e.g. my morning coffee / lunch / brushing teeth"
               className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
             <span className="shrink-0 text-xs text-slate-500">→ {cueItem.emoji}</span>
-            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: 'Courier New, monospace' }}>Save</button>
+            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>Save</button>
             <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
           </div>
           <p className="mt-1.5 text-[11px] text-slate-600">Anchoring a habit to an existing routine (an "if-then" plan) is one of the most reliable ways to make it stick.</p>
@@ -346,11 +346,11 @@ function QuickWinsPanel() {
             className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
           <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
             className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
-            style={{ fontFamily: 'Courier New, monospace' }}>
+            style={{ fontFamily: 'var(--font-mono)' }}>
             {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
           </select>
           <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
-            style={{ fontFamily: 'Courier New, monospace' }}>Add</button>
+            style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
         </form>
       )}
 
@@ -358,7 +358,7 @@ function QuickWinsPanel() {
         <p className="text-[11px] text-slate-600">
           Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
         </p>
-        <span className="text-[11px] text-slate-500" style={{ fontFamily: 'Courier New, monospace' }}>
+        <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
           Active {activeDays}/14 days
         </span>
       </div>
@@ -376,15 +376,15 @@ function FocusWidget({ onNavigate }) {
   if (!current) {
     return (
       <button onClick={() => onNavigate('review')}
-        className="glass group flex w-full items-center justify-between gap-4 rounded-xl border-dashed border-white/15 p-5 text-left transition hover:border-white/30">
+        className="glass glass-hover group flex w-full items-center justify-between gap-4 rounded-2xl border-dashed border-white/15 p-5 text-left transition">
         <div className="flex items-center gap-4">
-          <span className="grid h-11 w-11 place-items-center border border-white/10 text-xl">🎯</span>
+          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 text-xl">🎯</span>
           <div>
             <div className="op-label">This week's focus</div>
             <div className="text-sm text-slate-400">Not set — run a 5-min weekly review to pick your 1–3 priorities.</div>
           </div>
         </div>
-        <span className="shrink-0 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'Courier New, monospace' }}>
+        <span className="shrink-0 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>
           Set focus →
         </span>
       </button>
@@ -440,12 +440,13 @@ function VicesWidget({ onNavigate }) {
 
   return (
     <button onClick={() => onNavigate('vices')}
-      className="glass group flex w-full flex-wrap items-center justify-between gap-4 rounded-xl p-5 text-left transition hover:border-white/20">
+      className="glass glass-hover group flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-left transition"
+      style={{ '--glow': '#ec4899' }}>
       <div className="flex items-center gap-4">
-        <span className="grid h-11 w-11 place-items-center border border-white/10 text-xl">🍺</span>
+        <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 text-xl">🍺</span>
         <div>
           <div className="op-label">Virtue points</div>
-          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>{bal} pts</div>
+          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{bal} pts</div>
         </div>
       </div>
       <div className="flex items-center gap-6 text-sm">

@@ -13,7 +13,7 @@ import { Card, SectionTitle } from '../components/ui.jsx'
 
 const ACCENT = '#ffffff'
 const SPEND = '#f43f5e'
-const MONO = 'Courier New, monospace'
+const MONO = 'var(--font-mono)'
 const EMOJIS = ['🍺', '🍕', '🎮', '😴', '🍫', '🎬', '🛍️', '☕', '🥂', '🚬', '🍔', '🏖️', '💤', '🎧', '🍩', '🎲']
 
 export default function Vices() {
@@ -59,7 +59,7 @@ export default function Vices() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowRates(true)} className="topbtn2">⚙ Rates</button>
+            <button onClick={() => setShowRates(true)} className="btn-ghost">⚙ Rates</button>
             <button onClick={() => setAdding(true)} className="rounded border border-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: MONO }}>+ Vice</button>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function Vices() {
               const short = v.pointCost - bal
               const locked = !afford || cd > 0
               return (
-                <div key={v.id} className="glass rounded-xl p-5">
+                <div key={v.id} className="glass glass-hover rounded-2xl p-5" style={{ '--glow': '#ec4899' }}>
                   <div className="flex items-start justify-between">
                     <span className="text-3xl">{v.emoji}</span>
                     <button onClick={() => actions.deleteVice(v.id)} className="text-slate-600 hover:text-rose-400">✕</button>
@@ -152,8 +152,6 @@ export default function Vices() {
       {adding && <AddViceModal onClose={() => setAdding(false)} onAdd={(v) => { actions.addVice(v); setAdding(false); toast({ icon: v.emoji, title: 'Vice added', color: ACCENT }) }} />}
       {redeeming && <RedeemModal vice={redeeming} bal={bal} onClose={() => setRedeeming(null)} onConfirm={() => redeeming._unearned ? doLogUnearned(redeeming) : doRedeem(redeeming)} />}
       {showRates && <RatesModal state={state} onClose={() => setShowRates(false)} onSave={(r) => { actions.setEarnRates(r); setShowRates(false) }} />}
-
-      <style>{`.topbtn2{border-radius:4px;border:1px solid rgba(255,255,255,.1);background:transparent;padding:.5rem .7rem;font-size:.7rem;color:#777;font-family:${MONO};text-transform:uppercase;letter-spacing:.05em}.topbtn2:hover{border-color:rgba(255,255,255,.3);color:#fff}`}</style>
     </div>
   )
 }
@@ -212,17 +210,17 @@ function AddViceModal({ onClose, onAdd }) {
             ))}
           </div>
         </div>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="What's the vice?" className="vinp" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="vinp" />
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="What's the vice?" className="field" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="field" />
         <label className="block"><span className="mb-1 block op-label">Healthier swap (optional)</span>
-          <input value={substitution} onChange={(e) => setSubstitution(e.target.value)} placeholder="e.g. sparkling water, a walk, an early night" className="vinp" />
+          <input value={substitution} onChange={(e) => setSubstitution(e.target.value)} placeholder="e.g. sparkling water, a walk, an early night" className="field" />
           <span className="mt-1 block text-[11px] text-slate-600">Shown as a gentle nudge when you go to redeem — an approach swap, not a ban.</span>
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block"><span className="mb-1 block op-label">Cost (pts)</span>
-            <input type="number" value={pointCost} onChange={(e) => setPointCost(e.target.value)} placeholder="25" className="vinp" /></label>
+            <input type="number" value={pointCost} onChange={(e) => setPointCost(e.target.value)} placeholder="25" className="field" /></label>
           <label className="block"><span className="mb-1 block op-label">Cooldown (days)</span>
-            <input type="number" value={cooldownDays} onChange={(e) => setCooldownDays(e.target.value)} placeholder="0" className="vinp" /></label>
+            <input type="number" value={cooldownDays} onChange={(e) => setCooldownDays(e.target.value)} placeholder="0" className="field" /></label>
         </div>
         <div>
           <span className="mb-1 block op-label">Category</span>
@@ -237,7 +235,6 @@ function AddViceModal({ onClose, onAdd }) {
         <p className="border border-white/10 bg-white/[0.03] p-2 text-[11px] text-slate-500">Suggested: quick treat 10–20 · medium 25–40 · big night 50–70 · major splurge 80–100</p>
         <button type="submit" className="w-full rounded border border-white py-2 font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: MONO }}>Add vice</button>
       </form>
-      <style>{`.vinp{width:100%;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:.5rem .75rem;color:#fff;outline:none}.vinp:focus{border-color:rgba(255,255,255,.3)}`}</style>
     </Modal>
   )
 }

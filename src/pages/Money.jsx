@@ -80,7 +80,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>

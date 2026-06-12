@@ -106,7 +106,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -127,7 +127,7 @@ function GoalEditor({ target, cur, onChange }) {
       Goal <span className="text-slate-500">{cur}</span>
       <input type="number" value={target} onChange={(e) => onChange(e.target.value)}
         className="w-16 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-right text-xs text-white outline-none focus:border-white/30"
-        style={{ fontFamily: 'Courier New, monospace' }} /> /mo
+        style={{ fontFamily: 'var(--font-mono)' }} /> /mo
     </label>
   )
 }
@@ -159,12 +159,12 @@ function ProjectCard({ p, ym, cur, actions }) {
   }
 
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center border border-white/10 text-xl">{p.emoji}</span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10 text-xl">{p.emoji}</span>
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">{p.name}</div>
-          <div className="text-[11px] text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>
+          <div className="text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
             {money(monthRev, cur)} this month · {money(totalRev, cur)} total
           </div>
         </div>
@@ -179,7 +179,7 @@ function ProjectCard({ p, ym, cur, actions }) {
       {milestones.length > 0 && (
         <div className="mt-3">
           <div className="mb-1 flex justify-between text-[11px] text-slate-500">
-            <span>Milestones shipped</span><span style={{ fontFamily: 'Courier New, monospace' }}>{msDone}/{milestones.length}</span>
+            <span>Milestones shipped</span><span style={{ fontFamily: 'var(--font-mono)' }}>{msDone}/{milestones.length}</span>
           </div>
           <div className="h-1.5 overflow-hidden bg-white/8">
             <div className="h-full transition-all duration-700" style={{ width: `${pct(milestones.length ? msDone / milestones.length : 0)}%`, background: C.color }} />
@@ -207,7 +207,7 @@ function ProjectCard({ p, ym, cur, actions }) {
               {[...revenue].reverse().slice(0, 8).map((r) => (
                 <div key={r.id} className="flex items-center gap-2 text-xs">
                   <span className="w-12 shrink-0 text-slate-600">{r.date.slice(5)}</span>
-                  <span className="flex-1 text-emerald-400" style={{ fontFamily: 'Courier New, monospace' }}>{money(r.amount, cur)}</span>
+                  <span className="flex-1 text-emerald-400" style={{ fontFamily: 'var(--font-mono)' }}>{money(r.amount, cur)}</span>
                   <button onClick={() => actions.deleteRevenue(p.id, r.id)} className="text-slate-600 hover:text-rose-400">✕</button>
                 </div>
               ))}
@@ -281,7 +281,7 @@ function TodoList({ todos, actions }) {
                 style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
-              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
+              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
               <button onClick={() => actions.deleteBusinessTodo(td.id)} className="text-xs text-slate-600 hover:text-rose-400">✕</button>
             </div>
           )

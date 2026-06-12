@@ -20,11 +20,11 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
       >
         <div className="flex h-16 items-center gap-3 border-b border-white/8 px-5">
           <span
-            className="grid h-9 w-9 shrink-0 place-items-center border border-white text-xs font-black text-white"
-            style={{ fontFamily: 'Courier New, monospace', letterSpacing: '0.05em' }}>LX</span>
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white text-xs font-black text-white"
+            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>LX</span>
           <div>
-            <div className="text-sm font-bold tracking-widest text-white uppercase" style={{ fontFamily: 'Courier New, monospace' }}>Lifemax</div>
-            <div className="text-[9px] tracking-widest text-slate-600 uppercase" style={{ fontFamily: 'Courier New, monospace' }}>Intel Dashboard</div>
+            <div className="text-sm font-bold tracking-widest text-white uppercase" style={{ fontFamily: 'var(--font-mono)' }}>Lifemax</div>
+            <div className="text-[9px] tracking-widest text-slate-600 uppercase" style={{ fontFamily: 'var(--font-mono)' }}>Intel Dashboard</div>
           </div>
         </div>
 
@@ -46,7 +46,7 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-[9px] tracking-widest text-slate-700 uppercase" style={{ fontFamily: 'Courier New, monospace' }}>
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-[9px] tracking-widest text-slate-700 uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
           ● Data saved locally
         </div>
       </aside>

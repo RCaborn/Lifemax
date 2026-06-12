@@ -36,7 +36,7 @@ export default function ThisWeek() {
       <div className="glass rounded-2xl p-6 sm:p-8">
         <p className="op-label">Weekly Operation</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">This Week</h1>
-        <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: 'Courier New, monospace' }}>{weekLabel}</p>
+        <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{weekLabel}</p>
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           <WeekStat label="Runs" value={`${weekRuns}/${t.runsPerWeek || 3}`} hit={weekRuns >= (t.runsPerWeek || 3)} />
@@ -60,9 +60,9 @@ export default function ThisWeek() {
 
 function WeekStat({ label, value, hit }) {
   return (
-    <div className="glass rounded px-3 py-2.5">
+    <div className="glass rounded-xl px-3 py-2.5">
       <div className="op-label">{label}</div>
-      <div className="mt-1 font-bold" style={{ color: hit ? '#ffffff' : '#444', fontFamily: 'Courier New, monospace' }}>{value}</div>
+      <div className="mt-1 font-bold" style={{ color: hit ? '#ffffff' : '#444', fontFamily: 'var(--font-mono)' }}>{value}</div>
     </div>
   )
 }
@@ -79,16 +79,16 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
   const dateLabel = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
   return (
-    <div className={`glass rounded-xl p-4 sm:p-5 transition ${isToday ? 'border-white/20' : ''}`}>
+    <div className={`glass rounded-2xl p-4 sm:p-5 transition ${isToday ? 'border-white/20' : ''}`}>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-white">{dayName}</span>
-          <span className="text-sm text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>{dateLabel}</span>
+          <span className="text-sm text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>{dateLabel}</span>
         </div>
         <div className="flex items-center gap-2">
           {isToday && (
-            <span className="border border-white/30 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white"
-              style={{ fontFamily: 'Courier New, monospace' }}>TODAY</span>
+            <span className="rounded border border-white/30 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white"
+              style={{ fontFamily: 'var(--font-mono)' }}>TODAY</span>
           )}
           {hasData && <span className="h-1.5 w-1.5 bg-white" />}
         </div>
@@ -112,11 +112,10 @@ function DayCounter({ icon, label, value, color, onChange }) {
     <div className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
       <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
       <div className="flex items-center gap-1.5">
-        <button onClick={() => onChange(Math.max(0, value - 1))} className="dc">−</button>
-        <span className="w-5 text-center text-sm font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>{value}</span>
-        <button onClick={() => onChange(value + 1)} className="dc" style={{ background: color, color: '#000' }}>+</button>
+        <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon btn-icon-xs">−</button>
+        <span className="w-5 text-center text-sm font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{value}</span>
+        <button onClick={() => onChange(value + 1)} className="btn-icon btn-icon-xs" style={{ background: color, color: '#000' }}>+</button>
       </div>
-      <style>{`.dc{width:24px;height:24px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#777;font-size:14px;line-height:1}`}</style>
     </div>
   )
 }
