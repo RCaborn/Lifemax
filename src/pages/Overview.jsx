@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { Target, Beer, Check, X, Pencil, ArrowRight } from 'lucide-react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, todayKey, weekKeyOf, lastNDays } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, toKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
@@ -10,6 +11,7 @@ import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
+import { ItemIcon, IconPicker, QUICKWIN_ICONS } from '../lib/icons.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
 const ORDER = ['fitness', 'money', 'study', 'career', 'business']
@@ -81,7 +83,7 @@ export default function Overview({ onNavigate }) {
                 style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55, '--glow': meta.color }}>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <span className="text-xl">{meta.icon}</span>
+                    <ItemIcon icon={meta.icon} size={20} />
                     <span className="font-semibold text-white">{meta.name}</span>
                   </span>
                   <ProgressRing value={isActive ? Math.min(1, d.score / 0.8) : 0} size={48} stroke={5} color={isActive ? meta.color : '#333'} label="" />
@@ -200,8 +202,8 @@ function MasterTodoList({ onNavigate }) {
               <div key={`${td.domain}-${td.id}`}
                 className="flex items-center gap-3 rounded-lg bg-white/[0.025] px-3 py-2.5 text-sm">
                 <button onClick={() => conf.toggle(td.id)}
-                  className="grid h-5 w-5 shrink-0 place-items-center border text-[11px] transition"
-                  style={{ borderColor: td.done ? '#fff' : 'rgba(255,255,255,.18)', background: td.done ? '#fff' : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                  className="grid h-5 w-5 shrink-0 place-items-center border transition"
+                  style={{ borderColor: td.done ? '#fff' : 'rgba(255,255,255,.18)', background: td.done ? '#fff' : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={12} /></button>
                 <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO_COLOR[td.priority] || '#555' }} />
                 <span className={`flex-1 truncate ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
                 <button onClick={() => onNavigate(td.domain)}
@@ -226,23 +228,24 @@ function MasterTodoList({ onNavigate }) {
 function QuickWinsPanel() {
   const { state, actions } = useStore()
   const toast = useToast()
+  const [offset, setOffset] = useState(0)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newEmoji, setNewEmoji] = useState('⚡')
+  const [newIcon, setNewIcon] = useState('Zap')
   const [newPts, setNewPts] = useState('1')
   const [cueFor, setCueFor] = useState(null)
   const [cueText, setCueText] = useState('')
 
-  const today = todayKey()
+  const dateKey = (() => { const d = new Date(); d.setDate(d.getDate() + offset); return toKey(d) })()
   const items = state.quickWins?.items || []
-  const todayWins = state.quickWins?.days?.[today] || []
+  const dayWins = state.quickWins?.days?.[dateKey] || []
   const days = state.quickWins?.days || {}
 
   // Graceful consistency: "active X of last 14 days" — no punitive streak reset.
   const activeDays = lastNDays(14).filter((k) => (days[k]?.length || 0) > 0).length
 
-  const todayPts = items
-    .filter((item) => todayWins.includes(item.id))
+  const dayPts = items
+    .filter((item) => dayWins.includes(item.id))
     .reduce((a, item) => a + (item.points || 1), 0)
 
   const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
@@ -254,9 +257,9 @@ function QuickWinsPanel() {
   const cueItem = items.find((i) => i.id === cueFor)
 
   const toggle = (item) => {
-    const wasDone = todayWins.includes(item.id)
-    actions.toggleQuickWin(today, item.id)
-    if (!wasDone) {
+    const wasDone = dayWins.includes(item.id)
+    actions.toggleQuickWin(dateKey, item.id)
+    if (!wasDone && offset === 0) {
       toast({ icon: item.emoji, title: item.name, sub: `+${item.points} pt${item.points !== 1 ? 's' : ''}`, color: '#ffffff' })
     }
   }
@@ -264,19 +267,31 @@ function QuickWinsPanel() {
   const addWin = (e) => {
     e.preventDefault()
     if (!newName.trim()) return
-    actions.addQuickWin({ name: newName.trim(), emoji: newEmoji, points: Math.max(1, Math.min(5, Number(newPts) || 1)) })
-    setNewName(''); setNewEmoji('⚡'); setNewPts('1'); setAdding(false)
+    actions.addQuickWin({ name: newName.trim(), emoji: newIcon, points: Math.max(1, Math.min(5, Number(newPts) || 1)) })
+    setNewName(''); setNewIcon('Zap'); setNewPts('1'); setAdding(false)
   }
 
   return (
     <Card>
       <SectionTitle right={
-        <div className="flex items-center gap-3">
-          {todayPts > 0 && (
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{todayPts} pts today</span>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {dayPts > 0 && (
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} pts {offset === 0 ? 'today' : 'yesterday'}</span>
           )}
           <button onClick={() => setAdding((v) => !v)}
             className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
+          <div className="flex overflow-hidden rounded border border-white/10">
+            <button onClick={() => setOffset(0)}
+              className="px-2.5 py-1 text-xs font-medium transition"
+              style={{ background: offset === 0 ? 'rgba(255,255,255,0.12)' : 'transparent', color: offset === 0 ? '#fff' : '#555' }}>
+              Today
+            </button>
+            <button onClick={() => setOffset(-1)}
+              className="border-l border-white/10 px-2.5 py-1 text-xs font-medium transition"
+              style={{ background: offset === -1 ? 'rgba(255,255,255,0.12)' : 'transparent', color: offset === -1 ? '#fff' : '#555' }}>
+              Yesterday
+            </button>
+          </div>
         </div>
       }>
         Quick Wins
@@ -284,7 +299,7 @@ function QuickWinsPanel() {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {items.map((item) => {
-          const done = todayWins.includes(item.id)
+          const done = dayWins.includes(item.id)
           return (
             <div key={item.id} className="relative group">
               <button onClick={() => toggle(item)}
@@ -294,10 +309,10 @@ function QuickWinsPanel() {
                   color: done ? '#050505' : '#888',
                   border: `1px solid ${done ? '#fff' : 'rgba(255,255,255,0.08)'}`,
                 }}>
-                <span className="text-base">{item.emoji}</span>
+                <ItemIcon icon={item.emoji} size={16} />
                 <span className="flex-1 text-xs leading-tight">{item.name}</span>
                 <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: done ? '#050505' : '#555' }}>
-                  {done ? '✓' : `+${item.points}`}
+                  {done ? <Check size={12} /> : `+${item.points}`}
                 </span>
               </button>
               {item.cue && (
@@ -307,12 +322,12 @@ function QuickWinsPanel() {
               )}
               <div className="absolute -right-1.5 -top-1.5 hidden group-hover:flex gap-0.5">
                 <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
-                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[9px] text-slate-600 hover:text-white">
-                  ✎
+                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-white">
+                  <Pencil size={9} />
                 </button>
                 <button onClick={() => actions.deleteQuickWin(item.id)}
-                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[10px] text-slate-600 hover:text-rose-400">
-                  ✕
+                  className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-rose-400">
+                  <X size={10} />
                 </button>
               </div>
             </div>
@@ -328,7 +343,7 @@ function QuickWinsPanel() {
             <input value={cueText} onChange={(e) => setCueText(e.target.value)} autoFocus
               placeholder="e.g. my morning coffee / lunch / brushing teeth"
               className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-            <span className="shrink-0 text-xs text-slate-500">→ {cueItem.emoji}</span>
+            <span className="shrink-0 flex items-center gap-1 text-xs text-slate-500"><ArrowRight size={12} /> <ItemIcon icon={cueItem.emoji} size={14} /></span>
             <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>Save</button>
             <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
           </div>
@@ -337,20 +352,20 @@ function QuickWinsPanel() {
       )}
 
       {adding && (
-        <form onSubmit={addWin} className="mt-3 flex gap-2 items-center border-t border-white/8 pt-3">
-          <input value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)}
-            className="w-10 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-center text-white outline-none"
-            maxLength={2} />
-          <input value={newName} onChange={(e) => setNewName(e.target.value)}
-            placeholder="Win name…" autoFocus
-            className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-          <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
-            className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
-            style={{ fontFamily: 'var(--font-mono)' }}>
-            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
-          </select>
-          <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
-            style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
+        <form onSubmit={addWin} className="mt-3 space-y-2 border-t border-white/8 pt-3">
+          <div className="flex gap-2 items-center">
+            <input value={newName} onChange={(e) => setNewName(e.target.value)}
+              placeholder="Win name…" autoFocus
+              className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+            <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
+              className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
+              style={{ fontFamily: 'var(--font-mono)' }}>
+              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
+            </select>
+            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+              style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
+          </div>
+          <IconPicker icons={QUICKWIN_ICONS} value={newIcon} onChange={setNewIcon} />
         </form>
       )}
 
@@ -378,14 +393,14 @@ function FocusWidget({ onNavigate }) {
       <button onClick={() => onNavigate('review')}
         className="glass glass-hover group flex w-full items-center justify-between gap-4 rounded-2xl border-dashed border-white/15 p-5 text-left transition">
         <div className="flex items-center gap-4">
-          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 text-xl">🎯</span>
+          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Target size={22} /></span>
           <div>
             <div className="op-label">This week's focus</div>
             <div className="text-sm text-slate-400">Not set — run a 5-min weekly review to pick your 1–3 priorities.</div>
           </div>
         </div>
-        <span className="shrink-0 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>
-          Set focus →
+        <span className="shrink-0 flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>
+          Set focus <ArrowRight size={12} />
         </span>
       </button>
     )
@@ -401,7 +416,7 @@ function FocusWidget({ onNavigate }) {
           <button onClick={() => onNavigate('review')} className="op-label hover:text-white transition">Edit</button>
         </span>
       }>
-        🎯 This week's focus
+        <span className="flex items-center gap-1.5"><Target size={13} /> This week's focus</span>
       </SectionTitle>
       <div className="space-y-1.5">
         {focus.priorities.map((p, i) => {
@@ -409,8 +424,8 @@ function FocusWidget({ onNavigate }) {
           return (
             <button key={i} onClick={() => actions.toggleFocusPriority(i)}
               className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.06]">
-              <span className="grid h-5 w-5 shrink-0 place-items-center border text-[11px] transition"
-                style={{ borderColor: on ? '#fff' : 'rgba(255,255,255,.18)', background: on ? '#fff' : 'transparent', color: on ? '#000' : 'transparent' }}>✓</span>
+              <span className="grid h-5 w-5 shrink-0 place-items-center border transition"
+                style={{ borderColor: on ? '#fff' : 'rgba(255,255,255,.18)', background: on ? '#fff' : 'transparent', color: on ? '#000' : 'transparent' }}><Check size={12} /></span>
               <span className={`flex-1 text-sm ${on ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{p}</span>
             </button>
           )
@@ -443,7 +458,7 @@ function VicesWidget({ onNavigate }) {
       className="glass glass-hover group flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-left transition"
       style={{ '--glow': '#ec4899' }}>
       <div className="flex items-center gap-4">
-        <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 text-xl">🍺</span>
+        <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Beer size={22} /></span>
         <div>
           <div className="op-label">Virtue points</div>
           <div className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{bal} pts</div>
@@ -459,10 +474,10 @@ function VicesWidget({ onNavigate }) {
         {next && (
           <div>
             <div className="op-label">{bal >= next.pointCost ? 'Top vice' : 'Next unlock'}</div>
-            <div className="font-semibold text-white">{next.emoji} {next.name} · {next.pointCost}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-white"><ItemIcon icon={next.emoji} size={14} /> {next.name} · {next.pointCost}</div>
           </div>
         )}
-        <span className="text-slate-600 transition group-hover:translate-x-0.5">→</span>
+        <span className="text-slate-600 transition group-hover:translate-x-0.5"><ArrowRight size={16} /></span>
       </div>
     </button>
   )

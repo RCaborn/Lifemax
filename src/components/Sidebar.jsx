@@ -1,13 +1,14 @@
 import { DOMAINS } from '../lib/domains.js'
+import { ItemIcon } from '../lib/icons.jsx'
 
 export default function Sidebar({ current, onNavigate, open, onClose }) {
   const items = [
-    { id: 'overview', name: 'Overview', icon: '🧭' },
-    { id: 'thisweek', name: 'This Week', icon: '📋', color: '#fff' },
-    { id: 'review', name: 'Weekly Review', icon: '📝', color: '#fff' },
+    { id: 'overview', name: 'Overview', icon: 'LayoutDashboard' },
+    { id: 'thisweek', name: 'This Week', icon: 'CalendarDays', color: '#fff' },
+    { id: 'review', name: 'Weekly Review', icon: 'NotebookPen', color: '#fff' },
     ...DOMAINS,
-    { id: 'stakes', name: 'Stakes', icon: '🎯', color: '#f43f5e' },
-    { id: 'vices', name: 'Vices', icon: '🍺', color: '#ec4899' },
+    { id: 'stakes', name: 'Stakes', icon: 'Target', color: '#f43f5e' },
+    { id: 'vices', name: 'Vices', icon: 'Beer', color: '#ec4899' },
   ]
 
   return (
@@ -38,7 +39,7 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
                 className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium transition
                   ${active ? 'bg-white/10 text-white border-l-2 border-white' : 'text-slate-500 hover:bg-white/5 hover:text-white border-l-2 border-transparent'}`}
               >
-                <span className="text-base">{it.icon}</span>
+                <ItemIcon icon={it.icon} size={18} />
                 <span className="tracking-wide">{it.name}</span>
                 {active && <span className="ml-auto h-1.5 w-1.5 rounded-sm bg-white" />}
               </button>

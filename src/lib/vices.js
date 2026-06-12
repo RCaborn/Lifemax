@@ -24,16 +24,16 @@ export const DEFAULT_EARN_RATES = {
 }
 
 export const EARN_LABELS = {
-  run: { label: 'Run logged', icon: '🏃', domain: 'fitness' },
-  workout: { label: 'Workout logged', icon: '🏋️', domain: 'fitness' },
-  stretch: { label: 'Stretch day', icon: '🧘', domain: 'fitness' },
-  steps_10k: { label: 'Step goal hit', icon: '👟', domain: 'fitness' },
-  wake_target: { label: 'Woke on time', icon: '⏰', domain: 'fitness' },
-  pages_20: { label: 'Reading goal hit', icon: '📖', domain: 'study' },
-  study_hour: { label: 'Study hour', icon: '⏱️', domain: 'study' },
-  career_hour: { label: 'Skill hour', icon: '🎓', domain: 'career' },
-  milestone: { label: 'Milestone shipped', icon: '🚩', domain: 'business' },
-  stake: { label: 'Stake won', icon: '🎯', domain: 'stakes' },
+  run: { label: 'Run logged', icon: 'Activity', domain: 'fitness' },
+  workout: { label: 'Workout logged', icon: 'Dumbbell', domain: 'fitness' },
+  stretch: { label: 'Stretch day', icon: 'Flower2', domain: 'fitness' },
+  steps_10k: { label: 'Step goal hit', icon: 'Footprints', domain: 'fitness' },
+  wake_target: { label: 'Woke on time', icon: 'AlarmClock', domain: 'fitness' },
+  pages_20: { label: 'Reading goal hit', icon: 'BookOpen', domain: 'study' },
+  study_hour: { label: 'Study hour', icon: 'Timer', domain: 'study' },
+  career_hour: { label: 'Skill hour', icon: 'GraduationCap', domain: 'career' },
+  milestone: { label: 'Milestone shipped', icon: 'Flag', domain: 'business' },
+  stake: { label: 'Stake won', icon: 'Target', domain: 'stakes' },
 }
 
 function ratesOf(state) {
@@ -142,16 +142,16 @@ export function fullLedger(state) {
     if (e.source.startsWith('qw_')) {
       const item = qwMap[e.source.slice(3)]
       label = item?.name || 'Quick win'
-      icon = item?.emoji || '⚡'
+      icon = item?.emoji || 'Zap'
     } else {
       label = (EARN_LABELS[e.source]?.label || e.source) + (e.qty > 1 ? ` ×${e.qty}` : '')
-      icon = EARN_LABELS[e.source]?.icon || '✨'
+      icon = EARN_LABELS[e.source]?.icon || 'Sparkles'
     }
     return { ...e, type: 'earn', signed: e.points, label, icon }
   })
   const spent = spends(state).map((e) => ({
     date: e.date, type: 'spend', signed: -e.points, points: e.points, unearned: e.unearned,
-    label: (e.unearned ? '(unearned) ' : '') + (e.viceName || 'Vice redeemed'), icon: e.unearned ? '⚠️' : (e.icon || '🎁'),
+    label: (e.unearned ? '(unearned) ' : '') + (e.viceName || 'Vice redeemed'), icon: e.unearned ? 'TriangleAlert' : (e.icon || 'Gift'),
   }))
   return [...earned, ...spent].sort((a, b) => (a.date < b.date ? 1 : -1))
 }

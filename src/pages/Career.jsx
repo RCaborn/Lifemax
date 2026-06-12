@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check, X } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { careerScore } from '../lib/score.js'
@@ -7,6 +8,7 @@ import { pct } from '../lib/format.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../components/ui.jsx'
+import { ItemIcon } from '../lib/icons.jsx'
 
 const C = DOMAIN_MAP.career
 const STATUS = {
@@ -69,7 +71,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -134,7 +136,7 @@ function JobList({ jobs, actions }) {
             style={{ color: STATUS[j.status].color }}>
             {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k} className="bg-[#0d0d0d] text-white">{v.label}</option>)}
           </select>
-          <button onClick={() => actions.deleteJob(j.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+          <button onClick={() => actions.deleteJob(j.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
         </div>
       ))}
     </div>
@@ -159,7 +161,7 @@ function SkillList({ skills, actions }) {
                   <span className="text-xs text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{logged.toFixed(1)}/{sk.targetHours}h</span>
                   <button onClick={() => actions.logSkill(sk.id, 0.5)} className="rounded px-2 py-1 text-xs font-medium" style={{ background: C.color, color: '#000' }}>+30m</button>
                   <button onClick={() => actions.logSkill(sk.id, 1)} className="rounded bg-white/10 px-2 py-1 text-xs font-medium text-white">+1h</button>
-                  <button onClick={() => actions.deleteSkill(sk.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+                  <button onClick={() => actions.deleteSkill(sk.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
                 </div>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden bg-white/8">
@@ -203,12 +205,12 @@ function TodoList({ todos, actions }) {
           return (
             <div key={td.id} className="flex items-center gap-2 rounded bg-white/[0.03] px-3 py-2">
               <button onClick={() => actions.toggleCareerTodo(td.id)}
-                className="grid h-5 w-5 shrink-0 place-items-center border text-[11px]"
-                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                className="grid h-5 w-5 shrink-0 place-items-center border"
+                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={11} /></button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
               {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
-              <button onClick={() => actions.deleteCareerTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+              <button onClick={() => actions.deleteCareerTodo(td.id)} className="text-slate-600 hover:text-rose-400"><X size={12} /></button>
             </div>
           )
         })}

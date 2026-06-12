@@ -35,14 +35,14 @@ function seedStakes() {
 function seedQuickWins() {
   return {
     items: [
-      { id: 'meditate',    name: 'Meditate',        emoji: '🧘', points: 1 },
-      { id: 'walk',        name: 'Walk',             emoji: '🚶', points: 1 },
-      { id: 'finish_book', name: 'Finish a book',    emoji: '📚', points: 2 },
-      { id: 'maths',       name: 'Maths problem',    emoji: '🔢', points: 1 },
-      { id: 'spanish',     name: 'Practice Spanish', emoji: '🇪🇸', points: 1 },
-      { id: 'sea_dip',     name: 'Sea dip',          emoji: '🏊', points: 2 },
-      { id: 'golf',        name: 'Golf practice',    emoji: '⛳', points: 2 },
-      { id: 'clean',       name: 'Clean',            emoji: '🧹', points: 1 },
+      { id: 'meditate',    name: 'Meditate',        emoji: 'Flower2', points: 1 },
+      { id: 'walk',        name: 'Walk',             emoji: 'Footprints', points: 1 },
+      { id: 'finish_book', name: 'Finish a book',    emoji: 'BookOpen', points: 2 },
+      { id: 'maths',       name: 'Maths problem',    emoji: 'Calculator', points: 1 },
+      { id: 'spanish',     name: 'Practice Spanish', emoji: 'Languages', points: 1 },
+      { id: 'sea_dip',     name: 'Sea dip',          emoji: 'Waves', points: 2 },
+      { id: 'golf',        name: 'Golf practice',    emoji: 'Flag', points: 2 },
+      { id: 'clean',       name: 'Clean',            emoji: 'Brush', points: 1 },
     ],
     days: {},
   }
@@ -52,10 +52,10 @@ function seedVices() {
   return {
     earnRates: null,
     vices: [
-      { id: rid(), name: 'Night out', emoji: '🍺', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true, substitution: 'Sparkling water + early night' },
-      { id: rid(), name: 'Takeaway', emoji: '🍕', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true, substitution: '' },
-      { id: rid(), name: 'Gaming evening', emoji: '🎮', description: 'A full evening of games', pointCost: 25, cooldownDays: 2, category: 'entertainment', isActive: true, substitution: '' },
-      { id: rid(), name: 'Lie-in', emoji: '😴', description: 'No alarm, sleep in', pointCost: 20, cooldownDays: 5, category: 'other', isActive: true, substitution: '' },
+      { id: rid(), name: 'Night out', emoji: 'Beer', description: 'Drinks with mates', pointCost: 60, cooldownDays: 7, category: 'social', isActive: true, substitution: 'Sparkling water + early night' },
+      { id: rid(), name: 'Takeaway', emoji: 'Pizza', description: 'Order in tonight', pointCost: 15, cooldownDays: 3, category: 'food', isActive: true, substitution: '' },
+      { id: rid(), name: 'Gaming evening', emoji: 'Gamepad2', description: 'A full evening of games', pointCost: 25, cooldownDays: 2, category: 'entertainment', isActive: true, substitution: '' },
+      { id: rid(), name: 'Lie-in', emoji: 'BedDouble', description: 'No alarm, sleep in', pointCost: 20, cooldownDays: 5, category: 'other', isActive: true, substitution: '' },
     ],
     ledger: [],
   }

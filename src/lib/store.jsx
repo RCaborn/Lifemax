@@ -166,7 +166,7 @@ export function StoreProvider({ children }) {
     deleteContract: (id) => update((d) => { d.stakes.contracts = d.stakes.contracts.filter((x) => x.id !== id) }),
 
     // ---------- Vices ----------
-    addVice: (v) => update((d) => { d.vices.vices.push({ id: rid(), emoji: '🎁', cooldownDays: 0, category: 'other', isActive: true, ...v, pointCost: Number(v.pointCost) || 0 }) }),
+    addVice: (v) => update((d) => { d.vices.vices.push({ id: rid(), emoji: 'Gift', cooldownDays: 0, category: 'other', isActive: true, ...v, pointCost: Number(v.pointCost) || 0 }) }),
     updateVice: (id, patch) => update((d) => { const v = d.vices.vices.find((x) => x.id === id); if (v) Object.assign(v, patch) }),
     deleteVice: (id) => update((d) => { d.vices.vices = d.vices.vices.filter((x) => x.id !== id) }),
     redeemVice: (vice) => update((d) => {
@@ -246,7 +246,7 @@ export function StoreProvider({ children }) {
     }),
 
     // ---------- Business / side-hustle projects ----------
-    addProject: (p) => update((d) => { d.business.projects.push({ id: rid(), emoji: '🚀', status: 'building', createdAt: todayKey(), revenue: [], milestones: [], ...p }) }),
+    addProject: (p) => update((d) => { d.business.projects.push({ id: rid(), emoji: 'Rocket', status: 'building', createdAt: todayKey(), revenue: [], milestones: [], ...p }) }),
     updateProject: (id, patch) => update((d) => { const p = d.business.projects.find((x) => x.id === id); if (p) Object.assign(p, patch) }),
     deleteProject: (id) => update((d) => { d.business.projects = d.business.projects.filter((x) => x.id !== id) }),
     addRevenue: (projectId, entry) => update((d) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Settings, X, PartyPopper } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from '../components/Toast.jsx'
 import {
@@ -10,11 +11,11 @@ import { pct } from '../lib/format.js'
 import { confetti } from '../lib/confetti.js'
 import Modal from '../components/Modal.jsx'
 import { Card, SectionTitle } from '../components/ui.jsx'
+import { ItemIcon, IconPicker, VICE_ICONS } from '../lib/icons.jsx'
 
 const ACCENT = '#ffffff'
 const SPEND = '#f43f5e'
 const MONO = 'var(--font-mono)'
-const EMOJIS = ['🍺', '🍕', '🎮', '😴', '🍫', '🎬', '🛍️', '☕', '🥂', '🚬', '🍔', '🏖️', '💤', '🎧', '🍩', '🎲']
 
 export default function Vices() {
   const { state, actions } = useStore()
@@ -59,7 +60,7 @@ export default function Vices() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowRates(true)} className="btn-ghost">⚙ Rates</button>
+            <button onClick={() => setShowRates(true)} className="btn-ghost flex items-center gap-1.5"><Settings size={12} /> Rates</button>
             <button onClick={() => setAdding(true)} className="rounded border border-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: MONO }}>+ Vice</button>
           </div>
         </div>
@@ -67,7 +68,7 @@ export default function Vices() {
         {goal > 0 && (
           <div className="relative mt-4">
             <div className="mb-1 flex justify-between op-label">
-              <span>{nextUp ? `Next up · ${nextUp.emoji} ${nextUp.name}` : 'Top reward unlocked'}</span><span style={{ fontFamily: MONO }}>{Math.max(0, Math.min(bal, goal))}/{goal}</span>
+              <span className="flex items-center gap-1">{nextUp ? <>Next up · <ItemIcon icon={nextUp.emoji} size={12} /> {nextUp.name}</> : 'Top reward unlocked'}</span><span style={{ fontFamily: MONO }}>{Math.max(0, Math.min(bal, goal))}/{goal}</span>
             </div>
             <div className="h-1.5 overflow-hidden bg-white/8">
               <div className="h-full transition-all duration-700" style={{ width: `${pct(bal / goal)}%`, background: ACCENT }} />
@@ -83,7 +84,7 @@ export default function Vices() {
         <div className="flex flex-wrap gap-2">
           {Object.entries(EARN_LABELS).filter(([k]) => k !== 'stake').map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5 border border-white/10 px-3 py-1.5 text-sm text-slate-400">
-              <span>{v.icon}</span>{v.label}
+              <ItemIcon icon={v.icon} size={14} />{v.label}
               <span className="font-semibold text-white" style={{ fontFamily: MONO }}>+{rate(state, k)}</span>
             </span>
           ))}
@@ -110,8 +111,8 @@ export default function Vices() {
               return (
                 <div key={v.id} className="glass glass-hover rounded-2xl p-5" style={{ '--glow': '#ec4899' }}>
                   <div className="flex items-start justify-between">
-                    <span className="text-3xl">{v.emoji}</span>
-                    <button onClick={() => actions.deleteVice(v.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+                    <span className="grid h-12 w-12 place-items-center rounded-lg border border-white/10"><ItemIcon icon={v.emoji} size={22} /></span>
+                    <button onClick={() => actions.deleteVice(v.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
                   </div>
                   <div className="mt-2 font-semibold text-white">{v.name}</div>
                   {v.description && <div className="text-xs text-slate-600">{v.description}</div>}
@@ -177,7 +178,7 @@ function LedgerView({ state }) {
         {rows.length === 0 && <p className="text-sm text-slate-600">No activity yet.</p>}
         {rows.map((r, i) => (
           <div key={i} className="flex items-center gap-3 rounded bg-white/[0.03] px-3 py-2 text-sm">
-            <span>{r.icon}</span>
+            <ItemIcon icon={r.icon} size={14} />
             <span className="w-14 shrink-0 text-xs text-slate-600" style={{ fontFamily: MONO }}>{r.date?.slice(5)}</span>
             <span className="flex-1 truncate text-slate-400">{r.label}</span>
             <span className="font-semibold" style={{ color: r.signed >= 0 ? '#fff' : SPEND, fontFamily: MONO, opacity: r.unearned ? 0.6 : 1 }}>{r.signed >= 0 ? '+' : ''}{r.signed}</span>
@@ -190,25 +191,19 @@ function LedgerView({ state }) {
 
 function AddViceModal({ onClose, onAdd }) {
   const [name, setName] = useState('')
-  const [emoji, setEmoji] = useState('🍺')
+  const [icon, setIcon] = useState('Beer')
   const [description, setDescription] = useState('')
   const [pointCost, setPointCost] = useState('')
   const [cooldownDays, setCooldownDays] = useState('0')
   const [category, setCategory] = useState('social')
   const [substitution, setSubstitution] = useState('')
-  const submit = (e) => { e.preventDefault(); if (name.trim() && pointCost !== '') onAdd({ name: name.trim(), emoji, description: description.trim(), pointCost: Number(pointCost), cooldownDays: Number(cooldownDays) || 0, category, substitution: substitution.trim() }) }
+  const submit = (e) => { e.preventDefault(); if (name.trim() && pointCost !== '') onAdd({ name: name.trim(), emoji: icon, description: description.trim(), pointCost: Number(pointCost), cooldownDays: Number(cooldownDays) || 0, category, substitution: substitution.trim() }) }
   return (
     <Modal title="New vice" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         <div>
-          <span className="mb-1 block op-label">Pick an emoji</span>
-          <div className="grid grid-cols-8 gap-1.5">
-            {EMOJIS.map((e) => (
-              <button type="button" key={e} onClick={() => setEmoji(e)}
-                className="grid aspect-square place-items-center rounded text-xl transition"
-                style={{ background: emoji === e ? ACCENT : 'rgba(255,255,255,.06)' }}>{e}</button>
-            ))}
-          </div>
+          <span className="mb-1 block op-label">Pick an icon</span>
+          <IconPicker icons={VICE_ICONS} value={icon} onChange={setIcon} />
         </div>
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="What's the vice?" className="field" />
         <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="field" />
@@ -245,7 +240,7 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
   return (
     <Modal title={unearned ? `Log ${vice.name}` : `Redeem ${vice.name}?`} onClose={onClose}>
       <div className="text-center">
-        <div className="text-5xl">{vice.emoji}</div>
+        <div className="flex justify-center text-white"><ItemIcon icon={vice.emoji} size={48} /></div>
 
         {unearned ? (
           <div className="mt-4 space-y-3">
@@ -279,9 +274,9 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
         )}
 
         <button onClick={onConfirm}
-          className="mt-5 w-full rounded py-2 font-semibold uppercase tracking-wider transition"
+          className="mt-5 flex w-full items-center justify-center gap-1.5 rounded py-2 font-semibold uppercase tracking-wider transition"
           style={{ fontFamily: MONO, background: unearned ? 'rgba(255,255,255,.1)' : ACCENT, color: unearned ? '#aaa' : '#000' }}>
-          {unearned ? `Log it — ${vice.pointCost} pts` : 'Confirm — I earned this 🎉'}
+          {unearned ? `Log it — ${vice.pointCost} pts` : <>Confirm — I earned this <PartyPopper size={14} /></>}
         </button>
       </div>
     </Modal>
@@ -296,7 +291,7 @@ function RatesModal({ state, onClose, onSave }) {
       <div className="space-y-2">
         {Object.keys(DEFAULT_EARN_RATES).map((k) => (
           <div key={k} className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm text-slate-400">{EARN_LABELS[k]?.icon} {EARN_LABELS[k]?.label}</span>
+            <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={EARN_LABELS[k]?.icon} size={14} /> {EARN_LABELS[k]?.label}</span>
             <input type="number" value={rates[k]} onChange={(e) => setRates((r) => ({ ...r, [k]: Number(e.target.value) || 0 }))}
               className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-white outline-none focus:border-white/30" />
           </div>

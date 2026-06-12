@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Menu, Cloud, Download, Upload, RotateCcw } from 'lucide-react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import Money from './pages/Money.jsx'
@@ -83,30 +84,30 @@ export default function App() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-white/8 bg-[#050505]/90 px-4 backdrop-blur">
-          <button className="md:hidden text-slate-400" onClick={() => setNavOpen(true)}>☰</button>
+          <button className="md:hidden text-slate-400" onClick={() => setNavOpen(true)}><Menu size={20} /></button>
           <span className="text-xs uppercase tracking-widest text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{pageName}</span>
           <div className="ml-auto flex items-center gap-2">
             {installEvent && (
               <button onClick={doInstall}
-                className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+                className="flex items-center gap-1.5 rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
                 style={{ fontFamily: 'var(--font-mono)' }}>
-                ⤓ Install
+                <Download size={13} /> Install
               </button>
             )}
             <button onClick={() => setShowSync(true)} className="btn-ghost" title="Cloud sync across devices">
-              <span className="relative">
-                ☁ {sync.session ? 'Synced' : 'Sync'}
+              <span className="relative flex items-center gap-1.5">
+                <Cloud size={13} /> {sync.session ? 'Synced' : 'Sync'}
                 {sync.configured && (
                   <span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full"
                     style={{ background: sync.status === 'error' ? '#f43f5e' : sync.status === 'syncing' ? '#38bdf8' : sync.session ? '#22c55e' : '#eab308' }} />
                 )}
               </span>
             </button>
-            <button onClick={exportData} className="btn-ghost" title="Download a backup">⤓ Export</button>
-            <button onClick={() => fileRef.current?.click()} className="btn-ghost" title="Restore from backup">⤴ Import</button>
+            <button onClick={exportData} className="btn-ghost flex items-center gap-1.5" title="Download a backup"><Download size={13} /> Export</button>
+            <button onClick={() => fileRef.current?.click()} className="btn-ghost flex items-center gap-1.5" title="Restore from backup"><Upload size={13} /> Import</button>
             <button
               onClick={() => confirm('Reset ALL data to blank? This cannot be undone.') && actions.resetAll()}
-              className="btn-ghost" title="Reset all data">↺ Reset</button>
+              className="btn-ghost flex items-center gap-1.5" title="Reset all data"><RotateCcw size={13} /> Reset</button>
             <input ref={fileRef} type="file" accept="application/json" onChange={importData} className="hidden" />
           </div>
         </header>

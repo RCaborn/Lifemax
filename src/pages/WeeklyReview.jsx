@@ -7,6 +7,7 @@ import { pct, gradeFor } from '../lib/format.js'
 import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
 import { useToast } from '../components/Toast.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
+import { ItemIcon } from '../lib/icons.jsx'
 
 const MONO = 'var(--font-mono)'
 
@@ -57,7 +58,7 @@ export default function WeeklyReview() {
     })
     actions.setFocus(wk, cleaned)
     setSaved(true)
-    toast({ icon: '📝', title: 'Review saved', sub: cleaned.length ? `${cleaned.length} priorit${cleaned.length === 1 ? 'y' : 'ies'} set` : 'Reflection logged', color: '#ffffff' })
+    toast({ icon: 'NotebookPen', title: 'Review saved', sub: cleaned.length ? `${cleaned.length} priorit${cleaned.length === 1 ? 'y' : 'ies'} set` : 'Reflection logged', color: '#ffffff' })
   }
 
   return (
@@ -91,9 +92,9 @@ export default function WeeklyReview() {
             }))} color="#ffffff" />
           </div>
           <div className="space-y-3 text-sm">
-            <Insight icon="🏆" label="Strongest" text={best ? `${DOMAIN_MAP[best.id].name} — ${pct(best.score / 0.8)}%` : '—'} />
-            <Insight icon="🎯" label="Biggest lever" text={worst ? `${DOMAIN_MAP[worst.id].name} — ${pct(worst.score / 0.8)}%` : '—'} />
-            <Insight icon="⚡" label="Quick wins" text={`${qwTotal} logged · active ${qwActiveDays}/7 days`} />
+            <Insight icon="Trophy" label="Strongest" text={best ? `${DOMAIN_MAP[best.id].name} — ${pct(best.score / 0.8)}%` : '—'} />
+            <Insight icon="Target" label="Biggest lever" text={worst ? `${DOMAIN_MAP[worst.id].name} — ${pct(worst.score / 0.8)}%` : '—'} />
+            <Insight icon="Zap" label="Quick wins" text={`${qwTotal} logged · active ${qwActiveDays}/7 days`} />
           </div>
         </div>
       </Card>
@@ -152,7 +153,7 @@ export default function WeeklyReview() {
 function Insight({ icon, label, text }) {
   return (
     <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5">
-      <span className="text-lg">{icon}</span>
+      <span className="text-slate-400"><ItemIcon icon={icon} size={18} /></span>
       <div>
         <div className="op-label">{label}</div>
         <div className="text-sm font-semibold text-white">{text}</div>

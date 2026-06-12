@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CircleCheck, CircleX, X, Check, Hourglass, AlarmClock, Gift } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from '../components/Toast.jsx'
 import {
@@ -26,8 +27,8 @@ export default function Stakes() {
   const resolve = (c, outcome) => {
     const bonus = outcome === 'succeeded' ? (Number(c.virtuePointsOnSuccess) || 0) : 0
     actions.resolveContract(c.id, outcome, bonus)
-    if (outcome === 'succeeded') { confetti(); toast({ icon: '🎯', title: 'Stake survived!', sub: bonus ? `+${bonus} pts banked` : 'Virtue intact', color: '#22c55e' }) }
-    else { toast({ icon: '💀', title: 'Stake failed', sub: 'Own it, reset, go again.', color: ACCENT }); setCardFor(c) }
+    if (outcome === 'succeeded') { confetti(); toast({ icon: 'Target', title: 'Stake survived!', sub: bonus ? `+${bonus} pts banked` : 'Virtue intact', color: '#22c55e' }) }
+    else { toast({ icon: 'Skull', title: 'Stake failed', sub: 'Own it, reset, go again.', color: ACCENT }); setCardFor(c) }
   }
 
   return (
@@ -65,11 +66,11 @@ export default function Stakes() {
               <div className="space-y-1.5">
                 {past.slice().reverse().map((c) => (
                   <div key={c.id} className="flex items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2 text-sm">
-                    <span>{c.status === 'succeeded' ? '✅' : '❌'}</span>
+                    {c.status === 'succeeded' ? <CircleCheck size={14} className="shrink-0 text-emerald-400" /> : <CircleX size={14} className="shrink-0 text-rose-400" />}
                     <span className="flex-1 truncate text-slate-200">{c.name}</span>
                     <span className="text-xs text-slate-500">{c.stake}</span>
                     {c.status === 'failed' && <button onClick={() => setCardFor(c)} className="text-xs text-slate-400 hover:text-white">card</button>}
-                    <button onClick={() => actions.deleteContract(c.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+                    <button onClick={() => actions.deleteContract(c.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -78,7 +79,7 @@ export default function Stakes() {
         </div>
       )}
 
-      {adding && <NewStakeModal onClose={() => setAdding(false)} onAdd={(c) => { actions.addContract(c); setAdding(false); toast({ icon: '🎯', title: 'Stake set', sub: "It's real now.", color: ACCENT }) }} />}
+      {adding && <NewStakeModal onClose={() => setAdding(false)} onAdd={(c) => { actions.addContract(c); setAdding(false); toast({ icon: 'Target', title: 'Stake set', sub: "It's real now.", color: ACCENT }) }} />}
       {cardFor && <AccountabilityCard contract={cardFor} name={state.profile.name} onClose={() => setCardFor(null)} />}
     </div>
   )
@@ -117,14 +118,16 @@ function ContractCard({ c, state, onResolve, onDelete }) {
       )}
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-        <span>{left > 0 ? `⏳ ${left} days left` : left === 0 ? '⏳ Ends today' : '⏰ Window ended'}</span>
-        {c.virtuePointsOnSuccess > 0 && <span style={{ color: '#ec4899' }}>🎁 +{c.virtuePointsOnSuccess} pts if won</span>}
+        <span className="flex items-center gap-1">
+          {left > 0 ? <><Hourglass size={12} /> {left} days left</> : left === 0 ? <><Hourglass size={12} /> Ends today</> : <><AlarmClock size={12} /> Window ended</>}
+        </span>
+        {c.virtuePointsOnSuccess > 0 && <span className="flex items-center gap-1" style={{ color: '#ec4899' }}><Gift size={12} /> +{c.virtuePointsOnSuccess} pts if won</span>}
       </div>
 
       <div className="mt-4 flex gap-2">
-        <button onClick={() => onResolve(c, 'succeeded')} className="flex-1 rounded-lg py-2 text-sm font-semibold" style={{ background: '#22c55e', color: '#050505' }}>I did it ✓</button>
+        <button onClick={() => onResolve(c, 'succeeded')} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold" style={{ background: '#22c55e', color: '#050505' }}>I did it <Check size={14} /></button>
         <button onClick={() => onResolve(c, 'failed')} className="flex-1 rounded-lg bg-white/10 py-2 text-sm font-semibold text-white">I failed</button>
-        <button onClick={onDelete} className="rounded-lg bg-white/5 px-3 text-slate-500 hover:text-rose-400">✕</button>
+        <button onClick={onDelete} className="rounded-lg bg-white/5 px-3 text-slate-500 hover:text-rose-400"><X size={14} /></button>
       </div>
     </div>
   )
@@ -183,7 +186,7 @@ function NewStakeModal({ onClose, onAdd }) {
           </div>
         </div>
 
-        <label className="block"><span className="mb-1 block text-xs text-slate-400">Virtue points if you win 🎁</span>
+        <label className="block"><span className="mb-1 flex items-center gap-1 text-xs text-slate-400">Virtue points if you win <Gift size={12} /></span>
           <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} className="field" /></label>
 
         <button type="submit" className="w-full rounded-lg py-2 font-semibold" style={{ background: ACCENT, color: '#fff' }}>Set the stake</button>
@@ -208,7 +211,7 @@ function AccountabilityCard({ contract, name, onClose }) {
     x.fillStyle = '#fda4af'; x.font = '28px sans-serif'; x.fillText('On the line:', W / 2, 300)
     x.fillStyle = '#ffffff'; x.font = 'bold 34px sans-serif'; wrap(x, contract.stake, W / 2, 345, 880, 40)
     x.fillStyle = '#94a3b8'; x.font = '22px sans-serif'; x.fillText(`${contract.startDate} → ${contract.endDate}`, W / 2, 450)
-    x.fillStyle = '#f43f5e'; x.font = 'italic 26px sans-serif'; x.fillText(`${name} owned up. Stakes are real. 💀`, W / 2, 500)
+    x.fillStyle = '#f43f5e'; x.font = 'italic 26px sans-serif'; x.fillText(`${name} owned up. Stakes are real.`, W / 2, 500)
     const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `stake-failed-${contract.name.replace(/\s+/g, '-').toLowerCase()}.png`; a.click()
   }
   return (
@@ -219,7 +222,7 @@ function AccountabilityCard({ contract, name, onClose }) {
         <div className="mt-3 text-sm text-rose-200">On the line:</div>
         <div className="text-lg font-semibold text-white">{contract.stake}</div>
         <div className="mt-3 text-xs text-slate-400">{contract.startDate} → {contract.endDate}</div>
-        <div className="mt-2 text-sm italic" style={{ color: ACCENT }}>{name} owned up. Stakes are real. 💀</div>
+        <div className="mt-2 text-sm italic" style={{ color: ACCENT }}>{name} owned up. Stakes are real.</div>
       </div>
       <button onClick={download} className="mt-4 w-full rounded-lg py-2 font-semibold" style={{ background: ACCENT, color: '#fff' }}>⤓ Download as image</button>
     </Modal>

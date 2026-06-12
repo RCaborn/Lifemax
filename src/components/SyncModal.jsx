@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import Modal from './Modal.jsx'
@@ -27,12 +28,12 @@ function ConflictStage({ onClose, sync, toast }) {
         another device. Keep which one? The other copy will be replaced.
       </p>
       <div className="mt-4 space-y-2">
-        <button onClick={() => { sync.resolveConflict('local'); toast({ icon: '📲', title: 'Kept this device', sub: 'Uploaded to your account.', color: '#22c55e' }); onClose() }}
+        <button onClick={() => { sync.resolveConflict('local'); toast({ icon: 'Smartphone', title: 'Kept this device', sub: 'Uploaded to your account.', color: '#22c55e' }); onClose() }}
           className="w-full rounded-xl bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07]">
           <div className="font-semibold text-white">Keep this device’s data</div>
           <div className="text-xs text-slate-500">Upload what’s on this device and overwrite the account copy.</div>
         </button>
-        <button onClick={() => { sync.resolveConflict('remote'); toast({ icon: '☁️', title: 'Loaded account data', sub: 'This device now matches your account.', color: '#38bdf8' }); onClose() }}
+        <button onClick={() => { sync.resolveConflict('remote'); toast({ icon: 'Cloud', title: 'Loaded account data', sub: 'This device now matches your account.', color: '#38bdf8' }); onClose() }}
           className="w-full rounded-xl bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07]">
           <div className="font-semibold text-white">Load my account’s data</div>
           <div className="text-xs text-slate-500">Replace this device’s data with the copy from your account.</div>
@@ -56,7 +57,7 @@ function ConfigStage({ onClose, sync, toast }) {
     try { new URL(trimmedUrl) } catch { setErr('Please enter a valid project URL (e.g. https://abcd1234.supabase.co)'); return }
     setErr('')
     sync.saveConfig(trimmedUrl, trimmedKey)
-    toast({ icon: '☁️', title: 'Sync connected', sub: 'Now sign in with your email.', color: '#38bdf8' })
+    toast({ icon: 'Cloud', title: 'Sync connected', sub: 'Now sign in with your email.', color: '#38bdf8' })
   }
   return (
     <Modal title="Set up cloud sync" onClose={onClose}>
@@ -98,7 +99,7 @@ function SignInStage({ onClose, sync, toast }) {
     e.preventDefault()
     if (!email.trim()) return
     setBusy(true); setErr('')
-    try { await sync.sendCode(email); setSent(true); toast({ icon: '📧', title: 'Code sent', sub: 'Check your email.', color: '#38bdf8' }) }
+    try { await sync.sendCode(email); setSent(true); toast({ icon: 'Mail', title: 'Code sent', sub: 'Check your email.', color: '#38bdf8' }) }
     catch (ex) {
       const msg = ex.message || ''
       if (msg.includes('supabaseUrl') || msg.includes('valid HTTP') || msg.includes('invalid URL') || msg.includes('Failed to fetch')) {
@@ -114,7 +115,7 @@ function SignInStage({ onClose, sync, toast }) {
     e.preventDefault()
     if (!code.trim()) return
     setBusy(true); setErr('')
-    try { await sync.verifyCode(email, code); toast({ icon: '✅', title: 'Signed in', sub: 'Your data now syncs.', color: '#22c55e' }); onClose() }
+    try { await sync.verifyCode(email, code); toast({ icon: 'CircleCheck', title: 'Signed in', sub: 'Your data now syncs.', color: '#22c55e' }); onClose() }
     catch (e) { setErr(e.message || 'That code didn’t work.') }
     finally { setBusy(false) }
   }
@@ -135,7 +136,7 @@ function SignInStage({ onClose, sync, toast }) {
             className="field text-center text-lg tracking-[0.4em]" style={{ fontFamily: MONO }} autoFocus />
           {err && <p className="text-xs text-rose-400">{err}</p>}
           <button type="submit" disabled={busy} className="btn-primary disabled:opacity-50">{busy ? 'Verifying…' : 'Verify & sign in'}</button>
-          <button type="button" onClick={() => { setSent(false); setCode(''); setErr('') }} className="op-label hover:text-white">← Use a different email</button>
+          <button type="button" onClick={() => { setSent(false); setCode(''); setErr('') }} className="op-label flex items-center gap-1 hover:text-white"><ArrowLeft size={11} /> Use a different email</button>
         </form>
       )}
       <button onClick={() => sync.clearConfig()} className="mt-4 text-[11px] text-slate-600 hover:text-rose-400">Disconnect this Supabase project</button>
@@ -161,7 +162,7 @@ function ConnectedStage({ onClose, sync, toast }) {
           Your data is saved to your account and pulled in automatically when you open Lifemax on any device.
         </p>
         <div className="flex gap-2">
-          <button onClick={() => { sync.syncNow(); toast({ icon: '🔄', title: 'Syncing now', color: '#38bdf8' }) }}
+          <button onClick={() => { sync.syncNow(); toast({ icon: 'RefreshCw', title: 'Syncing now', color: '#38bdf8' }) }}
             className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white">Sync now</button>
           <button onClick={async () => { await sync.signOut(); onClose() }}
             className="flex-1 rounded border border-white/20 py-2 text-sm font-medium text-white transition hover:bg-white/10">Sign out</button>

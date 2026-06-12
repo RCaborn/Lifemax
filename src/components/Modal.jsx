@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { X } from 'lucide-react'
 
 // Centered dialog on desktop; slides up as a bottom sheet on mobile.
 export default function Modal({ title, onClose, children }) {
@@ -17,7 +18,7 @@ export default function Modal({ title, onClose, children }) {
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold text-white">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={18} /></button>
         </div>
         {children}
       </div>

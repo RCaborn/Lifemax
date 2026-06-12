@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Check, X } from 'lucide-react'
+import { ItemIcon } from '../lib/icons.jsx'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { studyScore } from '../lib/score.js'
@@ -65,8 +67,8 @@ export default function Study() {
             Log {dayOffset === 0 ? 'Today' : 'Yesterday'}
           </SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <Logger label="📖 Pages read" value={todayLog.pages} onChange={(v) => actions.setStudyDay(dateKey, { pages: v })} />
-            <Logger label="⏱️ Hours studied" value={todayLog.hours} step="0.25" onChange={(v) => actions.setStudyDay(dateKey, { hours: v })} />
+            <Logger icon="BookOpen" label="Pages read" value={todayLog.pages} onChange={(v) => actions.setStudyDay(dateKey, { pages: v })} />
+            <Logger icon="Timer" label="Hours studied" value={todayLog.hours} step="0.25" onChange={(v) => actions.setStudyDay(dateKey, { hours: v })} />
           </div>
           <div className="mt-4 rounded bg-white/[0.03] p-3">
             <div className="mb-1 flex justify-between text-xs text-slate-500">
@@ -119,7 +121,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -134,10 +136,10 @@ function Header({ score, ym, setYm }) {
   )
 }
 
-function Logger({ label, value, onChange, step = '1' }) {
+function Logger({ icon, label, value, onChange, step = '1' }) {
   return (
     <div>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <input type="number" step={step} value={value || ''} placeholder="0"
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mt-2 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30" />
@@ -167,8 +169,8 @@ function TodoList({ todos, actions }) {
           return (
             <div key={td.id} className="flex items-center gap-2 rounded bg-white/[0.03] px-3 py-2">
               <button onClick={() => actions.toggleTodo(td.id)}
-                className="grid h-5 w-5 shrink-0 place-items-center border text-[11px]"
-                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                className="grid h-5 w-5 shrink-0 place-items-center border"
+                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={11} /></button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} title={PRIO[td.priority].label} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
               {td.deadline && (
@@ -176,7 +178,7 @@ function TodoList({ todos, actions }) {
                   {overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}
                 </span>
               )}
-              <button onClick={() => actions.deleteTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+              <button onClick={() => actions.deleteTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs"><X size={12} /></button>
             </div>
           )
         })}

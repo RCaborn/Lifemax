@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Check, X, Circle } from 'lucide-react'
+import { ItemIcon } from '../lib/icons.jsx'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { fitnessScore } from '../lib/score.js'
@@ -77,11 +79,11 @@ export default function Fitness() {
           Log {dayOffset === 0 ? 'Today' : 'Yesterday'}
         </SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stepper label="🏃 Runs" value={todayLog.runs || 0} onChange={(v) => set({ runs: v })} />
-          <Stepper label="🏋️ Workouts" value={todayLog.workouts || 0} onChange={(v) => set({ workouts: v })} />
-          <Toggle label="🧘 Stretch" on={!!todayLog.stretch} onToggle={() => set({ stretch: !todayLog.stretch })} />
-          <NumberField label="👟 Steps" value={todayLog.steps || 0} onChange={(v) => set({ steps: v })} placeholder="e.g. 10000" />
-          <WakeField label={`⏰ Wake-up (target ${wakeTarget})`} value={todayLog.wake || ''} onChange={(v) => set({ wake: v })} />
+          <Stepper icon="Activity" label="Runs" value={todayLog.runs || 0} onChange={(v) => set({ runs: v })} />
+          <Stepper icon="Dumbbell" label="Workouts" value={todayLog.workouts || 0} onChange={(v) => set({ workouts: v })} />
+          <Toggle icon="Flower2" label="Stretch" on={!!todayLog.stretch} onToggle={() => set({ stretch: !todayLog.stretch })} />
+          <NumberField icon="Footprints" label="Steps" value={todayLog.steps || 0} onChange={(v) => set({ steps: v })} placeholder="e.g. 10000" />
+          <WakeField icon="AlarmClock" label={`Wake-up (target ${wakeTarget})`} value={todayLog.wake || ''} onChange={(v) => set({ wake: v })} />
         </div>
       </Card>
 
@@ -206,12 +208,12 @@ function TodoList({ todos, actions }) {
           return (
             <div key={td.id} className="flex items-center gap-2 rounded bg-white/[0.03] px-3 py-2">
               <button onClick={() => actions.toggleFitnessTodo(td.id)}
-                className="grid h-5 w-5 shrink-0 place-items-center border text-[11px]"
-                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                className="grid h-5 w-5 shrink-0 place-items-center border"
+                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={11} /></button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
               {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
-              <button onClick={() => actions.deleteFitnessTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+              <button onClick={() => actions.deleteFitnessTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs"><X size={12} /></button>
             </div>
           )
         })}
@@ -241,7 +243,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -256,10 +258,10 @@ function Header({ score, ym, setYm }) {
   )
 }
 
-function Stepper({ label, value, onChange }) {
+function Stepper({ icon, label, value, onChange }) {
   return (
     <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <div className="mt-3 flex items-center justify-between">
         <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon">−</button>
         <span className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{value}</span>
@@ -269,25 +271,27 @@ function Stepper({ label, value, onChange }) {
   )
 }
 
-function Toggle({ label, on, onToggle }) {
+function Toggle({ icon, label, on, onToggle }) {
   return (
     <button onClick={onToggle} className="glass glass-hover rounded-2xl p-4 text-left transition" style={{ '--glow': C.color }}>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-lg font-semibold" style={{ color: on ? C.color : '#444' }}>{on ? 'Done ✓' : 'Not yet'}</span>
+        <span className="text-lg font-semibold" style={{ color: on ? C.color : '#444' }}>
+          {on ? <span className="flex items-center gap-1.5">Done <Check size={14} /></span> : 'Not yet'}
+        </span>
         <span className="grid h-9 w-9 place-items-center rounded-lg border text-lg"
           style={{ borderColor: on ? C.color : 'rgba(255,255,255,.08)', background: on ? C.color : 'transparent', color: on ? '#000' : '#444' }}>
-          {on ? '✓' : '○'}
+          {on ? <Check size={14} /> : <Circle size={14} />}
         </span>
       </div>
     </button>
   )
 }
 
-function NumberField({ label, value, onChange, placeholder, step = '1' }) {
+function NumberField({ icon, label, value, onChange, placeholder, step = '1' }) {
   return (
     <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mt-3 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30" />
@@ -295,10 +299,10 @@ function NumberField({ label, value, onChange, placeholder, step = '1' }) {
   )
 }
 
-function WakeField({ label, value, onChange }) {
+function WakeField({ icon, label, value, onChange }) {
   return (
     <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': C.color }}>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <input type="time" value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="mt-3 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30"

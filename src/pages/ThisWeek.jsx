@@ -1,3 +1,5 @@
+import { Check, Circle } from 'lucide-react'
+import { ItemIcon } from '../lib/icons.jsx'
 import { useStore } from '../lib/store.jsx'
 import { toKey, thisWeekKeys, startOfWeek, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from '../lib/dates.js'
 import { compact } from '../lib/format.js'
@@ -95,13 +97,13 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <DayCounter icon="🏃" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
-        <DayCounter icon="🏋️" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
-        <DayToggle icon="🧘" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => setF({ stretch: !f.stretch })} />
-        <DayNum icon="👟" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
-        <DayTime icon="⏰" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
-        <DayNum icon="📖" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
-        <DayNum icon="⏱️" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
+        <DayCounter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
+        <DayCounter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
+        <DayToggle icon="Flower2" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => setF({ stretch: !f.stretch })} />
+        <DayNum icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
+        <DayTime icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
+        <DayNum icon="BookOpen" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
+        <DayNum icon="Timer" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
       </div>
     </div>
   )
@@ -110,7 +112,7 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
 function DayCounter({ icon, label, value, color, onChange }) {
   return (
     <div className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
+      <span className="flex items-center gap-1.5 text-xs text-slate-500"><ItemIcon icon={icon} size={14} /> {label}</span>
       <div className="flex items-center gap-1.5">
         <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon btn-icon-xs">−</button>
         <span className="w-5 text-center text-sm font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{value}</span>
@@ -123,10 +125,10 @@ function DayCounter({ icon, label, value, color, onChange }) {
 function DayToggle({ icon, label, on, color, onToggle }) {
   return (
     <button onClick={onToggle} className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2 transition hover:bg-white/[0.05]">
-      <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
+      <span className="flex items-center gap-1.5 text-xs text-slate-500"><ItemIcon icon={icon} size={14} /> {label}</span>
       <span className="grid h-6 w-6 place-items-center border text-xs"
         style={{ borderColor: on ? color : 'rgba(255,255,255,.08)', background: on ? color : 'transparent', color: on ? '#000' : '#555' }}>
-        {on ? '✓' : '○'}
+        {on ? <Check size={14} /> : <Circle size={14} />}
       </span>
     </button>
   )
@@ -135,7 +137,7 @@ function DayToggle({ icon, label, on, color, onToggle }) {
 function DayNum({ icon, label, value, color, onChange, placeholder, step = '1' }) {
   return (
     <div className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
+      <span className="flex items-center gap-1.5 text-xs text-slate-500"><ItemIcon icon={icon} size={14} /> {label}</span>
       <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="w-16 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-sm font-semibold text-white outline-none focus:border-white/30"
@@ -147,7 +149,7 @@ function DayNum({ icon, label, value, color, onChange, placeholder, step = '1' }
 function DayTime({ icon, label, value, color, onChange }) {
   return (
     <div className="flex items-center justify-between rounded bg-white/[0.03] px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs text-slate-500">{icon} {label}</span>
+      <span className="flex items-center gap-1.5 text-xs text-slate-500"><ItemIcon icon={icon} size={14} /> {label}</span>
       <input type="time" value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-24 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-sm font-semibold text-white outline-none focus:border-white/30"
