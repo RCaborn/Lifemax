@@ -3,7 +3,7 @@ import { Target, Beer, Check, X, Pencil, ArrowRight } from 'lucide-react'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthShort, monthStartOffset, monthDayKeys } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth } from '../lib/vices.js'
 import { addMonth } from '../lib/dates.js'
@@ -18,7 +18,6 @@ const ORDER = ['fitness', 'money', 'study', 'career', 'business']
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
 const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-const QW_MONTHS = 6
 
 export default function Overview({ onNavigate }) {
   const { state } = useStore()
@@ -249,9 +248,9 @@ function QuickWinsPanel() {
     .filter((item) => dayWins.includes(item.id))
     .reduce((a, item) => a + (item.points || 1), 0)
 
-  // Mini month-calendar grids, à la a bullet-journal "year overview" — current
-  // month first (always visible), scrolling right reveals previous months.
-  const months = Array.from({ length: QW_MONTHS }, (_, i) => addMonth(thisMonth(), -i))
+  // Mini month-calendar grid, à la a bullet-journal "month overview" — current month only.
+  const month = thisMonth()
+  const monthCells = [...Array(monthStartOffset(month)).fill(null), ...monthDayKeys(month)]
 
   const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
   const saveCue = (e) => {
@@ -331,47 +330,32 @@ function QuickWinsPanel() {
               </form>
             )}
 
-            <div className="mt-3 overflow-x-auto pb-1">
-              <div className="inline-flex items-start gap-3" style={{ minWidth: 'max-content' }}>
-                {months.map((ym) => {
-                  const offset = monthStartOffset(ym)
-                  const cells = [...Array(offset).fill(null), ...monthDayKeys(ym)]
+            <div className="mt-3 inline-grid grid-cols-7 gap-0.5">
+              {WEEKDAY_LETTERS.map((l, i) => (
+                <div key={`h${i}`} className="grid h-3 w-3 place-items-center text-[7px] text-slate-700">{l}</div>
+              ))}
+              {monthCells.map((k, i) => {
+                if (!k) return <div key={`b${i}`} className="h-3 w-3" />
+                const done = (days[k] || []).includes(item.id)
+                const isToday = k === today
+                const isFuture = k > today
+                if (isFuture) {
                   return (
-                    <div key={ym} className="shrink-0">
-                      <div className="mb-1 text-center text-[9px] font-bold uppercase tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {monthShort(ym)}
-                      </div>
-                      <div className="grid grid-cols-7 gap-0.5">
-                        {WEEKDAY_LETTERS.map((l, i) => (
-                          <div key={`h${i}`} className="grid h-3.5 w-3.5 place-items-center text-[7px] text-slate-700">{l}</div>
-                        ))}
-                        {cells.map((k, i) => {
-                          if (!k) return <div key={`b${i}`} className="h-3.5 w-3.5" />
-                          const done = (days[k] || []).includes(item.id)
-                          const isToday = k === today
-                          const isFuture = k > today
-                          if (isFuture) {
-                            return (
-                              <div key={k} className="grid h-3.5 w-3.5 place-items-center">
-                                <span className="h-2 w-2 rounded-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
-                              </div>
-                            )
-                          }
-                          return (
-                            <button key={k} onClick={() => toggle(item, k)} title={k}
-                              className="grid h-3.5 w-3.5 place-items-center transition hover:opacity-70">
-                              <span className="h-2 w-2 rounded-full" style={{
-                                background: done ? '#ffffff' : 'rgba(255,255,255,0.08)',
-                                boxShadow: isToday ? '0 0 0 1.5px rgba(255,255,255,0.4)' : 'none',
-                              }} />
-                            </button>
-                          )
-                        })}
-                      </div>
+                    <div key={k} className="grid h-3 w-3 place-items-center">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
                     </div>
                   )
-                })}
-              </div>
+                }
+                return (
+                  <button key={k} onClick={() => toggle(item, k)} title={k}
+                    className="grid h-3 w-3 place-items-center transition hover:opacity-70">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{
+                      background: done ? '#ffffff' : 'rgba(255,255,255,0.08)',
+                      boxShadow: isToday ? '0 0 0 1.5px rgba(255,255,255,0.4)' : 'none',
+                    }} />
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))}
