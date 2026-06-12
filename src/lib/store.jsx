@@ -1,11 +1,31 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
 import { todayKey } from './dates.js'
+import { ICONS } from './icons.jsx'
 import * as sync from './sync.js'
 
 const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
 const rid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
+
+// Older saves stored literal emoji glyphs for quick wins / vices / projects.
+// Map the ones from past seed data (and other common picks) to their Lucide
+// icon equivalents so everything renders as a line icon, not a fallback emoji.
+const EMOJI_TO_ICON = {
+  '🧘': 'Flower2', '🚶': 'Footprints', '📚': 'BookOpen', '🔢': 'Calculator',
+  '🇪🇸': 'Languages', '🏊': 'Waves', '⛳': 'Flag', '🧹': 'Brush',
+  '🍺': 'Beer', '🍕': 'Pizza', '🎮': 'Gamepad2', '😴': 'BedDouble',
+  '🚀': 'Rocket', '💪': 'Dumbbell', '📖': 'BookOpen', '🏃': 'Activity',
+  '💰': 'Wallet', '💸': 'Banknote', '🎯': 'Target', '⭐': 'Star', '✨': 'Sparkles',
+  '☕': 'Coffee', '🎵': 'Music', '🧠': 'Brain', '❤️': 'Heart', '💧': 'Droplet',
+  '☀️': 'Sun', '🌙': 'Moon', '🎨': 'Palette', '💻': 'Laptop', '📷': 'Camera',
+  '🏢': 'Building2', '🛒': 'ShoppingCart', '📦': 'Package', '📣': 'Megaphone',
+  '💡': 'Lightbulb', '🏪': 'Store', '🌍': 'Globe', '💎': 'Gem',
+}
+function fixIcon(value, fallback) {
+  if (value && ICONS[value]) return value
+  return EMOJI_TO_ICON[value] || fallback
+}
 
 function migrate(state) {
   const seed = buildSeedState()
@@ -33,6 +53,11 @@ function migrate(state) {
         .map((e) => { if (e.type === 'spend') delete e.penalty; return e })
     }
   }
+  // Swap any legacy emoji glyphs (pre-icon-system data) for Lucide icon names.
+  for (const item of state.quickWins.items || []) item.emoji = fixIcon(item.emoji, 'Zap')
+  for (const v of state.vices.vices || []) v.emoji = fixIcon(v.emoji, 'Gift')
+  for (const p of state.business.projects || []) p.emoji = fixIcon(p.emoji, 'Rocket')
+  for (const e of state.vices.ledger || []) if (e.icon) e.icon = fixIcon(e.icon, 'Gift')
   return state
 }
 

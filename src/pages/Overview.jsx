@@ -256,8 +256,6 @@ function QuickWinsPanel() {
     actions.setQuickWinCue(cueFor, cueText.trim())
     setCueFor(null); setCueText('')
   }
-  const cueItem = items.find((i) => i.id === cueFor)
-
   const toggle = (item, dateKey) => {
     const wasDone = (days[dateKey] || []).includes(item.id)
     actions.toggleQuickWin(dateKey, item.id)
@@ -274,7 +272,7 @@ function QuickWinsPanel() {
   }
 
   return (
-    <Card>
+    <div>
       <SectionTitle right={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {dayPts > 0 && (
@@ -287,105 +285,94 @@ function QuickWinsPanel() {
         Quick Wins
       </SectionTitle>
 
-      {items.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-600">No quick wins yet — add one below.</p>
-      ) : (
-        <div className="overflow-x-auto pb-1.5">
-          <div className="inline-flex flex-col gap-1" style={{ minWidth: 'max-content' }}>
-            {/* date header */}
-            <div className="flex items-center gap-1">
-              <div className="sticky left-0 z-10 w-[120px] shrink-0 bg-[#0e0e0e]" />
-              {track.map((k, i) => (
-                <div key={k}
-                  className={`grid h-5 w-6 shrink-0 place-items-center text-[9px] ${(i + 1) % 7 === 0 ? 'mr-1.5' : ''}`}
-                  style={{ fontFamily: 'var(--font-mono)', color: k === today ? '#fff' : '#3a3a3a', fontWeight: k === today ? 700 : 400 }}>
-                  {Number(k.slice(8))}
+      <div className="space-y-2.5">
+        {items.length === 0 && (
+          <div className="glass rounded-2xl border-dashed border-white/15 p-5 text-center">
+            <p className="text-sm text-slate-500">No quick wins yet — add one below to start your habit tracker.</p>
+          </div>
+        )}
+
+        {items.map((item) => (
+          <div key={item.id} className="glass glass-hover rounded-2xl p-3.5" style={{ '--glow': '#ffffff' }}>
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300">
+                <ItemIcon icon={item.emoji} size={16} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-white">{item.name}</span>
+                  <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-bold text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>+{item.points || 1} XP</span>
                 </div>
-              ))}
+                {item.cue && (
+                  <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                    <span className="text-slate-500">After</span> {item.cue}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
+                  className="btn-icon btn-icon-xs text-slate-600 hover:text-white"><Pencil size={11} /></button>
+                <button onClick={() => actions.deleteQuickWin(item.id)} title="Delete"
+                  className="btn-icon btn-icon-xs text-slate-600 hover:text-rose-400"><X size={12} /></button>
+              </div>
             </div>
 
-            {items.map((item) => (
-              <div key={item.id} className="group flex items-center gap-1">
-                <div className="sticky left-0 z-10 relative flex w-[120px] shrink-0 items-center gap-1.5 rounded-lg bg-[#0e0e0e] py-1 pr-1.5">
-                  <ItemIcon icon={item.emoji} size={14} className="shrink-0 text-slate-400" />
-                  <span className="flex-1 truncate text-xs text-slate-300">{item.name}</span>
-                  <span className="shrink-0 text-[10px] font-bold text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>+{item.points || 1}</span>
-                  <div className="absolute -right-1 -top-1 hidden gap-0.5 group-hover:flex">
-                    <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
-                      className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-white">
-                      <Pencil size={9} />
-                    </button>
-                    <button onClick={() => actions.deleteQuickWin(item.id)}
-                      className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-slate-600 hover:text-rose-400">
-                      <X size={10} />
-                    </button>
-                  </div>
-                </div>
+            {cueFor === item.id && (
+              <form onSubmit={saveCue} className="mt-3 flex items-center gap-2 border-t border-white/8 pt-3">
+                <span className="shrink-0 text-xs text-slate-500">After</span>
+                <input value={cueText} onChange={(e) => setCueText(e.target.value)} autoFocus
+                  placeholder="e.g. my morning coffee / lunch / brushing teeth"
+                  className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+                <button type="submit" className="btn-ghost">Save</button>
+                <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
+              </form>
+            )}
+
+            <div className="mt-3 overflow-x-auto pb-1">
+              <div className="inline-flex items-center gap-1.5" style={{ minWidth: 'max-content' }}>
                 {track.map((k, i) => {
                   const done = (days[k] || []).includes(item.id)
                   const isToday = k === today
                   return (
                     <button key={k} onClick={() => toggle(item, k)} title={k}
-                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition hover:border-white/25 ${(i + 1) % 7 === 0 ? 'mr-1.5' : ''}`}
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full transition hover:border-white/30 ${(i + 1) % 7 === 0 ? 'mr-2' : ''}`}
                       style={{
-                        background: done ? '#ffffff' : 'rgba(255,255,255,0.035)',
-                        border: `1px solid ${done ? '#ffffff' : isToday ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                        background: done ? '#ffffff' : 'rgba(255,255,255,0.02)',
+                        border: `1.5px solid ${done ? '#ffffff' : isToday ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)'}`,
                       }}>
-                      {done && <Check size={11} color="#050505" />}
+                      {done
+                        ? <Check size={12} color="#050505" />
+                        : <span className="text-[9px]" style={{ fontFamily: 'var(--font-mono)', color: isToday ? '#fff' : '#3a3a3a' }}>{Number(k.slice(8))}</span>}
                     </button>
                   )
                 })}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
-      {items.some((i) => i.cue) && (
-        <div className="mt-2 space-y-0.5">
-          {items.filter((i) => i.cue).map((i) => (
-            <p key={i.id} className="px-1 text-[10px] leading-tight text-slate-600">
-              <ItemIcon icon={i.emoji} size={10} className="mr-1 inline" />{i.name} — <span className="text-slate-500">after</span> {i.cue}
-            </p>
-          ))}
-        </div>
-      )}
-
-      {cueItem && (
-        <form onSubmit={saveCue} className="mt-3 border-t border-white/8 pt-3">
-          <label className="mb-1.5 block op-label">When/where will you do "{cueItem.name}"?</label>
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-xs text-slate-500">After</span>
-            <input value={cueText} onChange={(e) => setCueText(e.target.value)} autoFocus
-              placeholder="e.g. my morning coffee / lunch / brushing teeth"
-              className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-            <span className="shrink-0 flex items-center gap-1 text-xs text-slate-500"><ArrowRight size={12} /> <ItemIcon icon={cueItem.emoji} size={14} /></span>
-            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>Save</button>
-            <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
+        {adding && (
+          <div className="glass rounded-2xl p-3.5">
+            <form onSubmit={addWin} className="space-y-2">
+              <div className="flex gap-2 items-center">
+                <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Win name…" autoFocus
+                  className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+                <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
+                  className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
+                  style={{ fontFamily: 'var(--font-mono)' }}>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} XP</option>)}
+                </select>
+                <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+                  style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
+              </div>
+              <IconPicker icons={QUICKWIN_ICONS} value={newIcon} onChange={setNewIcon} />
+            </form>
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-600">Anchoring a habit to an existing routine (an "if-then" plan) is one of the most reliable ways to make it stick.</p>
-        </form>
-      )}
+        )}
+      </div>
 
-      {adding && (
-        <form onSubmit={addWin} className="mt-3 space-y-2 border-t border-white/8 pt-3">
-          <div className="flex gap-2 items-center">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)}
-              placeholder="Win name…" autoFocus
-              className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-            <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
-              className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
-              style={{ fontFamily: 'var(--font-mono)' }}>
-              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} XP</option>)}
-            </select>
-            <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
-              style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
-          </div>
-          <IconPicker icons={QUICKWIN_ICONS} value={newIcon} onChange={setNewIcon} />
-        </form>
-      )}
-
-      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-1">
         <p className="text-[11px] text-slate-600">
           Each win earns XP instantly · tap any day to fill in your history · doing 3/day adds a small bonus to your Life Score
         </p>
@@ -393,7 +380,7 @@ function QuickWinsPanel() {
           Active {activeDays}/14 days
         </span>
       </div>
-    </Card>
+    </div>
   )
 }
 
