@@ -278,8 +278,9 @@ function QuickWinsPanel() {
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => (
-          <div key={item.id} className="glass glass-hover rounded-2xl p-3.5" style={{ '--glow': '#ffffff' }}>
+          <div key={item.id} className="glass glass-hover flex flex-col rounded-2xl p-3.5" style={{ '--glow': '#ffffff' }}>
             <div className="flex items-center gap-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300">
                 <ItemIcon icon={item.emoji} size={16} />
@@ -343,6 +344,7 @@ function QuickWinsPanel() {
             </div>
           </div>
         ))}
+        </div>
 
         {adding && (
           <div className="glass rounded-2xl p-3.5">
