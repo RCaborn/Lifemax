@@ -222,6 +222,16 @@ function quickWinsWeekRate(state) {
   return clamp01(completions / (DAILY_TARGET * 7))
 }
 
+// How many days this week have any fitness or study activity logged —
+// used for the "This Week" bento card's collapsed summary.
+export function thisWeekActivitySummary(state) {
+  const keys = thisWeekKeys()
+  const f = state.fitness?.days || {}
+  const s = state.study?.days || {}
+  const loggedDays = keys.filter((k) => f[k] || s[k]).length
+  return { loggedDays, totalDays: keys.length }
+}
+
 // Fraction of the last 7 days with a journal rating logged.
 function journalWeekRate(state) {
   const days = state.journal?.days || {}

@@ -25,7 +25,7 @@ function shiftKey(key, delta) {
 function avg(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length }
 
 // % of closed "tomorrow" loops actually followed through (yes=1, partial=0.5, no=0).
-function followThroughRate(days) {
+export function followThroughRate(days) {
   const entries = Object.values(days).filter((d) => d?.followThrough)
   if (!entries.length) return null
   const score = entries.reduce((a, d) => a + (d.followThrough === 'yes' ? 1 : d.followThrough === 'partial' ? 0.5 : 0), 0)

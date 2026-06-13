@@ -1,31 +1,47 @@
 import { useState } from 'react'
-import { Target, Beer, Check, X, Pencil, ArrowRight } from 'lucide-react'
-import { DOMAIN_MAP } from '../lib/domains.js'
+import { Target, Beer, Check, Pencil, X, ArrowRight } from 'lucide-react'
+import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, toKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
-import { MOOD_COLORS, FOLLOW_OPTIONS } from './Journal.jsx'
+import { MOOD_COLORS } from './Journal.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
 import { useToast } from '../components/Toast.jsx'
-import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
+import { Card, SectionTitle } from '../components/ui.jsx'
 import { ItemIcon, IconPicker, QUICKWIN_ICONS } from '../lib/icons.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
+import BentoCard from '../components/BentoCard.jsx'
+import SectionSummary from '../components/BentoSummaries.jsx'
+import Money from './Money.jsx'
+import Fitness from './Fitness.jsx'
+import Study from './Study.jsx'
+import Career from './Career.jsx'
+import Business from './Business.jsx'
+import ThisWeek from './ThisWeek.jsx'
+import WeeklyReview from './WeeklyReview.jsx'
+import Journal from './Journal.jsx'
+import Stakes from './Stakes.jsx'
+import Vices from './Vices.jsx'
 
-const ORDER = ['fitness', 'money', 'study', 'career', 'business']
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
 const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
-export default function Overview({ onNavigate }) {
+const SECTION_PAGES = {
+  thisweek: ThisWeek, review: WeeklyReview, journal: Journal,
+  money: Money, fitness: Fitness, study: Study, career: Career, business: Business,
+  stakes: Stakes, vices: Vices,
+}
+
+export default function Overview({ expandedId, onExpand }) {
   const { state } = useStore()
 
   const ls = lifeScore(state)
   const grade = gradeFor(ls.score)
   const weeklyHistory = weeklyScoreHistory(state)
-  const byId = Object.fromEntries(ls.domains.map((d) => [d.id, d]))
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -62,65 +78,31 @@ export default function Overview({ onNavigate }) {
         </div>
       </div>
 
-      <FocusWidget onNavigate={onNavigate} />
+      <FocusWidget onExpand={onExpand} />
 
       <TodayPanel />
 
       <QuickWinsPanel />
 
-      <JournalWidget onNavigate={onNavigate} />
+      <JournalWidget onExpand={onExpand} />
 
-      <VicesWidget onNavigate={onNavigate} />
+      <VicesWidget onExpand={onExpand} />
 
-      {/* Domain cards */}
-      <div>
-        <SectionTitle>Domains · This Week</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {ORDER.map((id, i) => {
-            const meta = DOMAIN_MAP[id]
-            const d = byId[id]
-            const isActive = d.active !== false
-            return (
-              <button key={id} onClick={() => onNavigate(id)}
-                className="glass glass-hover group rounded-2xl p-4 text-left transition animate-fadeUp"
-                style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55, '--glow': meta.color }}>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <ItemIcon icon={meta.icon} size={20} />
-                    <span className="font-semibold text-white">{meta.name}</span>
-                  </span>
-                  <ProgressRing value={isActive ? Math.min(1, d.score / 0.8) : 0} size={48} stroke={5} color={isActive ? meta.color : '#333'} label="" />
-                </div>
-                {isActive ? (
-                  <div className="mt-3 space-y-1">
-                    {d.parts.slice(0, 3).map((p) => (
-                      <div key={p.label} className="flex items-center gap-2 text-xs">
-                        <span className="w-20 shrink-0 text-slate-500">{p.label}</span>
-                        <span className="h-1 flex-1 overflow-hidden bg-white/8">
-                          <span className="block h-full transition-all duration-700" style={{ width: `${Math.min(100, pct(p.value / 0.8))}%`, background: meta.color }} />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-[11px] text-slate-600">Not yet configured → tap to set up</p>
-                )}
-              </button>
-            )
-          })}
-        </div>
+      <MasterTodoList onExpand={onExpand} />
+
+      {/* Bento grid — every section, collapsed to a summary, tap to expand */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {BENTO_SECTIONS.map((meta) => {
+          const expanded = expandedId === meta.id
+          const Page = SECTION_PAGES[meta.id]
+          return (
+            <BentoCard key={meta.id} id={meta.id} meta={meta} expanded={expanded}
+              onToggle={() => onExpand(expanded ? null : meta.id)}>
+              {expanded ? <Page /> : <SectionSummary id={meta.id} state={state} ls={ls} />}
+            </BentoCard>
+          )
+        })}
       </div>
-
-      {/* This week breakdown */}
-      <Card>
-        <SectionTitle>This week breakdown</SectionTitle>
-        <p className="mb-3 text-xs text-slate-600">
-          Bars fill based on <span className="text-slate-400">this week's activity</span>. 80% = full score for each domain.
-        </p>
-        <ScoreBars parts={ls.domains.filter((d) => d.active !== false).map((d) => ({ label: DOMAIN_MAP[d.id].name, value: Math.min(1, d.score / 0.8), detail: `${pct(d.score / 0.8)}%` }))} color="#ffffff" />
-      </Card>
-
-      <MasterTodoList onNavigate={onNavigate} />
     </div>
   )
 }
@@ -156,7 +138,7 @@ function WeeklyScoreChart({ data }) {
   )
 }
 
-function MasterTodoList({ onNavigate }) {
+function MasterTodoList({ onExpand }) {
   const { state, actions } = useStore()
 
   const DOMAIN_CONFIG = {
@@ -209,7 +191,7 @@ function MasterTodoList({ onNavigate }) {
                   style={{ borderColor: td.done ? '#fff' : 'rgba(255,255,255,.18)', background: td.done ? '#fff' : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={12} /></button>
                 <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO_COLOR[td.priority] || '#555' }} />
                 <span className={`flex-1 truncate ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
-                <button onClick={() => onNavigate(td.domain)}
+                <button onClick={() => onExpand(td.domain)}
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-widest transition hover:opacity-80"
                   style={{ background: `${conf.color}20`, color: conf.color, fontFamily: 'var(--font-mono)' }}>
                   {conf.name}
@@ -395,7 +377,7 @@ function QuickWinsPanel() {
   )
 }
 
-function FocusWidget({ onNavigate }) {
+function FocusWidget({ onExpand }) {
   const { state, actions } = useStore()
   const wk = weekKeyOf()
   const focus = state.focus || { weekKey: '', priorities: [], ticked: [] }
@@ -404,7 +386,7 @@ function FocusWidget({ onNavigate }) {
 
   if (!current) {
     return (
-      <button onClick={() => onNavigate('review')}
+      <button onClick={() => onExpand('review')}
         className="glass glass-hover group flex w-full items-center justify-between gap-4 rounded-2xl border-dashed border-white/15 p-5 text-left transition">
         <div className="flex items-center gap-4">
           <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Target size={22} /></span>
@@ -427,7 +409,7 @@ function FocusWidget({ onNavigate }) {
       <SectionTitle right={
         <span className="flex items-center gap-3">
           <span className="op-label">{done}/{focus.priorities.length} done</span>
-          <button onClick={() => onNavigate('review')} className="op-label hover:text-white transition">Edit</button>
+          <button onClick={() => onExpand('review')} className="op-label hover:text-white transition">Edit</button>
         </span>
       }>
         <span className="flex items-center gap-1.5"><Target size={13} /> This week's focus</span>
@@ -458,22 +440,18 @@ function summary(ls) {
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
 }
 
-function JournalWidget({ onNavigate }) {
+function JournalWidget({ onExpand }) {
   const { state, actions } = useStore()
   const toast = useToast()
   const days = state.journal.days
   const today = todayKey()
-  const yesterday = toKey(new Date(Date.now() - 86400000))
   const entry = days[today] || {}
-  const prevEntry = days[yesterday]
-  const showFollowCheck = !!prevEntry?.tomorrow && entry.followThrough == null
 
   const setMood = (n) => {
     const had = entry.mood != null
     actions.setJournalDay(today, { mood: n })
     if (!had) toast({ icon: 'Feather', title: 'Journal logged', sub: `+${earnRate(state, 'journal')} XP`, color: '#06b6d4' })
   }
-  const setFollowThrough = (val) => actions.setJournalDay(today, { followThrough: val })
 
   return (
     <div className="glass glass-hover rounded-2xl p-5" style={{ '--glow': '#06b6d4' }}>
@@ -485,26 +463,12 @@ function JournalWidget({ onNavigate }) {
             <div className="text-sm text-slate-400">{entry.mood != null ? 'Logged today — tap to update' : 'One honest minute before you go'}</div>
           </div>
         </div>
-        <button onClick={() => onNavigate('journal')}
+        <button onClick={() => onExpand('journal')}
           className="flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
           style={{ fontFamily: 'var(--font-mono)' }}>
           Journal <ArrowRight size={12} />
         </button>
       </div>
-
-      {showFollowCheck && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <p className="op-label mb-1">Yesterday you focused on</p>
-          <p className="mb-3 text-sm text-slate-200">&ldquo;{prevEntry.tomorrow}&rdquo;</p>
-          <div className="flex flex-wrap gap-2">
-            {FOLLOW_OPTIONS.map((o) => (
-              <button key={o.id} onClick={() => setFollowThrough(o.id)}
-                className="rounded px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
-                style={{ border: `1px solid ${o.color}55`, color: o.color }}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="mt-4 flex items-center gap-2">
         {[1, 2, 3, 4, 5].map((n) => (
@@ -522,7 +486,7 @@ function JournalWidget({ onNavigate }) {
   )
 }
 
-function VicesWidget({ onNavigate }) {
+function VicesWidget({ onExpand }) {
   const { state } = useStore()
   const bal = balance(state)
   const thisM = earnedInMonth(state, thisMonth())
@@ -532,7 +496,7 @@ function VicesWidget({ onNavigate }) {
   const next = vices.find((v) => v.pointCost > bal) || vices[vices.length - 1]
 
   return (
-    <button onClick={() => onNavigate('vices')}
+    <button onClick={() => onExpand('vices')}
       className="glass glass-hover group flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-left transition"
       style={{ '--glow': '#ec4899' }}>
       <div className="flex items-center gap-4">
