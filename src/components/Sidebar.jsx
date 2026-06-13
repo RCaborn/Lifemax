@@ -2,7 +2,7 @@ import { BENTO_SECTIONS } from '../lib/domains.js'
 import { ItemIcon } from '../lib/icons.jsx'
 
 export default function Sidebar({ current, onNavigate, open, onClose }) {
-  const items = [{ id: 'overview', name: 'Overview', icon: 'LayoutDashboard' }, ...BENTO_SECTIONS]
+  const items = [{ id: 'overview', name: 'HQ', icon: 'LayoutDashboard' }, ...BENTO_SECTIONS]
 
   return (
     <>
@@ -13,9 +13,21 @@ export default function Sidebar({ current, onNavigate, open, onClose }) {
           transition-transform md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex h-16 items-center gap-3 border-b border-white/8 px-5">
-          <span
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white text-xs font-black text-white"
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>LX</span>
+          <svg viewBox="0 0 36 36" className="h-9 w-9 shrink-0 rounded-lg" aria-label="Lifemax">
+            <defs>
+              <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#0b0f1a" />
+                <stop offset="1" stopColor="#1e1b4b" />
+              </linearGradient>
+              <linearGradient id="logoFg" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" stopColor="#22c55e" />
+                <stop offset="1" stopColor="#38bdf8" />
+              </linearGradient>
+            </defs>
+            <rect width="36" height="36" rx="6.5" fill="url(#logoBg)" />
+            <path d="M6.5 21 L12.2 21 L15.1 12.2 L19.4 26.6 L23.8 18 L29.5 18"
+              stroke="url(#logoFg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
           <div>
             <div className="text-sm font-bold tracking-widest text-white uppercase" style={{ fontFamily: 'var(--font-mono)' }}>Lifemax</div>
             <div className="text-[9px] tracking-widest text-slate-600 uppercase" style={{ fontFamily: 'var(--font-mono)' }}>Intel Dashboard</div>

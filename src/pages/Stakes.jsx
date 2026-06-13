@@ -37,7 +37,7 @@ export default function Stakes() {
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl" style={{ background: `${ACCENT}22` }} />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-400">Stakes</p>
+            <p className="text-sm text-slate-400">Contracts</p>
             <h1 className="mt-1 text-3xl font-bold text-white">Put something on the line</h1>
             <p className="mt-1 text-sm text-slate-400">Commitment contracts that auto-check against your own data.</p>
           </div>
@@ -211,7 +211,7 @@ function AccountabilityCard({ contract, name, onClose }) {
     x.fillStyle = '#fda4af'; x.font = '28px sans-serif'; x.fillText('On the line:', W / 2, 300)
     x.fillStyle = '#ffffff'; x.font = 'bold 34px sans-serif'; wrap(x, contract.stake, W / 2, 345, 880, 40)
     x.fillStyle = '#94a3b8'; x.font = '22px sans-serif'; x.fillText(`${contract.startDate} → ${contract.endDate}`, W / 2, 450)
-    x.fillStyle = '#f43f5e'; x.font = 'italic 26px sans-serif'; x.fillText(`${name} owned up. Stakes are real.`, W / 2, 500)
+    x.fillStyle = '#f43f5e'; x.font = 'italic 26px sans-serif'; x.fillText(`${name} owned up. Contracts are real.`, W / 2, 500)
     const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `stake-failed-${contract.name.replace(/\s+/g, '-').toLowerCase()}.png`; a.click()
   }
   return (
@@ -222,7 +222,7 @@ function AccountabilityCard({ contract, name, onClose }) {
         <div className="mt-3 text-sm text-rose-200">On the line:</div>
         <div className="text-lg font-semibold text-white">{contract.stake}</div>
         <div className="mt-3 text-xs text-slate-400">{contract.startDate} → {contract.endDate}</div>
-        <div className="mt-2 text-sm italic" style={{ color: ACCENT }}>{name} owned up. Stakes are real.</div>
+        <div className="mt-2 text-sm italic" style={{ color: ACCENT }}>{name} owned up. Contracts are real.</div>
       </div>
       <button onClick={download} className="mt-4 w-full rounded-lg py-2 font-semibold" style={{ background: ACCENT, color: '#fff' }}>⤓ Download as image</button>
     </Modal>

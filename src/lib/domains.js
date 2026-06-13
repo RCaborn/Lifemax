@@ -14,11 +14,11 @@ export const DOMAIN_MAP = Object.fromEntries(DOMAINS.map((d) => [d.id, d]))
 // All 10 dashboard sections, in display order — drives both the bento grid
 // and the sidebar nav so icon/color/tagline stay defined in one place.
 export const BENTO_SECTIONS = [
-  { id: 'thisweek', name: 'This Week',     icon: 'CalendarDays', color: '#ffffff', tagline: 'Daily logging at a glance' },
-  { id: 'review',   name: 'Weekly Review', icon: 'NotebookPen',  color: '#ffffff', tagline: 'Reflect and set next priorities' },
-  { id: 'journal',  name: 'Journal',       icon: 'Feather',      color: '#06b6d4', tagline: 'One honest minute a day' },
+  { id: 'thisweek', name: 'Sitrep',     icon: 'CalendarDays', color: '#ffffff', tagline: 'Daily logging at a glance' },
+  { id: 'review',   name: 'AAR',        icon: 'NotebookPen',  color: '#ffffff', tagline: 'Reflect and set next priorities' },
+  { id: 'journal',  name: 'Field Notes', icon: 'Feather',     color: '#06b6d4', tagline: 'One honest minute a day' },
   DOMAIN_MAP.money, DOMAIN_MAP.fitness, DOMAIN_MAP.study, DOMAIN_MAP.career, DOMAIN_MAP.business,
-  { id: 'stakes', name: 'Stakes', icon: 'Target', color: '#f43f5e', tagline: 'Put something on the line' },
-  { id: 'vices',  name: 'Vices',  icon: 'Beer',   color: '#ec4899', tagline: 'Earn your treats' },
+  { id: 'stakes', name: 'Contracts', icon: 'Target', color: '#f43f5e', tagline: 'Put something on the line' },
+  { id: 'vices',  name: 'Vault',     icon: 'Beer',   color: '#ec4899', tagline: 'Earn your treats' },
 ]
 export const BENTO_MAP = Object.fromEntries(BENTO_SECTIONS.map((s) => [s.id, s]))

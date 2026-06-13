@@ -61,7 +61,7 @@ export default function App() {
   // Surface a first-connect data clash immediately so it's never resolved silently.
   useEffect(() => { if (sync.hasConflict) setShowSync(true) }, [sync.hasConflict])
 
-  const pageName = expandedId ? BENTO_MAP[expandedId].name : 'Overview'
+  const pageName = expandedId ? BENTO_MAP[expandedId].name : 'HQ'
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })

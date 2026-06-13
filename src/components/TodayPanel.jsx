@@ -73,7 +73,7 @@ export default function TodayPanel() {
         <Num icon="BookOpen" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <Num icon="Timer" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
       </div>
-      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Life Score and earns XP automatically.</p>
+      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Pulse and earns XP automatically.</p>
     </Card>
   )
 }

@@ -50,7 +50,7 @@ export default function Vices() {
       <div className="glass relative overflow-hidden rounded-2xl p-6">
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="op-label">Earn My Vices</p>
+            <p className="op-label">The Vault</p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-5xl font-black" style={{ color: '#fff', fontFamily: MONO }}>{bal}</span>
               <span className="text-lg font-semibold" style={{ color: '#666' }}>XP</span>

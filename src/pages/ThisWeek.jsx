@@ -37,7 +37,7 @@ export default function ThisWeek() {
     <div className="space-y-6">
       <div className="glass rounded-2xl p-6 sm:p-8">
         <p className="op-label">Weekly Operation</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">This Week</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Sitrep</h1>
         <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{weekLabel}</p>
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

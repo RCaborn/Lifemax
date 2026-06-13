@@ -1,5 +1,5 @@
 // Generates the PWA PNG icons with zero external dependencies.
-// Draws a dark rounded-feel square with a bright gradient "L" (Lifemax) glyph.
+// Draws a dark rounded-feel square with a bright gradient "pulse" (heartbeat) glyph.
 import { deflateSync } from 'node:zlib'
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -77,19 +77,29 @@ function drawIcon(size) {
       px[i + 3] = 255
     }
   }
-  // draw an "L" glyph with a green->cyan gradient
-  const m = size * 0.28          // margin
-  const top = size * 0.24
-  const bottom = size * 0.76
-  const thick = size * 0.11
-  const footRight = size * 0.72
+  // draw a "pulse" (heartbeat) glyph with a green->cyan gradient
+  const pts = [[0.18, 0.58], [0.34, 0.58], [0.42, 0.34], [0.54, 0.74], [0.66, 0.50], [0.82, 0.50]]
+    .map(([fx, fy]) => [fx * size, fy * size])
+  const strokeWidth = size * 0.085
+  const distToSeg = (px0, py0, ax, ay, bx, by) => {
+    const abx = bx - ax, aby = by - ay
+    const apx = px0 - ax, apy = py0 - ay
+    const ab2 = abx * abx + aby * aby
+    let t = ab2 > 0 ? (apx * abx + apy * aby) / ab2 : 0
+    t = Math.max(0, Math.min(1, t))
+    const dx = px0 - (ax + abx * t), dy = py0 - (ay + aby * t)
+    return Math.sqrt(dx * dx + dy * dy)
+  }
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4
       if (px[i + 3] === 0) continue
-      const vertical = x >= m && x <= m + thick && y >= top && y <= bottom
-      const foot = y >= bottom - thick && y <= bottom && x >= m && x <= footRight
-      if (vertical || foot) {
+      let onStroke = false
+      for (let s = 0; s < pts.length - 1; s++) {
+        const [ax, ay] = pts[s], [bx, by] = pts[s + 1]
+        if (distToSeg(x + 0.5, y + 0.5, ax, ay, bx, by) <= strokeWidth / 2) { onStroke = true; break }
+      }
+      if (onStroke) {
         const t = (x + (size - y)) / (2 * size)
         px[i] = lerp(34, 56, t)      // R   #22c55e -> #38bdf8
         px[i + 1] = lerp(197, 189, t) // G

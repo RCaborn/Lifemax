@@ -9,7 +9,7 @@ import { ItemIcon } from '../lib/icons.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
-const C = { color: '#06b6d4', icon: 'Feather', name: 'Journal', tagline: 'One honest minute a day' }
+const C = { color: '#06b6d4', icon: 'Feather', name: 'Field Notes', tagline: 'One honest minute a day' }
 export const MOOD_COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#22c55e']
 export const FOLLOW_OPTIONS = [
   { id: 'yes', label: 'Nailed it', color: '#22c55e' },

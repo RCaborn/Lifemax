@@ -68,7 +68,7 @@ export default function WeeklyReview() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="op-label">Weekly Debrief</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Weekly Review</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">AAR</h1>
             <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: MONO }}>{weekRangeLabel(startOfWeek())}</p>
             <p className="mt-3 max-w-md text-[13px] text-slate-500">
               Five minutes here is where the week actually sticks. Reflect, subtract what isn’t working, and pick the 1–3 things that matter most next.

@@ -48,13 +48,13 @@ export default function Overview({ expandedId, onExpand }) {
 
   return (
     <div className="space-y-6">
-      {/* Hero — Life Score, centre stage */}
+      {/* Hero — Pulse, centre stage */}
       <div className="glass glass-hover relative overflow-hidden rounded-2xl p-6 sm:p-8" style={{ '--glow': grade.color }}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between lg:w-56 lg:shrink-0 lg:flex-col lg:items-stretch lg:justify-center lg:gap-6">
             <div>
               <p className="op-label">{greeting}, {state.profile.name}</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score</h1>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Pulse</h1>
               <div className="mt-3 flex items-center gap-3">
                 <span className="grid h-12 w-12 place-items-center rounded-lg border font-black text-2xl"
                   style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'var(--font-mono)' }}>{grade.letter}</span>
@@ -68,11 +68,11 @@ export default function Overview({ expandedId, onExpand }) {
               </p>
             </div>
             <div className="shrink-0 self-center lg:self-start">
-              <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Life Score" />
+              <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Pulse" />
             </div>
           </div>
           <div className="min-w-0 flex-1 lg:border-l lg:border-white/8 lg:pl-8">
-            <SectionTitle>Life Score — 6 months weekly</SectionTitle>
+            <SectionTitle>Pulse — 6 months weekly</SectionTitle>
             <WeeklyScoreChart data={weeklyHistory} />
           </div>
         </div>
@@ -367,7 +367,7 @@ function QuickWinsPanel() {
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-1">
         <p className="text-[11px] text-slate-600">
-          Each win earns XP instantly · tap any day to fill in your history · doing 3/day adds a small bonus to your Life Score
+          Each win earns XP instantly · tap any day to fill in your history · doing 3/day adds a small bonus to your Pulse
         </p>
         <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
           Active {activeDays}/14 days
@@ -391,7 +391,7 @@ function FocusWidget({ onExpand }) {
         <div className="flex items-center gap-4">
           <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Target size={22} /></span>
           <div>
-            <div className="op-label">This week's focus</div>
+            <div className="op-label">Objectives</div>
             <div className="text-sm text-slate-400">Not set — run a 5-min weekly review to pick your 1–3 priorities.</div>
           </div>
         </div>
@@ -412,7 +412,7 @@ function FocusWidget({ onExpand }) {
           <button onClick={() => onExpand('review')} className="op-label hover:text-white transition">Edit</button>
         </span>
       }>
-        <span className="flex items-center gap-1.5"><Target size={13} /> This week's focus</span>
+        <span className="flex items-center gap-1.5"><Target size={13} /> Objectives</span>
       </SectionTitle>
       <div className="space-y-1.5">
         {focus.priorities.map((p, i) => {
@@ -459,14 +459,14 @@ function JournalWidget({ onExpand }) {
         <div className="flex items-center gap-4">
           <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><ItemIcon icon="Feather" size={22} /></span>
           <div>
-            <div className="op-label">Daily Loop</div>
+            <div className="op-label">Field Notes</div>
             <div className="text-sm text-slate-400">{entry.mood != null ? 'Logged today — tap to update' : 'One honest minute before you go'}</div>
           </div>
         </div>
         <button onClick={() => onExpand('journal')}
           className="flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
           style={{ fontFamily: 'var(--font-mono)' }}>
-          Journal <ArrowRight size={12} />
+          Field Notes <ArrowRight size={12} />
         </button>
       </div>
 
