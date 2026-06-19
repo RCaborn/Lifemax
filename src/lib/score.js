@@ -99,7 +99,9 @@ export function careerScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, apps, skillHours }
 }
 
-const SHIP_TARGET = 2
+// Business score is driven purely by income vs the monthly goal — a tiny sale
+// shouldn't "smash the game" via participation credit. Milestones still earn XP
+// and are surfaced as stat tiles; they just don't inflate the score.
 export function businessScore(state, ym) {
   const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
   const projects = b.projects || []
@@ -111,16 +113,12 @@ export function businessScore(state, ym) {
   const milestonesThisMonth = sum(projects.map((p) =>
     (p.milestones || []).filter((m) => m.done && m.doneAt?.startsWith(ym + '-')).length))
   const active = projects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
-  const touched = active.filter((p) =>
-    (p.revenue || []).some((r) => r.date?.startsWith(ym + '-')) ||
-    (p.milestones || []).some((m) => m.done && m.doneAt?.startsWith(ym + '-'))).length
 
+  const income = clamp01(target ? monthRevenue / target : 0)
   const parts = [
-    { label: 'Income', value: clamp01(target ? monthRevenue / target : 0), detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
-    { label: 'Shipping', value: clamp01(milestonesThisMonth / SHIP_TARGET), detail: `${milestonesThisMonth} milestone${milestonesThisMonth !== 1 ? 's' : ''} shipped` },
-    { label: 'Momentum', value: active.length ? clamp01(touched / active.length) : 0, detail: active.length ? `${touched}/${active.length} hustles active` : 'No active projects' },
+    { label: 'Income', value: income, detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
   ]
-  return { score: avg(parts.map((p) => p.value)), parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
+  return { score: income, parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
 }
 
 export const SCORERS = {
@@ -325,16 +323,7 @@ function weekScore(state, weekStartDate) {
   const bProjects = b.projects || []
   const bTarget = (b.monthlyIncomeTarget || 500) / 4.33
   const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
-  const weekMilestones = sum(bProjects.map((p) => (p.milestones || []).filter((m) => m.done && keySet.has(m.doneAt)).length))
-  const bActive = bProjects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
-  const bTouched = bActive.filter((p) =>
-    (p.revenue || []).some((r) => keySet.has(r.date)) ||
-    (p.milestones || []).some((m) => m.done && keySet.has(m.doneAt))).length
-  const businessScoreVal = avg([
-    clamp01(bTarget ? weekRevenue / bTarget : 0),
-    clamp01(weekMilestones / (SHIP_TARGET / 4.33)),
-    bActive.length ? clamp01(bTouched / bActive.length) : 0,
-  ])
+  const businessScoreVal = clamp01(bTarget ? weekRevenue / bTarget : 0)
 
   return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal, businessScoreVal])
 }

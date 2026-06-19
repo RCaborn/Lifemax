@@ -53,9 +53,8 @@ export default function Business() {
           <div className="rounded-lg bg-white/[0.02] p-5 text-sm text-slate-500">
             <p className="text-slate-300">No projects yet — add your first hustle below.</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Each project is scored on three things: <span className="text-slate-400">Income</span> (money in vs your monthly goal),
-              <span className="text-slate-400"> Shipping</span> (milestones you complete — the things you'll be proud of), and
-              <span className="text-slate-400"> Momentum</span> (keeping every active hustle moving). Shipping a milestone earns XP too.
+              Your score is based on <span className="text-slate-400">Income</span> — money in vs your monthly goal.
+              Shipping a milestone still earns XP.
             </p>
           </div>
         ) : (
