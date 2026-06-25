@@ -269,6 +269,7 @@ export function scoreHistory(state, months = 6) {
 }
 
 // Internal: raw 0-1 weekly aggregate for a given Mon-start window (used by history chart).
+// Mirrors lifeScore() exactly: active-domain filtering + quick wins / journal bonuses.
 function weekScore(state, weekStartDate) {
   const keys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
@@ -325,7 +326,27 @@ function weekScore(state, weekStartDate) {
   const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
   const businessScoreVal = clamp01(bTarget ? weekRevenue / bTarget : 0)
 
-  return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal, businessScoreVal])
+  const allDomains = [
+    { id: 'fitness',  score: fitScore },
+    { id: 'money',    score: mScore.score },
+    { id: 'study',    score: studyScoreVal },
+    { id: 'career',   score: careerScoreVal },
+    { id: 'business', score: businessScoreVal },
+  ]
+  const activeDomains = allDomains.filter((d) => isDomainActive(state, d.id))
+  const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
+
+  const qw = state.quickWins || { items: [], days: {} }
+  const qwCompletions = Object.entries(qw.days || {})
+    .filter(([k]) => keySet.has(k))
+    .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
+  const qwBonus = clamp01(qwCompletions / (3 * 7)) * 0.05
+
+  const jDays = state.journal?.days || {}
+  const jLogged = keys.filter((k) => jDays[k]?.mood != null).length
+  const journalBonus = clamp01(jLogged / keys.length) * 0.03
+
+  return domainAvg + qwBonus + journalBonus
 }
 
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.
