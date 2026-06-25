@@ -58,9 +58,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Surface a first-connect data clash immediately so it's never resolved silently.
-  useEffect(() => { if (sync.hasConflict) setShowSync(true) }, [sync.hasConflict])
-
   const pageName = expandedId ? BENTO_MAP[expandedId].name : 'HQ'
 
   const exportData = () => {

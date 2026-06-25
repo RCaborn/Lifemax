@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, History } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import Modal from './Modal.jsx'
@@ -14,33 +14,38 @@ export default function SyncModal({ onClose }) {
   const { sync } = useStore()
   const toast = useToast()
 
-  if (sync.hasConflict) return <ConflictStage onClose={onClose} sync={sync} toast={toast} />
   if (!sync.configured) return <ConfigStage onClose={onClose} sync={sync} toast={toast} />
   if (!sync.session) return <SignInStage onClose={onClose} sync={sync} toast={toast} />
   return <ConnectedStage onClose={onClose} sync={sync} toast={toast} />
 }
 
-function ConflictStage({ onClose, sync, toast }) {
+// Newest-first list of local snapshots with one-tap restore — the recovery path
+// if anything ever looks like it went missing.
+function BackupList({ sync, toast, onClose }) {
+  const [backups] = useState(() => sync.listBackups())
+  if (!backups.length) return null
+  const fmt = (iso) => {
+    try { return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
+    catch { return iso }
+  }
+  const restore = (b) => {
+    if (!confirm(`Restore your data from ${fmt(b.at)}? This replaces what’s on this device now (then syncs up).`)) return
+    if (sync.restoreBackup(b.key)) { toast({ icon: 'History', title: 'Restored', sub: `Rolled back to ${fmt(b.at)}.`, color: '#22c55e' }); onClose() }
+  }
   return (
-    <Modal title="Two copies of your data" onClose={onClose}>
-      <p className="text-sm text-slate-400">
-        This device has data saved locally, and your account already has saved data from
-        another device. Keep which one? The other copy will be replaced.
-      </p>
-      <div className="mt-4 space-y-2">
-        <button onClick={() => { sync.resolveConflict('local'); toast({ icon: 'Smartphone', title: 'Kept this device', sub: 'Uploaded to your account.', color: '#22c55e' }); onClose() }}
-          className="w-full rounded-xl bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07]">
-          <div className="font-semibold text-white">Keep this device’s data</div>
-          <div className="text-xs text-slate-500">Upload what’s on this device and overwrite the account copy.</div>
-        </button>
-        <button onClick={() => { sync.resolveConflict('remote'); toast({ icon: 'Cloud', title: 'Loaded account data', sub: 'This device now matches your account.', color: '#38bdf8' }); onClose() }}
-          className="w-full rounded-xl bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07]">
-          <div className="font-semibold text-white">Load my account’s data</div>
-          <div className="text-xs text-slate-500">Replace this device’s data with the copy from your account.</div>
-        </button>
+    <div className="rounded-xl bg-white/[0.03] p-4">
+      <div className="op-label flex items-center gap-1.5"><History size={11} /> Recent backups</div>
+      <p className="mt-1 text-[11px] text-slate-600">Automatic local snapshots. Tap one to roll this device back if data looks wrong.</p>
+      <div className="mt-2 space-y-1">
+        {backups.map((b) => (
+          <button key={b.key} onClick={() => restore(b)}
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-300 transition hover:bg-white/[0.06]">
+            <span style={{ fontFamily: MONO }}>{fmt(b.at)}</span>
+            <span className="op-label">Restore</span>
+          </button>
+        ))}
       </div>
-      <p className="mt-3 text-[11px] text-slate-600">Tip: set up sync on the device that already has your data first, and this won’t come up.</p>
-    </Modal>
+    </div>
   )
 }
 
@@ -160,6 +165,7 @@ function ConnectedStage({ onClose, sync, toast }) {
         </div>
         <p className="text-[13px] text-slate-500">
           Your data is saved to your account and pulled in automatically when you open Lifemax on any device.
+          Edits from your phone and laptop are <span className="text-slate-300">merged</span>, so nothing one device logs gets overwritten by the other.
         </p>
         <div className="flex gap-2">
           <button onClick={() => { sync.syncNow(); toast({ icon: 'RefreshCw', title: 'Syncing now', color: '#38bdf8' }) }}
@@ -167,6 +173,7 @@ function ConnectedStage({ onClose, sync, toast }) {
           <button onClick={async () => { await sync.signOut(); onClose() }}
             className="flex-1 rounded border border-white/20 py-2 text-sm font-medium text-white transition hover:bg-white/10">Sign out</button>
         </div>
+        <BackupList sync={sync} toast={toast} onClose={onClose} />
         <button onClick={() => { sync.clearConfig(); onClose() }} className="text-[11px] text-slate-600 hover:text-rose-400">Disconnect this Supabase project from this device</button>
       </div>
     </Modal>

@@ -122,20 +122,92 @@ export async function pullState() {
   return { data: data.data, updatedAt: data.updated_at }
 }
 
-// Upserts the blob for the signed-in user. Returns the new updatedAt ISO string.
-export async function pushState(stateObj) {
+// Writes the blob for the signed-in user with optimistic concurrency.
+//
+// Returns:
+//   { updatedAt }     — write succeeded; new row timestamp
+//   { conflict: true } — the remote row advanced since `expectedRemoteAt`; the
+//                        caller must pull, merge, and push again
+//   null               — sync not configured / not signed in
+//
+// Pass `expectedRemoteAt` (the last remote timestamp this device saw) to guard
+// the write: we only overwrite the row if it still carries that timestamp, so a
+// stale device can never clobber edits another device pushed in the meantime.
+// Omit it (first sync / seeding an empty account) for a plain upsert.
+export async function pushState(stateObj, expectedRemoteAt) {
   const c = await getClient()
   if (!c) return null
   const { data: { user } } = await c.auth.getUser()
   if (!user) return null
   const updated_at = new Date().toISOString()
-  const { error } = await c.from(TABLE).upsert(
-    { user_id: user.id, data: stateObj, updated_at },
-    { onConflict: 'user_id' },
-  )
+  const row = { user_id: user.id, data: stateObj, updated_at }
+
+  if (expectedRemoteAt) {
+    const { data, error } = await c.from(TABLE)
+      .update({ data: stateObj, updated_at })
+      .eq('user_id', user.id).eq('updated_at', expectedRemoteAt)
+      .select('updated_at')
+    if (error) throw error
+    if (data && data.length) return { updatedAt: updated_at }
+    // Nothing matched → the row either advanced or doesn't exist yet.
+    const { data: existing, error: selErr } = await c.from(TABLE)
+      .select('updated_at').eq('user_id', user.id).maybeSingle()
+    if (selErr) throw selErr
+    if (existing) return { conflict: true }
+    const { error: insErr } = await c.from(TABLE).insert(row)
+    if (insErr) return { conflict: true } // someone inserted first → pull + merge
+    return { updatedAt: updated_at }
+  }
+
+  const { error } = await c.from(TABLE).upsert(row, { onConflict: 'user_id' })
   if (error) throw error
-  return updated_at
+  return { updatedAt: updated_at }
 }
 
 export function getLastRemoteAt() { return localStorage.getItem(LAST_SYNC_KEY) }
 export function setLastRemoteAt(iso) { if (iso) localStorage.setItem(LAST_SYNC_KEY, iso) }
+
+// --- Local rolling backups -------------------------------------------------
+// A small ring of timestamped snapshots in localStorage. They are written before
+// any remote adopt/merge and once a day, so a bad merge or a wiped device is
+// always one tap away from recovery (restore UI lives in SyncModal).
+
+const BACKUP_PREFIX = 'lifemax.backup.'
+const MAX_BACKUPS = 7
+
+function backupKeys() {
+  const keys = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k && k.startsWith(BACKUP_PREFIX)) keys.push(k)
+  }
+  return keys.sort() // ISO timestamps sort chronologically
+}
+
+// Snapshot the given state. With { dailyOnly: true } it no-ops if a backup
+// already exists for today (used for the once-a-day snapshot).
+export function snapshotBackup(stateObj, { dailyOnly = false } = {}) {
+  try {
+    const now = new Date().toISOString()
+    if (dailyOnly) {
+      const today = now.slice(0, 10)
+      if (backupKeys().some((k) => k.slice(BACKUP_PREFIX.length).startsWith(today))) return
+    }
+    const keys = backupKeys()
+    while (keys.length >= MAX_BACKUPS) localStorage.removeItem(keys.shift())
+    localStorage.setItem(BACKUP_PREFIX + now, JSON.stringify(stateObj))
+  } catch { /* quota — skip the snapshot rather than fail an edit */ }
+}
+
+// Newest-first list of { key, at } for the restore UI.
+export function listBackups() {
+  return backupKeys().reverse().map((k) => ({ key: k, at: k.slice(BACKUP_PREFIX.length) }))
+}
+
+// Parsed state for a backup key, or null if missing/unreadable.
+export function restoreBackup(key) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}

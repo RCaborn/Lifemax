@@ -100,11 +100,18 @@ URL, key, and email. After you sign in, that device pulls your data automaticall
 
 ## How syncing behaves
 
-- **It's last-write-wins.** Open Lifemax on a device and it pulls the latest; your edits
-  push up a second or two after you make them, and again when you switch back to a tab.
-- **Use one device at a time and you'll never lose anything.** The only lossy case is
-  editing on two devices *at the same time while one is offline* — then whichever saves
-  last wins. Rare for a personal tracker, but worth knowing.
+- **Edits are merged, not overwritten.** Open Lifemax on a device and it pulls the
+  latest and *merges* it with what's on the device; your edits push up a second or two
+  after you make them, and again when you switch back to a tab. Because day logs and lists
+  are unioned, logging on your phone and your laptop both stick — neither clobbers the other.
+- **Concurrency-guarded.** A device only overwrites the account copy if it hasn't changed
+  since that device last synced; otherwise it pulls, merges, and re-pushes. So even
+  simultaneous edits on two devices survive.
+  (One edge: a record *deleted* on one device while still present on the other can reappear
+  after a merge — just delete it again.)
+- **Automatic local backups.** Each device keeps a rolling set of snapshots (taken daily
+  and before adopting any account data). If something ever looks wrong, open **Cloud sync →
+  Recent backups** and tap one to roll back.
 - **Offline still works.** With no connection, Lifemax keeps using the local copy and
   syncs up the next time you're online.
 - **Your keys live on each device**, not in the code, so nothing secret is published to
