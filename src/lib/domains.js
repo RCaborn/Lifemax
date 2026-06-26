@@ -20,5 +20,6 @@ export const BENTO_SECTIONS = [
   DOMAIN_MAP.money, DOMAIN_MAP.fitness, DOMAIN_MAP.study, DOMAIN_MAP.career, DOMAIN_MAP.business,
   { id: 'stakes', name: 'Contracts', icon: 'Target', color: '#f43f5e', tagline: 'Put something on the line' },
   { id: 'vices',  name: 'Vault',     icon: 'Beer',   color: '#ec4899', tagline: 'Earn your treats' },
+  { id: 'targets', name: 'Targets', icon: 'Gauge', color: '#94a3b8', tagline: 'Tune your goals — they reshape your score' },
 ]
 export const BENTO_MAP = Object.fromEntries(BENTO_SECTIONS.map((s) => [s.id, s]))

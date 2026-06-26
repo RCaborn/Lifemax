@@ -46,8 +46,8 @@ export default function ThisWeek() {
           <WeekStat label="Stretch" value={`${weekStretch}/7`} hit={weekStretch >= 5} />
           <WeekStat label="Avg steps" value={compact(weekAvgSteps)} hit={weekAvgSteps >= (t.stepsDaily || 10000)} />
           <WeekStat label="Avg wake" value={weekAvgWake || '—'} hit={weekWakeScore >= 0.8} />
-          <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesDaily || 20) * 5} />
-          <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursMonthly || 40) / 4.33} />
+          <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesWeekly || 140)} />
+          <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursWeekly || 9)} />
         </div>
       </div>
 

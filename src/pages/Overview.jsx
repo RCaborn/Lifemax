@@ -25,6 +25,7 @@ import WeeklyReview from './WeeklyReview.jsx'
 import Journal from './Journal.jsx'
 import Stakes from './Stakes.jsx'
 import Vices from './Vices.jsx'
+import Targets from './Targets.jsx'
 
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
@@ -33,7 +34,7 @@ const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const SECTION_PAGES = {
   thisweek: ThisWeek, review: WeeklyReview, journal: Journal,
   money: Money, fitness: Fitness, study: Study, career: Career, business: Business,
-  stakes: Stakes, vices: Vices,
+  stakes: Stakes, vices: Vices, targets: Targets,
 }
 
 export default function Overview({ expandedId, onExpand }) {
@@ -369,7 +370,7 @@ function QuickWinsPanel() {
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-1">
         <p className="text-[11px] text-slate-600">
-          Each win earns XP instantly · tap any day to fill in your history · doing 3/day adds a small bonus to your Pulse
+          Each win earns XP instantly · tap any day to fill in your history · doing {state.quickWins?.dailyTarget || 3}/day adds a small bonus to your Pulse
         </p>
         <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
           Active {activeDays}/14 days

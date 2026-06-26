@@ -72,7 +72,7 @@ export function earnedEvents(state) {
 
   // Study
   const s = state.study || { days: {}, targets: {} }
-  const pageTarget = s.targets?.pagesDaily || 20
+  const pageTarget = (s.targets?.pagesWeekly || 140) / 7
   for (const [date, d] of Object.entries(s.days || {})) {
     if ((d.pages || 0) >= pageTarget) out.push({ date, source: 'pages_20', qty: 1, points: rates.pages_20 })
     if (d.hours) {

@@ -58,9 +58,10 @@ export function moneyScore(state, ym) {
   const saving = sum(tx.filter((x) => x.kind === 'saving').map((x) => x.amount))
   const invest = sum(tx.filter((x) => x.kind === 'investment').map((x) => x.amount))
   const savingsRate = income > 0 ? (saving + invest) / income : 0
+  const savingsTarget = m.targets?.savingsRate || 0.2
 
   const parts = [
-    { label: 'Savings rate', value: clamp01(savingsRate / 0.2), detail: `${Math.round(savingsRate * 100)}% (20% = full)` },
+    { label: 'Savings rate', value: clamp01(savingsRate / savingsTarget), detail: `${Math.round(savingsRate * 100)}% (${Math.round(savingsTarget * 100)}% = full)` },
     { label: 'Positive cashflow', value: income > 0 ? clamp01((income - spending) / income) : 0, detail: income > spending ? 'In surplus' : 'Overspending' },
     { label: 'Investing', value: invest > 0 ? 1 : 0, detail: invest > 0 ? 'Invested this month' : 'Nothing invested yet' },
   ]
@@ -72,16 +73,19 @@ export function studyScore(state, ym) {
   const t = s.targets || {}
   const days = daysOfMonth(s.days, ym)
   const elapsed = daysElapsed(ym)
+  const weeks = weeksElapsed(ym)
   const totalPages = sum(days.map((d) => d.pages || 0))
   const totalHours = sum(days.map((d) => d.hours || 0))
   const avgPages = totalPages / elapsed
+  const monthlyPageTarget = (t.pagesWeekly || 140) * weeks
+  const monthlyHourTarget = (t.hoursWeekly || 9) * weeks
 
   const due = (s.todos || []).filter((td) => (td.deadline && td.deadline.startsWith(ym + '-')) || (td.done))
   const completion = due.length ? due.filter((td) => td.done).length / due.length : (s.todos?.length ? 0 : 1)
 
   const parts = [
-    { label: 'Reading', value: clamp01(avgPages / (t.pagesDaily || 20)), detail: `${avgPages.toFixed(1)} pages/day avg` },
-    { label: 'Study hours', value: clamp01(totalHours / (t.hoursMonthly || 40)), detail: `${totalHours.toFixed(1)}h of ${t.hoursMonthly || 40}h` },
+    { label: 'Reading', value: clamp01(totalPages / monthlyPageTarget), detail: `${totalPages} pages (${avgPages.toFixed(1)}/day avg)` },
+    { label: 'Study hours', value: clamp01(totalHours / monthlyHourTarget), detail: `${totalHours.toFixed(1)}h of ${monthlyHourTarget.toFixed(0)}h` },
     { label: 'Tasks done', value: clamp01(completion), detail: `${Math.round(completion * 100)}% complete` },
   ]
   return { score: avg(parts.map((p) => p.value)), parts, totalPages, totalHours, avgPages }
@@ -174,15 +178,15 @@ function weekDomainScores(state) {
     { label: 'Wake-up', value: wWake.score, detail: wWake.logged ? `${wWake.label} / ${wakeTarget}` : 'Not logged' },
   ]
 
-  // Study — tasks are deadline-based (not weekly), so we only score activity here
+  // Study — weekly bucket: spread however you like within the week
   const s = state.study || { targets: {}, days: {}, todos: [] }
   const st = s.targets || {}
   const studyDays = keys.map((k) => s.days[k] || {})
   const wPages = sum(studyDays.map((d) => d.pages || 0))
   const wHours = sum(studyDays.map((d) => d.hours || 0))
   const studyParts = [
-    { label: 'Reading', value: clamp01((wPages / 7) / (st.pagesDaily || 20)), detail: `${wPages} pages this week` },
-    { label: 'Study hours', value: clamp01(wHours / ((st.hoursMonthly || 40) / 4.33)), detail: `${wHours.toFixed(1)}h this week` },
+    { label: 'Reading', value: clamp01(wPages / (st.pagesWeekly || 140)), detail: `${wPages} pages this week` },
+    { label: 'Study hours', value: clamp01(wHours / (st.hoursWeekly || 9)), detail: `${wHours.toFixed(1)}h this week` },
   ]
 
   // Career
@@ -213,11 +217,11 @@ function quickWinsWeekRate(state) {
   const qw = state.quickWins || { items: [], days: {} }
   const keys = thisWeekKeys()
   const keySet = new Set(keys)
-  const DAILY_TARGET = 3
+  const dailyTarget = qw.dailyTarget || 3
   const completions = Object.entries(qw.days || {})
     .filter(([k]) => keySet.has(k))
     .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
-  return clamp01(completions / (DAILY_TARGET * 7))
+  return clamp01(completions / (dailyTarget * 7))
 }
 
 // How many days this week have any fitness or study activity logged —
@@ -302,8 +306,8 @@ function weekScore(state, weekStartDate) {
   const totalPages = sum(studyDays.map((d) => d.pages || 0))
   const totalHours = sum(studyDays.map((d) => d.hours || 0))
   const studyScoreVal = avg([
-    clamp01((totalPages / 7) / (st.pagesDaily || 20)),
-    clamp01(totalHours / ((st.hoursMonthly || 40) / 4.33)),
+    clamp01(totalPages / (st.pagesWeekly || 140)),
+    clamp01(totalHours / (st.hoursWeekly || 9)),
   ])
 
   const weekApps = (c.jobs || []).filter((j) => keySet.has(j.date)).length
@@ -337,10 +341,11 @@ function weekScore(state, weekStartDate) {
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
 
   const qw = state.quickWins || { items: [], days: {} }
+  const qwDaily = qw.dailyTarget || 3
   const qwCompletions = Object.entries(qw.days || {})
     .filter(([k]) => keySet.has(k))
     .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
-  const qwBonus = clamp01(qwCompletions / (3 * 7)) * 0.05
+  const qwBonus = clamp01(qwCompletions / (qwDaily * 7)) * 0.05
 
   const jDays = state.journal?.days || {}
   const jLogged = keys.filter((k) => jDays[k]?.mood != null).length

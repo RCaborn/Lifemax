@@ -9,11 +9,11 @@ function seedFitness() {
 }
 
 function seedMoney() {
-  return { currency: '£', incomeSources: [], tx: [] }
+  return { currency: '£', incomeSources: [], tx: [], targets: { savingsRate: 0.2 } }
 }
 
 function seedStudy() {
-  return { targets: { pagesDaily: 20, hoursMonthly: 40 }, days: {}, todos: [] }
+  return { targets: { pagesWeekly: 140, hoursWeekly: 9 }, days: {}, todos: [] }
 }
 
 function seedCareer() {
@@ -34,6 +34,7 @@ function seedStakes() {
 
 function seedQuickWins() {
   return {
+    dailyTarget: 3,
     items: [
       { id: 'meditate',    name: 'Meditate',        emoji: 'Flower2', points: 1 },
       { id: 'walk',        name: 'Walk',             emoji: 'Footprints', points: 1 },

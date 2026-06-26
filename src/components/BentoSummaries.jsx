@@ -19,6 +19,7 @@ export default function SectionSummary({ id, state, ls }) {
     case 'journal': return <JournalSummary state={state} />
     case 'stakes': return <StakesSummary state={state} />
     case 'vices': return <VicesSummary state={state} />
+    case 'targets': return <p className="text-[11px] text-slate-600">Tune your goals → tap to adjust</p>
     default: return null
   }
 }

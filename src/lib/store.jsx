@@ -42,6 +42,16 @@ function migrate(state) {
   if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
   if (!state.quickWins) state.quickWins = seed.quickWins
   if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
+  // Study: migrate daily/monthly → weekly targets.
+  const st = state.study.targets
+  if (st.pagesWeekly == null) st.pagesWeekly = st.pagesDaily != null ? st.pagesDaily * 7 : 140
+  if (st.hoursWeekly == null) st.hoursWeekly = st.hoursMonthly != null ? Math.round(st.hoursMonthly / 4.33) : 9
+  delete st.pagesDaily; delete st.hoursMonthly
+  // Money: backfill targets sub-object.
+  if (!state.money.targets) state.money.targets = { savingsRate: 0.2 }
+  if (state.money.targets.savingsRate == null) state.money.targets.savingsRate = 0.2
+  // Quick wins: backfill daily target.
+  if (state.quickWins && state.quickWins.dailyTarget == null) state.quickWins.dailyTarget = 3
   // Weekly review + focus priorities
   if (!state.reviews) state.reviews = seed.reviews
   if (!state.focus) state.focus = seed.focus
@@ -271,12 +281,20 @@ export function StoreProvider({ children }) {
     toggleCareerTodo: (id) => update((d) => { const t = d.career.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
     deleteCareerTodo: (id) => update((d) => { d.career.todos = d.career.todos.filter((x) => x.id !== id) }),
 
+    // ---------- Career targets ----------
+    setCareerTargets: (patch) => update((d) => { Object.assign(d.career, patch) }),
+
+    // ---------- Money targets ----------
+    setMoneyTargets: (patch) => update((d) => { Object.assign((d.money.targets ||= {}), patch) }),
+    setMoneyCurrency: (cur) => update((d) => { d.money.currency = cur }),
+
     // ---------- Quick Wins ----------
     toggleQuickWin: (dateKey, winId) => update((d) => {
       const day = (d.quickWins.days[dateKey] ||= [])
       const idx = day.indexOf(winId)
       if (idx >= 0) day.splice(idx, 1); else day.push(winId)
     }),
+    setQuickWinsTarget: (n) => update((d) => { d.quickWins.dailyTarget = Math.max(1, Number(n) || 3) }),
     addQuickWin: (item) => update((d) => { d.quickWins.items.push({ id: rid(), ...item }) }),
     deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
     // Implementation intention: "After [cue], I will [win]." (Gollwitzer 2006)

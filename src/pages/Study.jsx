@@ -4,7 +4,7 @@ import { ItemIcon } from '../lib/icons.jsx'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { studyScore } from '../lib/score.js'
-import { toKey, thisMonth, monthDayKeys, daysUntil } from '../lib/dates.js'
+import { toKey, thisMonth, monthDayKeys, daysUntil, thisWeekKeys } from '../lib/dates.js'
 import { pct } from '../lib/format.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
@@ -39,9 +39,9 @@ export default function Study() {
       <Header score={sc.score} ym={ym} setYm={setYm} />
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Avg pages / day" value={sc.avgPages.toFixed(1)} sub={`target ${t.pagesDaily}`} color={C.color} />
+        <StatTile label="Avg pages / day" value={sc.avgPages.toFixed(1)} sub={`target ${t.pagesWeekly || 140}/wk`} color={C.color} />
         <StatTile label="Pages this month" value={sc.totalPages} color={C.color} />
-        <StatTile label="Study hours" value={`${sc.totalHours.toFixed(1)}h`} sub={`target ${t.hoursMonthly}h`} color={C.color} />
+        <StatTile label="Study hours" value={`${sc.totalHours.toFixed(1)}h`} sub={`target ${t.hoursWeekly || 9}h/wk`} color={C.color} />
         <StatTile label="Open tasks" value={s.todos.filter((x) => !x.done).length} color={C.color} />
       </div>
 
@@ -70,14 +70,7 @@ export default function Study() {
             <Logger icon="BookOpen" label="Pages read" value={todayLog.pages} onChange={(v) => actions.setStudyDay(dateKey, { pages: v })} />
             <Logger icon="Timer" label="Hours studied" value={todayLog.hours} step="0.25" onChange={(v) => actions.setStudyDay(dateKey, { hours: v })} />
           </div>
-          <div className="mt-4 rounded bg-white/[0.03] p-3">
-            <div className="mb-1 flex justify-between text-xs text-slate-500">
-              <span>Today's reading goal</span><span style={{ fontFamily: 'var(--font-mono)' }}>{todayLog.pages}/{t.pagesDaily} pages</span>
-            </div>
-            <div className="h-1.5 overflow-hidden bg-white/8">
-              <div className="h-full transition-all" style={{ width: `${pct(todayLog.pages / t.pagesDaily)}%`, background: C.color }} />
-            </div>
-          </div>
+          <WeekProgress state={state} t={t} todayPages={todayLog.pages} />
         </Card>
 
         <Card>
@@ -92,7 +85,7 @@ export default function Study() {
           <div>
             <p className="mb-2 text-xs text-slate-500">Pages read each day</p>
             <Heatmap ym={ym} color={C.color}
-              intensity={(k) => (s.days[k]?.pages || 0) / (t.pagesDaily || 20)}
+              intensity={(k) => (s.days[k]?.pages || 0) / ((t.pagesWeekly || 140) / 7)}
               valueLabel={(k) => `${s.days[k]?.pages || 0} pages`} />
           </div>
           <div>
@@ -102,6 +95,22 @@ export default function Study() {
           </div>
         </div>
       </Card>
+    </div>
+  )
+}
+
+function WeekProgress({ state, t }) {
+  const keys = thisWeekKeys()
+  const weekPages = keys.reduce((a, k) => a + (state.study.days[k]?.pages || 0), 0)
+  const target = t.pagesWeekly || 140
+  return (
+    <div className="mt-4 rounded bg-white/[0.03] p-3">
+      <div className="mb-1 flex justify-between text-xs text-slate-500">
+        <span>Weekly reading</span><span style={{ fontFamily: 'var(--font-mono)' }}>{weekPages}/{target} pages</span>
+      </div>
+      <div className="h-1.5 overflow-hidden bg-white/8">
+        <div className="h-full transition-all" style={{ width: `${pct(weekPages / target)}%`, background: C.color }} />
+      </div>
     </div>
   )
 }
