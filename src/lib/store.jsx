@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
 import { mergeStates } from './merge.js'
-import { todayKey } from './dates.js'
+import { todayKey, weekKeyOf } from './dates.js'
 import { ICONS } from './icons.jsx'
 import * as sync from './sync.js'
 
@@ -30,6 +30,29 @@ function fixIcon(value, fallback) {
   return EMOJI_TO_ICON[value] || fallback
 }
 
+function collectTargets(d) {
+  return {
+    fitness: { ...d.fitness.targets },
+    study: { ...d.study.targets },
+    career: { monthlyApplyTarget: d.career.monthlyApplyTarget, monthlySkillTarget: d.career.monthlySkillTarget },
+    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget },
+    money: { savingsRate: d.money?.targets?.savingsRate ?? 0.2 },
+    quickWins: { dailyTarget: d.quickWins?.dailyTarget ?? 3 },
+  }
+}
+
+function snapshotTargets(d, preChange) {
+  const wk = weekKeyOf()
+  if (!d.targetHistory) d.targetHistory = []
+  if (!d.targetHistory.length && preChange) {
+    d.targetHistory.push({ weekKey: '0000-01-01', ...preChange })
+  }
+  const targets = collectTargets(d)
+  const idx = d.targetHistory.findIndex((e) => e.weekKey === wk)
+  if (idx >= 0) d.targetHistory[idx] = { weekKey: wk, ...targets }
+  else d.targetHistory.push({ weekKey: wk, ...targets })
+}
+
 function migrate(state) {
   const seed = buildSeedState()
   if (!state.stakes) state.stakes = seed.stakes
@@ -52,6 +75,8 @@ function migrate(state) {
   if (state.money.targets.savingsRate == null) state.money.targets.savingsRate = 0.2
   // Quick wins: backfill daily target.
   if (state.quickWins && state.quickWins.dailyTarget == null) state.quickWins.dailyTarget = 3
+  // Target history — snapshot-based so changing targets doesn't rewrite the past.
+  if (!state.targetHistory) state.targetHistory = []
   // Weekly review + focus priorities
   if (!state.reviews) state.reviews = seed.reviews
   if (!state.focus) state.focus = seed.focus
@@ -242,7 +267,11 @@ export function StoreProvider({ children }) {
       const day = (d.fitness.days[dateKey] ||= { runs: 0, workouts: 0, stretch: false, steps: 0 })
       Object.assign(day, patch)
     }),
-    setFitnessTargets: (patch) => update((d) => { Object.assign(d.fitness.targets, patch) }),
+    setFitnessTargets: (patch) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      Object.assign(d.fitness.targets, patch)
+      snapshotTargets(d, pre)
+    }),
     addFitnessTodo: (todo) => update((d) => { d.fitness.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
     updateFitnessTodo: (id, patch) => update((d) => { const t = d.fitness.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
     toggleFitnessTodo: (id) => update((d) => { const t = d.fitness.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
@@ -260,7 +289,11 @@ export function StoreProvider({ children }) {
       const day = (d.study.days[dateKey] ||= { pages: 0, hours: 0 })
       Object.assign(day, patch)
     }),
-    setStudyTargets: (patch) => update((d) => { Object.assign(d.study.targets, patch) }),
+    setStudyTargets: (patch) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      Object.assign(d.study.targets, patch)
+      snapshotTargets(d, pre)
+    }),
     addTodo: (todo) => update((d) => { d.study.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),
     updateTodo: (id, patch) => update((d) => { const t = d.study.todos.find((x) => x.id === id); if (t) Object.assign(t, patch) }),
     toggleTodo: (id) => update((d) => { const t = d.study.todos.find((x) => x.id === id); if (t) t.done = !t.done }),
@@ -282,10 +315,18 @@ export function StoreProvider({ children }) {
     deleteCareerTodo: (id) => update((d) => { d.career.todos = d.career.todos.filter((x) => x.id !== id) }),
 
     // ---------- Career targets ----------
-    setCareerTargets: (patch) => update((d) => { Object.assign(d.career, patch) }),
+    setCareerTargets: (patch) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      Object.assign(d.career, patch)
+      snapshotTargets(d, pre)
+    }),
 
     // ---------- Money targets ----------
-    setMoneyTargets: (patch) => update((d) => { Object.assign((d.money.targets ||= {}), patch) }),
+    setMoneyTargets: (patch) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      Object.assign((d.money.targets ||= {}), patch)
+      snapshotTargets(d, pre)
+    }),
     setMoneyCurrency: (cur) => update((d) => { d.money.currency = cur }),
 
     // ---------- Quick Wins ----------
@@ -294,7 +335,11 @@ export function StoreProvider({ children }) {
       const idx = day.indexOf(winId)
       if (idx >= 0) day.splice(idx, 1); else day.push(winId)
     }),
-    setQuickWinsTarget: (n) => update((d) => { d.quickWins.dailyTarget = Math.max(1, Number(n) || 3) }),
+    setQuickWinsTarget: (n) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      d.quickWins.dailyTarget = Math.max(1, Number(n) || 3)
+      snapshotTargets(d, pre)
+    }),
     addQuickWin: (item) => update((d) => { d.quickWins.items.push({ id: rid(), ...item }) }),
     deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
     // Implementation intention: "After [cue], I will [win]." (Gollwitzer 2006)
@@ -344,7 +389,11 @@ export function StoreProvider({ children }) {
       const p = d.business.projects.find((x) => x.id === projectId)
       if (p) p.milestones = p.milestones.filter((m) => m.id !== milestoneId)
     }),
-    setBusinessIncomeTarget: (amount) => update((d) => { d.business.monthlyIncomeTarget = Number(amount) || 0 }),
+    setBusinessIncomeTarget: (amount) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      d.business.monthlyIncomeTarget = Number(amount) || 0
+      snapshotTargets(d, pre)
+    }),
 
     // ---------- Business tasks ----------
     addBusinessTodo: (todo) => update((d) => { d.business.todos.push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo }) }),

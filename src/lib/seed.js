@@ -87,5 +87,6 @@ export function buildSeedState() {
     reviews: seedReviews(),
     focus: seedFocus(),
     journal: seedJournal(),
+    targetHistory: [],
   }
 }

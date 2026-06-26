@@ -98,6 +98,15 @@ const mergeSkill = (a, b, newerWins) => ({
   sessions: unionBySig(a.sessions, b.sessions, (s) => `${s.date}|${s.hours}`),
 })
 
+function mergeTargetHistory(a = [], b = [], newerWins) {
+  const older = newerWins ? a : b
+  const newer = newerWins ? b : a
+  const map = new Map()
+  for (const e of older) map.set(e.weekKey, e)
+  for (const e of newer) map.set(e.weekKey, e)
+  return Array.from(map.values()).sort((x, y) => x.weekKey.localeCompare(y.weekKey))
+}
+
 const mergeProject = (a, b, newerWins) => ({
   ...(newerWins ? a : b),
   ...(newerWins ? b : a),
@@ -135,6 +144,7 @@ export function mergeStates(local, remote) {
       ...mergeSettings(
         { currency: lm.currency }, { currency: rm.currency }, newerWins,
       ),
+      targets: mergeSettings(lm.targets, rm.targets, newerWins),
       incomeSources: unionById(lm.incomeSources, rm.incomeSources, newerWins),
       tx: unionById(lm.tx, rm.tx, newerWins),
     },
@@ -167,6 +177,9 @@ export function mergeStates(local, remote) {
       ledger: unionById(lv.ledger, rv.ledger, newerWins),
     },
     quickWins: {
+      ...mergeSettings(
+        { dailyTarget: lq.dailyTarget }, { dailyTarget: rq.dailyTarget }, newerWins,
+      ),
       items: unionById(lq.items, rq.items, newerWins),
       days: mergeDayMap(lq.days, rq.days, (a, b) => mergeIdList(a, b)),
     },
@@ -181,5 +194,6 @@ export function mergeStates(local, remote) {
     journal: {
       days: mergeDayMap(local.journal?.days, remote.journal?.days, (a, b) => mergeDayObj(a, b, newerWins)),
     },
+    targetHistory: mergeTargetHistory(local.targetHistory, remote.targetHistory, newerWins),
   }
 }

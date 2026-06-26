@@ -50,7 +50,7 @@ export function fitnessScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, wake }
 }
 
-export function moneyScore(state, ym) {
+export function moneyScore(state, ym, opts) {
   const m = state.money || { incomeSources: [], tx: [] }
   const income = sum((m.incomeSources || []).map((s) => Number(s.amount) || 0))
   const tx = txOfMonth(m.tx, ym)
@@ -58,7 +58,7 @@ export function moneyScore(state, ym) {
   const saving = sum(tx.filter((x) => x.kind === 'saving').map((x) => x.amount))
   const invest = sum(tx.filter((x) => x.kind === 'investment').map((x) => x.amount))
   const savingsRate = income > 0 ? (saving + invest) / income : 0
-  const savingsTarget = m.targets?.savingsRate || 0.2
+  const savingsTarget = opts?.savingsRate ?? m.targets?.savingsRate ?? 0.2
 
   const parts = [
     { label: 'Savings rate', value: clamp01(savingsRate / savingsTarget), detail: `${Math.round(savingsRate * 100)}% (${Math.round(savingsTarget * 100)}% = full)` },
@@ -272,8 +272,23 @@ export function scoreHistory(state, months = 6) {
   })
 }
 
+// Look up the target snapshot that was in effect for a given week.
+// Returns null if no snapshots exist (backward compat: use current targets).
+function targetsForWeek(state, weekStartKey) {
+  const history = state.targetHistory || []
+  if (!history.length) return null
+  let best = null
+  for (const entry of history) {
+    if (entry.weekKey <= weekStartKey && (!best || entry.weekKey > best.weekKey)) {
+      best = entry
+    }
+  }
+  return best
+}
+
 // Internal: raw 0-1 weekly aggregate for a given Mon-start window (used by history chart).
 // Mirrors lifeScore() exactly: active-domain filtering + quick wins / journal bonuses.
+// Uses historical target snapshots so past weeks aren't affected by target changes.
 function weekScore(state, weekStartDate) {
   const keys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
@@ -282,10 +297,12 @@ function weekScore(state, weekStartDate) {
   })
   const keySet = new Set(keys)
 
+  const ht = targetsForWeek(state, toKey(weekStartDate))
+
   const f = state.fitness || { targets: {}, days: {} }
-  const t = f.targets || {}
+  const t = ht?.fitness || f.targets || {}
   const s = state.study || { targets: {}, days: {} }
-  const st = s.targets || {}
+  const st = ht?.study || s.targets || {}
   const c = state.career || { jobs: [], skills: [] }
 
   const fitDays = keys.map((k) => f.days[k] || {})
@@ -310,6 +327,8 @@ function weekScore(state, weekStartDate) {
     clamp01(totalHours / (st.hoursWeekly || 9)),
   ])
 
+  const monthlyApplyTarget = ht?.career?.monthlyApplyTarget ?? c.monthlyApplyTarget ?? 8
+  const monthlySkillTarget = ht?.career?.monthlySkillTarget ?? c.monthlySkillTarget ?? 10
   const weekApps = (c.jobs || []).filter((j) => keySet.has(j.date)).length
   const weekSkillHours = sum(
     (c.skills || []).flatMap((sk) =>
@@ -317,16 +336,17 @@ function weekScore(state, weekStartDate) {
     )
   )
   const careerScoreVal = avg([
-    clamp01(weekApps / ((c.monthlyApplyTarget || 8) / 4.33)),
-    clamp01(weekSkillHours / ((c.monthlySkillTarget || 10) / 4.33)),
+    clamp01(weekApps / (monthlyApplyTarget / 4.33)),
+    clamp01(weekSkillHours / (monthlySkillTarget / 4.33)),
   ])
 
   const ym = monthKey(new Date(keys[3]))
-  const mScore = moneyScore(state, ym)
+  const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
   const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
   const bProjects = b.projects || []
-  const bTarget = (b.monthlyIncomeTarget || 500) / 4.33
+  const bMonthlyTarget = ht?.business?.monthlyIncomeTarget ?? b.monthlyIncomeTarget ?? 500
+  const bTarget = bMonthlyTarget / 4.33
   const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
   const businessScoreVal = clamp01(bTarget ? weekRevenue / bTarget : 0)
 
@@ -341,7 +361,7 @@ function weekScore(state, weekStartDate) {
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
 
   const qw = state.quickWins || { items: [], days: {} }
-  const qwDaily = qw.dailyTarget || 3
+  const qwDaily = ht?.quickWins?.dailyTarget ?? qw.dailyTarget ?? 3
   const qwCompletions = Object.entries(qw.days || {})
     .filter(([k]) => keySet.has(k))
     .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
