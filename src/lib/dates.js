@@ -81,6 +81,15 @@ export function thisWeekKeys() {
   const s = startOfWeek()
   return Array.from({ length: 7 }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return toKey(x) })
 }
+// A stable identifier for "the week of" a date: the Monday's date key.
+export function weekKeyOf(d = new Date()) { return toKey(startOfWeek(d)) }
+// Human label for a week, e.g. "26 May – 1 Jun 2026".
+export function weekRangeLabel(weekStart = startOfWeek()) {
+  const end = new Date(weekStart); end.setDate(weekStart.getDate() + 6)
+  const a = weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  const b = end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${a} – ${b}`
+}
 
 // Count consecutive days (ending today, or yesterday if today not done) where predicate is true.
 export function streakOf(predicate) {

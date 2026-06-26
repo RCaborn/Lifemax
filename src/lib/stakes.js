@@ -105,6 +105,16 @@ export function dueResolutions(state) {
   return res
 }
 
+// Quick "how am I doing" summary for the Stakes bento card.
+export function activeStakesSummary(state) {
+  const active = (state.stakes?.contracts || []).filter((c) => c.status === 'active' || c.status === 'pending_review')
+  const onTrack = active.filter((c) => {
+    const e = evaluate(c, state)
+    return e.met == null || e.ratio >= 0.85
+  })
+  return { activeCount: active.length, onTrackCount: onTrack.length }
+}
+
 export function daysLeft(contract) {
   return daysUntil(contract.endDate)
 }

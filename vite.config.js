@@ -19,6 +19,9 @@ export default defineConfig(({ command }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}']
+        },
         manifest: {
           name: 'Lifemax — Life Dashboard',
           short_name: 'Lifemax',

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X, Check, Flag } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { businessScore } from '../lib/score.js'
@@ -9,6 +10,7 @@ import MonthNav from '../components/MonthNav.jsx'
 import Bars from '../components/Bars.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../components/ui.jsx'
+import { ItemIcon, IconPicker, PROJECT_ICONS } from '../lib/icons.jsx'
 
 const C = DOMAIN_MAP.business
 const STATUS = {
@@ -51,9 +53,8 @@ export default function Business() {
           <div className="rounded-lg bg-white/[0.02] p-5 text-sm text-slate-500">
             <p className="text-slate-300">No projects yet — add your first hustle below.</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Each project is scored on three things: <span className="text-slate-400">Income</span> (money in vs your monthly goal),
-              <span className="text-slate-400"> Shipping</span> (milestones you complete — the things you'll be proud of), and
-              <span className="text-slate-400"> Momentum</span> (keeping every active hustle moving). Shipping a milestone earns Virtue points too.
+              Your score is based on <span className="text-slate-400">Income</span> — money in vs your monthly goal.
+              Shipping a milestone still earns XP.
             </p>
           </div>
         ) : (
@@ -106,7 +107,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -127,7 +128,7 @@ function GoalEditor({ target, cur, onChange }) {
       Goal <span className="text-slate-500">{cur}</span>
       <input type="number" value={target} onChange={(e) => onChange(e.target.value)}
         className="w-16 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-right text-xs text-white outline-none focus:border-white/30"
-        style={{ fontFamily: 'Courier New, monospace' }} /> /mo
+        style={{ fontFamily: 'var(--font-mono)' }} /> /mo
     </label>
   )
 }
@@ -149,22 +150,22 @@ function ProjectCard({ p, ym, cur, actions }) {
     e.preventDefault()
     if (amt === '') return
     actions.addRevenue(p.id, { amount: amt })
-    toast({ icon: '💵', title: p.name, sub: `+${money(Number(amt) || 0, cur)} logged`, color: '#22c55e' })
+    toast({ icon: 'Banknote', title: p.name, sub: `+${money(Number(amt) || 0, cur)} logged`, color: '#22c55e' })
     setAmt('')
   }
   const addMs = (e) => { e.preventDefault(); if (ms.trim()) { actions.addMilestone(p.id, ms.trim()); setMs('') } }
   const toggleMs = (m) => {
     actions.toggleMilestone(p.id, m.id)
-    if (!m.done) toast({ icon: '🚩', title: 'Milestone shipped', sub: `${m.title} · +8 pts`, color: C.color })
+    if (!m.done) toast({ icon: 'Flag', title: 'Milestone shipped', sub: `${m.title} · +8 XP`, color: C.color })
   }
 
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center border border-white/10 text-xl">{p.emoji}</span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10"><ItemIcon icon={p.emoji} size={18} /></span>
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">{p.name}</div>
-          <div className="text-[11px] text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>
+          <div className="text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
             {money(monthRev, cur)} this month · {money(totalRev, cur)} total
           </div>
         </div>
@@ -173,13 +174,13 @@ function ProjectCard({ p, ym, cur, actions }) {
           style={{ color: st.color }}>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k} className="bg-[#0d0d0d] text-white">{v.label}</option>)}
         </select>
-        <button onClick={() => actions.deleteProject(p.id)} className="shrink-0 text-sm text-slate-600 hover:text-rose-400">✕</button>
+        <button onClick={() => actions.deleteProject(p.id)} className="shrink-0 text-slate-600 hover:text-rose-400"><X size={14} /></button>
       </div>
 
       {milestones.length > 0 && (
         <div className="mt-3">
           <div className="mb-1 flex justify-between text-[11px] text-slate-500">
-            <span>Milestones shipped</span><span style={{ fontFamily: 'Courier New, monospace' }}>{msDone}/{milestones.length}</span>
+            <span>Milestones shipped</span><span style={{ fontFamily: 'var(--font-mono)' }}>{msDone}/{milestones.length}</span>
           </div>
           <div className="h-1.5 overflow-hidden bg-white/8">
             <div className="h-full transition-all duration-700" style={{ width: `${pct(milestones.length ? msDone / milestones.length : 0)}%`, background: C.color }} />
@@ -207,8 +208,8 @@ function ProjectCard({ p, ym, cur, actions }) {
               {[...revenue].reverse().slice(0, 8).map((r) => (
                 <div key={r.id} className="flex items-center gap-2 text-xs">
                   <span className="w-12 shrink-0 text-slate-600">{r.date.slice(5)}</span>
-                  <span className="flex-1 text-emerald-400" style={{ fontFamily: 'Courier New, monospace' }}>{money(r.amount, cur)}</span>
-                  <button onClick={() => actions.deleteRevenue(p.id, r.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+                  <span className="flex-1 text-emerald-400" style={{ fontFamily: 'var(--font-mono)' }}>{money(r.amount, cur)}</span>
+                  <button onClick={() => actions.deleteRevenue(p.id, r.id)} className="text-slate-600 hover:text-rose-400"><X size={12} /></button>
                 </div>
               ))}
             </div>
@@ -219,11 +220,11 @@ function ProjectCard({ p, ym, cur, actions }) {
               {milestones.map((m) => (
                 <div key={m.id} className="flex items-center gap-2 text-sm">
                   <button onClick={() => toggleMs(m)}
-                    className="grid h-4 w-4 shrink-0 place-items-center border text-[10px]"
-                    style={{ borderColor: m.done ? C.color : 'rgba(255,255,255,.18)', background: m.done ? C.color : 'transparent', color: m.done ? '#000' : 'transparent' }}>✓</button>
+                    className="grid h-4 w-4 shrink-0 place-items-center border"
+                    style={{ borderColor: m.done ? C.color : 'rgba(255,255,255,.18)', background: m.done ? C.color : 'transparent', color: m.done ? '#000' : 'transparent' }}><Check size={10} /></button>
                   <span className={`flex-1 truncate ${m.done ? 'text-slate-600 line-through' : 'text-slate-300'}`}>{m.title}</span>
-                  {m.done && <span className="shrink-0 text-xs">🚩</span>}
-                  <button onClick={() => actions.deleteMilestone(p.id, m.id)} className="shrink-0 text-xs text-slate-600 hover:text-rose-400">✕</button>
+                  {m.done && <Flag size={12} className="shrink-0 text-slate-400" />}
+                  <button onClick={() => actions.deleteMilestone(p.id, m.id)} className="shrink-0 text-slate-600 hover:text-rose-400"><X size={11} /></button>
                 </div>
               ))}
             </div>
@@ -241,15 +242,16 @@ function ProjectCard({ p, ym, cur, actions }) {
 
 function NewProject({ actions }) {
   const [name, setName] = useState('')
-  const [emoji, setEmoji] = useState('🚀')
-  const add = (e) => { e.preventDefault(); if (name.trim()) { actions.addProject({ name: name.trim(), emoji }); setName(''); setEmoji('🚀') } }
+  const [icon, setIcon] = useState('Rocket')
+  const add = (e) => { e.preventDefault(); if (name.trim()) { actions.addProject({ name: name.trim(), emoji: icon }); setName(''); setIcon('Rocket') } }
   return (
-    <form onSubmit={add} className="flex gap-2">
-      <input value={emoji} onChange={(e) => setEmoji(e.target.value)} maxLength={2}
-        className="w-12 rounded border border-white/10 bg-white/5 px-2 py-2 text-center text-white outline-none" />
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New side hustle / project…"
-        className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-white/30" />
-      <button type="submit" className="rounded px-4 py-2 text-sm font-medium" style={{ background: C.color, color: '#050505' }}>Add</button>
+    <form onSubmit={add} className="space-y-2">
+      <div className="flex gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New side hustle / project…"
+          className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-white/30" />
+        <button type="submit" className="rounded px-4 py-2 text-sm font-medium" style={{ background: C.color, color: '#050505' }}>Add</button>
+      </div>
+      <IconPicker icons={PROJECT_ICONS} value={icon} onChange={setIcon} />
     </form>
   )
 }
@@ -277,12 +279,12 @@ function TodoList({ todos, actions }) {
           return (
             <div key={td.id} className="flex items-center gap-2 rounded bg-white/[0.03] px-3 py-2">
               <button onClick={() => actions.toggleBusinessTodo(td.id)}
-                className="grid h-5 w-5 shrink-0 place-items-center border text-[11px]"
-                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                className="grid h-5 w-5 shrink-0 place-items-center border"
+                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={11} /></button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
-              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
-              <button onClick={() => actions.deleteBusinessTodo(td.id)} className="text-xs text-slate-600 hover:text-rose-400">✕</button>
+              {td.deadline && <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>{overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}</span>}
+              <button onClick={() => actions.deleteBusinessTodo(td.id)} className="text-slate-600 hover:text-rose-400"><X size={11} /></button>
             </div>
           )
         })}

@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Check, X } from 'lucide-react'
+import { ItemIcon } from '../lib/icons.jsx'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { studyScore } from '../lib/score.js'
-import { toKey, thisMonth, monthDayKeys, daysUntil } from '../lib/dates.js'
+import { toKey, thisMonth, monthDayKeys, daysUntil, thisWeekKeys } from '../lib/dates.js'
 import { pct } from '../lib/format.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
@@ -29,15 +31,17 @@ export default function Study() {
 
   const mkeys = monthDayKeys(ym)
   const hoursByWeek = buildWeekHours(mkeys, s.days)
+  // Graceful consistency: days you showed up at all this month (no punitive streak).
+  const mActiveDays = mkeys.filter((k) => { const d = s.days[k]; return d && ((d.pages || 0) > 0 || (d.hours || 0) > 0) }).length
 
   return (
     <div className="space-y-6">
       <Header score={sc.score} ym={ym} setYm={setYm} />
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Avg pages / day" value={sc.avgPages.toFixed(1)} sub={`target ${t.pagesDaily}`} color={C.color} />
+        <StatTile label="Avg pages / day" value={sc.avgPages.toFixed(1)} sub={`target ${t.pagesWeekly || 140}/wk`} color={C.color} />
         <StatTile label="Pages this month" value={sc.totalPages} color={C.color} />
-        <StatTile label="Study hours" value={`${sc.totalHours.toFixed(1)}h`} sub={`target ${t.hoursMonthly}h`} color={C.color} />
+        <StatTile label="Study hours" value={`${sc.totalHours.toFixed(1)}h`} sub={`target ${t.hoursWeekly || 9}h/wk`} color={C.color} />
         <StatTile label="Open tasks" value={s.todos.filter((x) => !x.done).length} color={C.color} />
       </div>
 
@@ -63,17 +67,10 @@ export default function Study() {
             Log {dayOffset === 0 ? 'Today' : 'Yesterday'}
           </SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <Logger label="📖 Pages read" value={todayLog.pages} onChange={(v) => actions.setStudyDay(dateKey, { pages: v })} />
-            <Logger label="⏱️ Hours studied" value={todayLog.hours} step="0.25" onChange={(v) => actions.setStudyDay(dateKey, { hours: v })} />
+            <Logger icon="BookOpen" label="Pages read" value={todayLog.pages} onChange={(v) => actions.setStudyDay(dateKey, { pages: v })} />
+            <Logger icon="Timer" label="Hours studied" value={todayLog.hours} step="0.25" onChange={(v) => actions.setStudyDay(dateKey, { hours: v })} />
           </div>
-          <div className="mt-4 rounded bg-white/[0.03] p-3">
-            <div className="mb-1 flex justify-between text-xs text-slate-500">
-              <span>Today's reading goal</span><span style={{ fontFamily: 'Courier New, monospace' }}>{todayLog.pages}/{t.pagesDaily} pages</span>
-            </div>
-            <div className="h-1.5 overflow-hidden bg-white/8">
-              <div className="h-full transition-all" style={{ width: `${pct(todayLog.pages / t.pagesDaily)}%`, background: C.color }} />
-            </div>
-          </div>
+          <WeekProgress state={state} t={t} todayPages={todayLog.pages} />
         </Card>
 
         <Card>
@@ -83,12 +80,12 @@ export default function Study() {
       </div>
 
       <Card>
-        <SectionTitle right={<span className="text-xs text-slate-500">Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
+        <SectionTitle right={<span className="text-xs text-slate-500">Active {mActiveDays} days · Score {pct(sc.score)}%</span>}>Monthly overview</SectionTitle>
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <p className="mb-2 text-xs text-slate-500">Pages read each day</p>
             <Heatmap ym={ym} color={C.color}
-              intensity={(k) => (s.days[k]?.pages || 0) / (t.pagesDaily || 20)}
+              intensity={(k) => (s.days[k]?.pages || 0) / ((t.pagesWeekly || 140) / 7)}
               valueLabel={(k) => `${s.days[k]?.pages || 0} pages`} />
           </div>
           <div>
@@ -98,6 +95,22 @@ export default function Study() {
           </div>
         </div>
       </Card>
+    </div>
+  )
+}
+
+function WeekProgress({ state, t }) {
+  const keys = thisWeekKeys()
+  const weekPages = keys.reduce((a, k) => a + (state.study.days[k]?.pages || 0), 0)
+  const target = t.pagesWeekly || 140
+  return (
+    <div className="mt-4 rounded bg-white/[0.03] p-3">
+      <div className="mb-1 flex justify-between text-xs text-slate-500">
+        <span>Weekly reading</span><span style={{ fontFamily: 'var(--font-mono)' }}>{weekPages}/{target} pages</span>
+      </div>
+      <div className="h-1.5 overflow-hidden bg-white/8">
+        <div className="h-full transition-all" style={{ width: `${pct(weekPages / target)}%`, background: C.color }} />
+      </div>
     </div>
   )
 }
@@ -117,7 +130,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -132,10 +145,10 @@ function Header({ score, ym, setYm }) {
   )
 }
 
-function Logger({ label, value, onChange, step = '1' }) {
+function Logger({ icon, label, value, onChange, step = '1' }) {
   return (
     <div>
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</div>
       <input type="number" step={step} value={value || ''} placeholder="0"
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mt-2 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-lg font-semibold text-white outline-none focus:border-white/30" />
@@ -165,16 +178,16 @@ function TodoList({ todos, actions }) {
           return (
             <div key={td.id} className="flex items-center gap-2 rounded bg-white/[0.03] px-3 py-2">
               <button onClick={() => actions.toggleTodo(td.id)}
-                className="grid h-5 w-5 shrink-0 place-items-center border text-[11px]"
-                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                className="grid h-5 w-5 shrink-0 place-items-center border"
+                style={{ borderColor: td.done ? C.color : 'rgba(255,255,255,.18)', background: td.done ? C.color : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={11} /></button>
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO[td.priority].color }} title={PRIO[td.priority].label} />
               <span className={`flex-1 truncate text-sm ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
               {td.deadline && (
-                <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>
+                <span className="shrink-0 text-xs" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>
                   {overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}
                 </span>
               )}
-              <button onClick={() => actions.deleteTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+              <button onClick={() => actions.deleteTodo(td.id)} className="text-slate-600 hover:text-rose-400 text-xs"><X size={12} /></button>
             </div>
           )
         })}

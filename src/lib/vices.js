@@ -21,23 +21,30 @@ export const DEFAULT_EARN_RATES = {
   study_hour: 3,   // per hour studied
   career_hour: 3,  // per skill hour logged
   milestone: 8,    // per side-hustle milestone shipped
+  journal: 3,      // per day's journal entry
 }
 
 export const EARN_LABELS = {
-  run: { label: 'Run logged', icon: '🏃', domain: 'fitness' },
-  workout: { label: 'Workout logged', icon: '🏋️', domain: 'fitness' },
-  stretch: { label: 'Stretch day', icon: '🧘', domain: 'fitness' },
-  steps_10k: { label: 'Step goal hit', icon: '👟', domain: 'fitness' },
-  wake_target: { label: 'Woke on time', icon: '⏰', domain: 'fitness' },
-  pages_20: { label: 'Reading goal hit', icon: '📖', domain: 'study' },
-  study_hour: { label: 'Study hour', icon: '⏱️', domain: 'study' },
-  career_hour: { label: 'Skill hour', icon: '🎓', domain: 'career' },
-  milestone: { label: 'Milestone shipped', icon: '🚩', domain: 'business' },
-  stake: { label: 'Stake won', icon: '🎯', domain: 'stakes' },
+  run: { label: 'Run logged', icon: 'Activity', domain: 'fitness' },
+  workout: { label: 'Workout logged', icon: 'Dumbbell', domain: 'fitness' },
+  stretch: { label: 'Stretch day', icon: 'Flower2', domain: 'fitness' },
+  steps_10k: { label: 'Step goal hit', icon: 'Footprints', domain: 'fitness' },
+  wake_target: { label: 'Woke on time', icon: 'AlarmClock', domain: 'fitness' },
+  pages_20: { label: 'Reading goal hit', icon: 'BookOpen', domain: 'study' },
+  study_hour: { label: 'Study hour', icon: 'Timer', domain: 'study' },
+  career_hour: { label: 'Skill hour', icon: 'GraduationCap', domain: 'career' },
+  milestone: { label: 'Milestone shipped', icon: 'Flag', domain: 'business' },
+  stake: { label: 'Stake won', icon: 'Target', domain: 'stakes' },
+  journal: { label: 'Journal entry', icon: 'Feather', domain: 'journal' },
 }
 
 function ratesOf(state) {
   return { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
+}
+
+// The XP a given activity is currently worth, respecting user-configured rates.
+export function earnRate(state, key) {
+  return ratesOf(state)[key]
 }
 
 // Build the full list of *earned* point events from logged activity.
@@ -65,7 +72,7 @@ export function earnedEvents(state) {
 
   // Study
   const s = state.study || { days: {}, targets: {} }
-  const pageTarget = s.targets?.pagesDaily || 20
+  const pageTarget = (s.targets?.pagesWeekly || 140) / 7
   for (const [date, d] of Object.entries(s.days || {})) {
     if ((d.pages || 0) >= pageTarget) out.push({ date, source: 'pages_20', qty: 1, points: rates.pages_20 })
     if (d.hours) {
@@ -101,6 +108,11 @@ export function earnedEvents(state) {
     }
   }
 
+  // Journal — rating today's day is the action that earns XP (text fields are bonus reflection)
+  for (const [date, d] of Object.entries(state.journal?.days || {})) {
+    if (d.mood != null) out.push({ date, source: 'journal', qty: 1, points: rates.journal })
+  }
+
   // Stake bonuses are stored in the ledger as type 'earn' with source 'stake'.
   for (const e of state.vices?.ledger || []) {
     if (e.type === 'earn' && e.source === 'stake') out.push({ date: e.date, source: 'stake', qty: 1, points: e.points, note: e.note })
@@ -118,36 +130,15 @@ export function totalEarned(state) {
 export function spends(state) {
   return (state.vices?.ledger || []).filter((e) => e.type === 'spend')
 }
-// A spend costs its base points PLUS any debt penalty charged at redeem time.
 export function totalSpent(state) {
-  return spends(state).reduce((a, e) => a + e.points + (e.penalty || 0), 0)
+  return spends(state).reduce((a, e) => a + e.points, 0)
 }
 
-// Balance can go NEGATIVE — that's vice debt. You took a reward before earning it.
+// Balance = earned minus spent. A reward only unlocks once you've genuinely
+// earned it — there's no borrowing against future effort, so the points stay a
+// real commitment device rather than a credit line that can spiral into debt.
 export function balance(state) {
   return totalEarned(state) - totalSpent(state)
-}
-
-// --- Vice debt ---------------------------------------------------------------
-// Redeeming a vice you can't afford is allowed, but the shortfall is taxed:
-// you're charged extra points on top, so digging in deeper hurts more.
-export const DEFAULT_DEBT_PENALTY_RATE = 0.5
-
-export function debtPenaltyRate(state) {
-  const r = state.vices?.debtPenaltyRate
-  return r == null ? DEFAULT_DEBT_PENALTY_RATE : r
-}
-
-// How many extra points a vice would cost right now if taken on credit.
-export function debtPenaltyFor(state, vice) {
-  const bal = balance(state)
-  const shortfall = Math.max(0, (vice.pointCost || 0) - bal)
-  return Math.ceil(shortfall * debtPenaltyRate(state))
-}
-
-// Total outstanding debt (0 when you're in the black).
-export function debt(state) {
-  return Math.max(0, -balance(state))
 }
 
 // Points earned within a given "YYYY-MM" month.
@@ -163,26 +154,17 @@ export function fullLedger(state) {
     if (e.source.startsWith('qw_')) {
       const item = qwMap[e.source.slice(3)]
       label = item?.name || 'Quick win'
-      icon = item?.emoji || '⚡'
+      icon = item?.emoji || 'Zap'
     } else {
       label = (EARN_LABELS[e.source]?.label || e.source) + (e.qty > 1 ? ` ×${e.qty}` : '')
-      icon = EARN_LABELS[e.source]?.icon || '✨'
+      icon = EARN_LABELS[e.source]?.icon || 'Sparkles'
     }
     return { ...e, type: 'earn', signed: e.points, label, icon }
   })
-  const spent = []
-  for (const e of spends(state)) {
-    spent.push({
-      date: e.date, type: 'spend', signed: -e.points, points: e.points,
-      label: e.viceName || 'Vice redeemed', icon: e.icon || '🎁',
-    })
-    if (e.penalty) {
-      spent.push({
-        date: e.date, type: 'spend', signed: -e.penalty, points: e.penalty,
-        label: `Debt penalty${e.viceName ? ` · ${e.viceName}` : ''}`, icon: '⚠️',
-      })
-    }
-  }
+  const spent = spends(state).map((e) => ({
+    date: e.date, type: 'spend', signed: -e.points, points: e.points, unearned: e.unearned,
+    label: (e.unearned ? '(unearned) ' : '') + (e.viceName || 'Vice redeemed'), icon: e.unearned ? 'TriangleAlert' : (e.icon || 'Gift'),
+  }))
   return [...earned, ...spent].sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 

@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { Check as CheckIcon, Circle } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import { toKey } from '../lib/dates.js'
+import { earnRate } from '../lib/vices.js'
 import { Card, SectionTitle } from './ui.jsx'
+import { ItemIcon } from '../lib/icons.jsx'
 
 export default function TodayPanel() {
   const { state, actions } = useStore()
@@ -42,22 +45,35 @@ export default function TodayPanel() {
       </SectionTitle>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Counter icon="🏃" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
-        <Counter icon="🏋️" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
-        <Check icon="🧘" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => {
+        <Counter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => {
+          const prev = f.runs || 0
+          setF({ runs: v })
+          if (v > prev && offset === 0) toast({ icon: 'Activity', title: 'Run logged', sub: `+${earnRate(state, 'run')} XP`, color: '#f97316' })
+        }} />
+        <Counter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => {
+          const prev = f.workouts || 0
+          setF({ workouts: v })
+          if (v > prev && offset === 0) toast({ icon: 'Dumbbell', title: 'Workout logged', sub: `+${earnRate(state, 'workout')} XP`, color: '#f97316' })
+        }} />
+        <Check icon="Flower2" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => {
           const n = !f.stretch
           setF({ stretch: n })
-          if (n && offset === 0) toast({ icon: '🧘', title: '+stretch logged', color: '#f97316' })
+          if (n && offset === 0) toast({ icon: 'Flower2', title: 'Stretch logged', sub: `+${earnRate(state, 'stretch')} XP`, color: '#f97316' })
         }} />
-        <Num icon="👟" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
-        <TimeField icon="⏰" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => {
+        <Num icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => {
+          const target = state.fitness.targets?.stepsDaily || 10000
+          const prev = f.steps || 0
+          setF({ steps: v })
+          if (v >= target && prev < target && offset === 0) toast({ icon: 'Footprints', title: 'Step goal hit', sub: `+${earnRate(state, 'steps_10k')} XP`, color: '#f97316' })
+        }} placeholder="10000" />
+        <TimeField icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => {
           setF({ wake: v })
-          if (v && offset === 0) toast({ icon: '⏰', title: `Up at ${v}`, color: '#f97316' })
+          if (v && offset === 0) toast({ icon: 'AlarmClock', title: `Up at ${v}`, color: '#f97316' })
         }} />
-        <Num icon="📖" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
-        <Num icon="⏱️" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
+        <Num icon="BookOpen" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
+        <Num icon="Timer" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
       </div>
-      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Life Score and earns Virtue points automatically.</p>
+      <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Pulse and earns XP automatically.</p>
     </Card>
   )
 }
@@ -65,13 +81,12 @@ export default function TodayPanel() {
 function Counter({ icon, label, value, color, onChange }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5">
-      <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
+      <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</span>
       <div className="flex items-center gap-2">
-        <button onClick={() => onChange(Math.max(0, value - 1))} className="cbtn">−</button>
+        <button onClick={() => onChange(Math.max(0, value - 1))} className="btn-icon btn-icon-sm">−</button>
         <span className="w-5 text-center font-semibold text-white">{value}</span>
-        <button onClick={() => onChange(value + 1)} className="cbtn" style={{ background: color, color: '#050505' }}>+</button>
+        <button onClick={() => onChange(value + 1)} className="btn-icon btn-icon-sm" style={{ background: color, color: '#050505' }}>+</button>
       </div>
-      <style>{`.cbtn{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#888;font-size:16px;line-height:1}`}</style>
     </div>
   )
 }
@@ -79,9 +94,9 @@ function Counter({ icon, label, value, color, onChange }) {
 function Check({ icon, label, on, color, onToggle }) {
   return (
     <button onClick={onToggle} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5 transition hover:bg-white/[0.06]">
-      <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
-      <span className="grid h-7 w-7 place-items-center rounded text-sm"
-        style={{ background: on ? color : 'rgba(255,255,255,.06)', color: on ? '#050505' : '#555' }}>{on ? '✓' : '○'}</span>
+      <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</span>
+      <span className="grid h-7 w-7 place-items-center rounded"
+        style={{ background: on ? color : 'rgba(255,255,255,.06)', color: on ? '#050505' : '#555' }}>{on ? <CheckIcon size={14} /> : <Circle size={14} />}</span>
     </button>
   )
 }
@@ -89,7 +104,7 @@ function Check({ icon, label, on, color, onToggle }) {
 function Num({ icon, label, value, color, onChange, placeholder, step = '1' }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5">
-      <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
+      <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</span>
       <input type="number" step={step} value={value || ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-right font-semibold text-white outline-none focus:border-white/30"
@@ -101,7 +116,7 @@ function Num({ icon, label, value, color, onChange, placeholder, step = '1' }) {
 function TimeField({ icon, label, value, color, onChange }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5">
-      <span className="flex items-center gap-2 text-sm text-slate-400">{icon} {label}</span>
+      <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={icon} size={14} /> {label}</span>
       <input type="time" value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-28 rounded border border-white/10 bg-white/5 px-2 py-1 text-right font-semibold text-white outline-none focus:border-white/30"

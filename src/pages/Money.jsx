@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CreditCard, X } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { moneyScore } from '../lib/score.js'
@@ -8,6 +9,7 @@ import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
 import Donut from '../components/Donut.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../components/ui.jsx'
+import { ItemIcon } from '../lib/icons.jsx'
 
 const C = DOMAIN_MAP.money
 
@@ -80,7 +82,7 @@ function Header({ score, ym, setYm }) {
     <div className="glass relative overflow-hidden rounded-2xl p-6">
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center border border-white/10 text-3xl">{C.icon}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-lg border border-white/10"><ItemIcon icon={C.icon} size={28} /></span>
           <div>
             <h1 className="text-2xl font-bold text-white">{C.name}</h1>
             <p className="text-sm text-slate-500">{C.tagline}</p>
@@ -110,7 +112,7 @@ function IncomeEditor({ sources, cur, actions }) {
                 onChange={(e) => actions.updateIncomeSource(s.id, { amount: Number(e.target.value) || 0 })}
                 className="w-20 rounded-md bg-white/5 border border-white/10 px-2 py-1 text-right text-white outline-none focus:border-white/30" />
             </div>
-            <button onClick={() => actions.deleteIncomeSource(s.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+            <button onClick={() => actions.deleteIncomeSource(s.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
           </div>
         ))}
       </div>
@@ -165,7 +167,7 @@ function TxForm({ onAdd, cur }) {
           {['card', 'credit', 'cash'].map((mth) => (
             <button key={mth} type="button" onClick={() => setMethod(mth)}
               className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium capitalize transition ${method === mth ? 'bg-white/15 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>
-              {mth === 'credit' ? '💳 credit card' : mth}
+              {mth === 'credit' ? <span className="inline-flex items-center gap-1"><CreditCard size={12} /> credit card</span> : mth}
             </button>
           ))}
         </div>
@@ -184,9 +186,9 @@ function TxList({ tx, cur, onDelete }) {
         <div key={t.id} className="flex items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2 text-sm">
           <span className="h-2 w-2 rounded-full" style={{ background: colorOf(t.kind) }} />
           <span className="w-16 shrink-0 text-xs text-slate-500">{t.date.slice(5)}</span>
-          <span className="flex-1 truncate text-slate-200">{t.category || t.kind}{t.method === 'credit' && <span className="ml-1 text-rose-300">💳</span>}</span>
+          <span className="flex-1 truncate text-slate-200">{t.category || t.kind}{t.method === 'credit' && <CreditCard size={12} className="ml-1 inline text-rose-300" />}</span>
           <span className="font-medium" style={{ color: colorOf(t.kind) }}>{money(t.amount, cur)}</span>
-          <button onClick={() => onDelete(t.id)} className="text-slate-600 hover:text-rose-400">✕</button>
+          <button onClick={() => onDelete(t.id)} className="text-slate-600 hover:text-rose-400"><X size={14} /></button>
         </div>
       ))}
     </div>

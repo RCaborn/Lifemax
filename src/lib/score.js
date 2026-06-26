@@ -50,7 +50,7 @@ export function fitnessScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, wake }
 }
 
-export function moneyScore(state, ym) {
+export function moneyScore(state, ym, opts) {
   const m = state.money || { incomeSources: [], tx: [] }
   const income = sum((m.incomeSources || []).map((s) => Number(s.amount) || 0))
   const tx = txOfMonth(m.tx, ym)
@@ -58,9 +58,10 @@ export function moneyScore(state, ym) {
   const saving = sum(tx.filter((x) => x.kind === 'saving').map((x) => x.amount))
   const invest = sum(tx.filter((x) => x.kind === 'investment').map((x) => x.amount))
   const savingsRate = income > 0 ? (saving + invest) / income : 0
+  const savingsTarget = opts?.savingsRate ?? m.targets?.savingsRate ?? 0.2
 
   const parts = [
-    { label: 'Savings rate', value: clamp01(savingsRate / 0.2), detail: `${Math.round(savingsRate * 100)}% (20% = full)` },
+    { label: 'Savings rate', value: clamp01(savingsRate / savingsTarget), detail: `${Math.round(savingsRate * 100)}% (${Math.round(savingsTarget * 100)}% = full)` },
     { label: 'Positive cashflow', value: income > 0 ? clamp01((income - spending) / income) : 0, detail: income > spending ? 'In surplus' : 'Overspending' },
     { label: 'Investing', value: invest > 0 ? 1 : 0, detail: invest > 0 ? 'Invested this month' : 'Nothing invested yet' },
   ]
@@ -72,16 +73,19 @@ export function studyScore(state, ym) {
   const t = s.targets || {}
   const days = daysOfMonth(s.days, ym)
   const elapsed = daysElapsed(ym)
+  const weeks = weeksElapsed(ym)
   const totalPages = sum(days.map((d) => d.pages || 0))
   const totalHours = sum(days.map((d) => d.hours || 0))
   const avgPages = totalPages / elapsed
+  const monthlyPageTarget = (t.pagesWeekly || 140) * weeks
+  const monthlyHourTarget = (t.hoursWeekly || 9) * weeks
 
   const due = (s.todos || []).filter((td) => (td.deadline && td.deadline.startsWith(ym + '-')) || (td.done))
   const completion = due.length ? due.filter((td) => td.done).length / due.length : (s.todos?.length ? 0 : 1)
 
   const parts = [
-    { label: 'Reading', value: clamp01(avgPages / (t.pagesDaily || 20)), detail: `${avgPages.toFixed(1)} pages/day avg` },
-    { label: 'Study hours', value: clamp01(totalHours / (t.hoursMonthly || 40)), detail: `${totalHours.toFixed(1)}h of ${t.hoursMonthly || 40}h` },
+    { label: 'Reading', value: clamp01(totalPages / monthlyPageTarget), detail: `${totalPages} pages (${avgPages.toFixed(1)}/day avg)` },
+    { label: 'Study hours', value: clamp01(totalHours / monthlyHourTarget), detail: `${totalHours.toFixed(1)}h of ${monthlyHourTarget.toFixed(0)}h` },
     { label: 'Tasks done', value: clamp01(completion), detail: `${Math.round(completion * 100)}% complete` },
   ]
   return { score: avg(parts.map((p) => p.value)), parts, totalPages, totalHours, avgPages }
@@ -99,7 +103,9 @@ export function careerScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, apps, skillHours }
 }
 
-const SHIP_TARGET = 2
+// Business score is driven purely by income vs the monthly goal — a tiny sale
+// shouldn't "smash the game" via participation credit. Milestones still earn XP
+// and are surfaced as stat tiles; they just don't inflate the score.
 export function businessScore(state, ym) {
   const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
   const projects = b.projects || []
@@ -111,16 +117,12 @@ export function businessScore(state, ym) {
   const milestonesThisMonth = sum(projects.map((p) =>
     (p.milestones || []).filter((m) => m.done && m.doneAt?.startsWith(ym + '-')).length))
   const active = projects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
-  const touched = active.filter((p) =>
-    (p.revenue || []).some((r) => r.date?.startsWith(ym + '-')) ||
-    (p.milestones || []).some((m) => m.done && m.doneAt?.startsWith(ym + '-'))).length
 
+  const income = clamp01(target ? monthRevenue / target : 0)
   const parts = [
-    { label: 'Income', value: clamp01(target ? monthRevenue / target : 0), detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
-    { label: 'Shipping', value: clamp01(milestonesThisMonth / SHIP_TARGET), detail: `${milestonesThisMonth} milestone${milestonesThisMonth !== 1 ? 's' : ''} shipped` },
-    { label: 'Momentum', value: active.length ? clamp01(touched / active.length) : 0, detail: active.length ? `${touched}/${active.length} hustles active` : 'No active projects' },
+    { label: 'Income', value: income, detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
   ]
-  return { score: avg(parts.map((p) => p.value)), parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
+  return { score: income, parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
 }
 
 export const SCORERS = {
@@ -176,15 +178,15 @@ function weekDomainScores(state) {
     { label: 'Wake-up', value: wWake.score, detail: wWake.logged ? `${wWake.label} / ${wakeTarget}` : 'Not logged' },
   ]
 
-  // Study — tasks are deadline-based (not weekly), so we only score activity here
+  // Study — weekly bucket: spread however you like within the week
   const s = state.study || { targets: {}, days: {}, todos: [] }
   const st = s.targets || {}
   const studyDays = keys.map((k) => s.days[k] || {})
   const wPages = sum(studyDays.map((d) => d.pages || 0))
   const wHours = sum(studyDays.map((d) => d.hours || 0))
   const studyParts = [
-    { label: 'Reading', value: clamp01((wPages / 7) / (st.pagesDaily || 20)), detail: `${wPages} pages this week` },
-    { label: 'Study hours', value: clamp01(wHours / ((st.hoursMonthly || 40) / 4.33)), detail: `${wHours.toFixed(1)}h this week` },
+    { label: 'Reading', value: clamp01(wPages / (st.pagesWeekly || 140)), detail: `${wPages} pages this week` },
+    { label: 'Study hours', value: clamp01(wHours / (st.hoursWeekly || 9)), detail: `${wHours.toFixed(1)}h this week` },
   ]
 
   // Career
@@ -215,11 +217,29 @@ function quickWinsWeekRate(state) {
   const qw = state.quickWins || { items: [], days: {} }
   const keys = thisWeekKeys()
   const keySet = new Set(keys)
-  const DAILY_TARGET = 3
+  const dailyTarget = qw.dailyTarget || 3
   const completions = Object.entries(qw.days || {})
     .filter(([k]) => keySet.has(k))
     .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
-  return clamp01(completions / (DAILY_TARGET * 7))
+  return clamp01(completions / (dailyTarget * 7))
+}
+
+// How many days this week have any fitness or study activity logged —
+// used for the "This Week" bento card's collapsed summary.
+export function thisWeekActivitySummary(state) {
+  const keys = thisWeekKeys()
+  const f = state.fitness?.days || {}
+  const s = state.study?.days || {}
+  const loggedDays = keys.filter((k) => f[k] || s[k]).length
+  return { loggedDays, totalDays: keys.length }
+}
+
+// Fraction of the last 7 days with a journal rating logged.
+function journalWeekRate(state) {
+  const days = state.journal?.days || {}
+  const keys = thisWeekKeys()
+  const logged = keys.filter((k) => days[k]?.mood != null).length
+  return clamp01(logged / keys.length)
 }
 
 // The headline Life Score — rolling 7-day, scaled so FULL_AT effort = 100.
@@ -231,7 +251,9 @@ export function lifeScore(state) {
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
   // Quick wins: hitting 3/day all week adds up to +5 display points. Never dominates.
   const qwBonus = quickWinsWeekRate(state) * 0.05
-  const score = Math.min(1, (domainAvg + qwBonus) / FULL_AT)
+  // Journal: a full week of entries adds up to +3 display points.
+  const journalBonus = journalWeekRate(state) * 0.03
+  const score = Math.min(1, (domainAvg + qwBonus + journalBonus) / FULL_AT)
   return { score, domains }
 }
 
@@ -250,7 +272,23 @@ export function scoreHistory(state, months = 6) {
   })
 }
 
+// Look up the target snapshot that was in effect for a given week.
+// Returns null if no snapshots exist (backward compat: use current targets).
+function targetsForWeek(state, weekStartKey) {
+  const history = state.targetHistory || []
+  if (!history.length) return null
+  let best = null
+  for (const entry of history) {
+    if (entry.weekKey <= weekStartKey && (!best || entry.weekKey > best.weekKey)) {
+      best = entry
+    }
+  }
+  return best
+}
+
 // Internal: raw 0-1 weekly aggregate for a given Mon-start window (used by history chart).
+// Mirrors lifeScore() exactly: active-domain filtering + quick wins / journal bonuses.
+// Uses historical target snapshots so past weeks aren't affected by target changes.
 function weekScore(state, weekStartDate) {
   const keys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
@@ -259,10 +297,12 @@ function weekScore(state, weekStartDate) {
   })
   const keySet = new Set(keys)
 
+  const ht = targetsForWeek(state, toKey(weekStartDate))
+
   const f = state.fitness || { targets: {}, days: {} }
-  const t = f.targets || {}
+  const t = ht?.fitness || f.targets || {}
   const s = state.study || { targets: {}, days: {} }
-  const st = s.targets || {}
+  const st = ht?.study || s.targets || {}
   const c = state.career || { jobs: [], skills: [] }
 
   const fitDays = keys.map((k) => f.days[k] || {})
@@ -283,10 +323,12 @@ function weekScore(state, weekStartDate) {
   const totalPages = sum(studyDays.map((d) => d.pages || 0))
   const totalHours = sum(studyDays.map((d) => d.hours || 0))
   const studyScoreVal = avg([
-    clamp01((totalPages / 7) / (st.pagesDaily || 20)),
-    clamp01(totalHours / ((st.hoursMonthly || 40) / 4.33)),
+    clamp01(totalPages / (st.pagesWeekly || 140)),
+    clamp01(totalHours / (st.hoursWeekly || 9)),
   ])
 
+  const monthlyApplyTarget = ht?.career?.monthlyApplyTarget ?? c.monthlyApplyTarget ?? 8
+  const monthlySkillTarget = ht?.career?.monthlySkillTarget ?? c.monthlySkillTarget ?? 10
   const weekApps = (c.jobs || []).filter((j) => keySet.has(j.date)).length
   const weekSkillHours = sum(
     (c.skills || []).flatMap((sk) =>
@@ -294,29 +336,42 @@ function weekScore(state, weekStartDate) {
     )
   )
   const careerScoreVal = avg([
-    clamp01(weekApps / ((c.monthlyApplyTarget || 8) / 4.33)),
-    clamp01(weekSkillHours / ((c.monthlySkillTarget || 10) / 4.33)),
+    clamp01(weekApps / (monthlyApplyTarget / 4.33)),
+    clamp01(weekSkillHours / (monthlySkillTarget / 4.33)),
   ])
 
   const ym = monthKey(new Date(keys[3]))
-  const mScore = moneyScore(state, ym)
+  const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
   const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
   const bProjects = b.projects || []
-  const bTarget = (b.monthlyIncomeTarget || 500) / 4.33
+  const bMonthlyTarget = ht?.business?.monthlyIncomeTarget ?? b.monthlyIncomeTarget ?? 500
+  const bTarget = bMonthlyTarget / 4.33
   const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
-  const weekMilestones = sum(bProjects.map((p) => (p.milestones || []).filter((m) => m.done && keySet.has(m.doneAt)).length))
-  const bActive = bProjects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
-  const bTouched = bActive.filter((p) =>
-    (p.revenue || []).some((r) => keySet.has(r.date)) ||
-    (p.milestones || []).some((m) => m.done && keySet.has(m.doneAt))).length
-  const businessScoreVal = avg([
-    clamp01(bTarget ? weekRevenue / bTarget : 0),
-    clamp01(weekMilestones / (SHIP_TARGET / 4.33)),
-    bActive.length ? clamp01(bTouched / bActive.length) : 0,
-  ])
+  const businessScoreVal = clamp01(bTarget ? weekRevenue / bTarget : 0)
 
-  return avg([fitScore, mScore.score, studyScoreVal, careerScoreVal, businessScoreVal])
+  const allDomains = [
+    { id: 'fitness',  score: fitScore },
+    { id: 'money',    score: mScore.score },
+    { id: 'study',    score: studyScoreVal },
+    { id: 'career',   score: careerScoreVal },
+    { id: 'business', score: businessScoreVal },
+  ]
+  const activeDomains = allDomains.filter((d) => isDomainActive(state, d.id))
+  const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
+
+  const qw = state.quickWins || { items: [], days: {} }
+  const qwDaily = ht?.quickWins?.dailyTarget ?? qw.dailyTarget ?? 3
+  const qwCompletions = Object.entries(qw.days || {})
+    .filter(([k]) => keySet.has(k))
+    .reduce((a, [, ids]) => a + (ids?.length || 0), 0)
+  const qwBonus = clamp01(qwCompletions / (qwDaily * 7)) * 0.05
+
+  const jDays = state.journal?.days || {}
+  const jLogged = keys.filter((k) => jDays[k]?.mood != null).length
+  const journalBonus = clamp01(jLogged / keys.length) * 0.03
+
+  return domainAvg + qwBonus + journalBonus
 }
 
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.

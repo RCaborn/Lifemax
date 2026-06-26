@@ -1,119 +1,113 @@
 import { useState } from 'react'
-import { DOMAIN_MAP } from '../lib/domains.js'
+import { Target, Beer, Check, Pencil, X, ArrowRight } from 'lucide-react'
+import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, todayKey } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
-import { balance, earnedInMonth } from '../lib/vices.js'
-import { addMonth } from '../lib/dates.js'
+import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
+import { MOOD_COLORS } from './Journal.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
 import { useToast } from '../components/Toast.jsx'
-import { Card, SectionTitle, ScoreBars } from '../components/ui.jsx'
+import { Card, SectionTitle } from '../components/ui.jsx'
+import { ItemIcon, IconPicker, QUICKWIN_ICONS } from '../lib/icons.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
+import BentoCard from '../components/BentoCard.jsx'
+import SectionSummary from '../components/BentoSummaries.jsx'
+import CoachCard from '../components/CoachCard.jsx'
+import Money from './Money.jsx'
+import Fitness from './Fitness.jsx'
+import Study from './Study.jsx'
+import Career from './Career.jsx'
+import Business from './Business.jsx'
+import ThisWeek from './ThisWeek.jsx'
+import WeeklyReview from './WeeklyReview.jsx'
+import Journal from './Journal.jsx'
+import Stakes from './Stakes.jsx'
+import Vices from './Vices.jsx'
+import Targets from './Targets.jsx'
 
-const ORDER = ['fitness', 'money', 'study', 'career', 'business']
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
+const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
-export default function Overview({ onNavigate }) {
+const SECTION_PAGES = {
+  thisweek: ThisWeek, review: WeeklyReview, journal: Journal,
+  money: Money, fitness: Fitness, study: Study, career: Career, business: Business,
+  stakes: Stakes, vices: Vices, targets: Targets,
+}
+
+export default function Overview({ expandedId, onExpand }) {
   const { state } = useStore()
 
   const ls = lifeScore(state)
   const grade = gradeFor(ls.score)
   const weeklyHistory = weeklyScoreHistory(state)
-  const byId = Object.fromEntries(ls.domains.map((d) => [d.id, d]))
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
-      <div className="glass relative overflow-hidden rounded-2xl p-6 sm:p-8">
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="op-label">{greeting}, {state.profile.name}</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Life Score · This Week</h1>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center border font-black text-2xl"
-                style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'Courier New, monospace' }}>{grade.letter}</span>
-              <div>
-                <div className="font-semibold" style={{ color: grade.color }}>{grade.label}</div>
-                <div className="text-sm text-slate-500">{summary(ls)}</div>
+      {/* AI coaching read — pinned to the top of HQ */}
+      <CoachCard />
+
+      {/* Hero — Pulse, centre stage */}
+      <div className="glass glass-hover relative overflow-hidden rounded-2xl p-6 sm:p-8" style={{ '--glow': grade.color }}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between lg:w-56 lg:shrink-0 lg:flex-col lg:items-stretch lg:justify-center lg:gap-6">
+            <div>
+              <p className="op-label">{greeting}, {state.profile.name}</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Pulse</h1>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center rounded-lg border font-black text-2xl"
+                  style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'var(--font-mono)' }}>{grade.letter}</span>
+                <div>
+                  <div className="font-semibold" style={{ color: grade.color }}>{grade.label}</div>
+                  <div className="text-sm text-slate-500">{summary(ls)}</div>
+                </div>
               </div>
+              <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
+                80% of weekly targets = score 100 · resets Monday
+              </p>
             </div>
-            <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'Courier New, monospace' }}>
-              80% of weekly targets = score 100 · resets Monday
-            </p>
+            <div className="shrink-0 self-center lg:self-start">
+              <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Pulse" />
+            </div>
           </div>
-          <div className="shrink-0 self-center">
-            <ProgressRing value={ls.score} size={150} stroke={12} color={grade.color} label="Life Score" />
+          <div className="min-w-0 flex-1 lg:border-l lg:border-white/8 lg:pl-8">
+            <SectionTitle>Pulse — 6 months weekly</SectionTitle>
+            <WeeklyScoreChart data={weeklyHistory} />
           </div>
         </div>
       </div>
+
+      <FocusWidget onExpand={onExpand} />
 
       <TodayPanel />
 
       <QuickWinsPanel />
 
-      <VicesWidget onNavigate={onNavigate} />
+      <JournalWidget onExpand={onExpand} />
 
-      {/* Domain cards */}
-      <div>
-        <SectionTitle>Domains · This Week</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {ORDER.map((id, i) => {
-            const meta = DOMAIN_MAP[id]
-            const d = byId[id]
-            const isActive = d.active !== false
-            return (
-              <button key={id} onClick={() => onNavigate(id)}
-                className="glass group rounded-xl p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20 animate-fadeUp"
-                style={{ animationDelay: `${i * 60}ms`, opacity: isActive ? 1 : 0.55 }}>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="text-xl">{meta.icon}</span>
-                    <span className="font-semibold text-white">{meta.name}</span>
-                  </span>
-                  <ProgressRing value={isActive ? Math.min(1, d.score / 0.8) : 0} size={48} stroke={5} color={isActive ? meta.color : '#333'} label="" />
-                </div>
-                {isActive ? (
-                  <div className="mt-3 space-y-1">
-                    {d.parts.slice(0, 3).map((p) => (
-                      <div key={p.label} className="flex items-center gap-2 text-xs">
-                        <span className="w-20 shrink-0 text-slate-500">{p.label}</span>
-                        <span className="h-1 flex-1 overflow-hidden bg-white/8">
-                          <span className="block h-full transition-all duration-700" style={{ width: `${Math.min(100, pct(p.value / 0.8))}%`, background: meta.color }} />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-[11px] text-slate-600">Not yet configured → tap to set up</p>
-                )}
-              </button>
-            )
-          })}
-        </div>
+      <VicesWidget onExpand={onExpand} />
+
+      <MasterTodoList onExpand={onExpand} />
+
+      {/* Bento grid — every section, collapsed to a summary, tap to expand */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {BENTO_SECTIONS.map((meta) => {
+          const expanded = expandedId === meta.id
+          const Page = SECTION_PAGES[meta.id]
+          return (
+            <BentoCard key={meta.id} id={meta.id} meta={meta} expanded={expanded}
+              onToggle={() => onExpand(expanded ? null : meta.id)}>
+              {expanded ? <Page /> : <SectionSummary id={meta.id} state={state} ls={ls} />}
+            </BentoCard>
+          )
+        })}
       </div>
-
-      {/* Weekly score trend + breakdown */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <SectionTitle>Life Score — 6 months weekly</SectionTitle>
-          <WeeklyScoreChart data={weeklyHistory} />
-        </Card>
-        <Card>
-          <SectionTitle>This week breakdown</SectionTitle>
-          <p className="mb-3 text-xs text-slate-600">
-            Bars fill based on <span className="text-slate-400">this week's activity</span>. 80% = full score for each domain.
-          </p>
-          <ScoreBars parts={ls.domains.filter((d) => d.active !== false).map((d) => ({ label: DOMAIN_MAP[d.id].name, value: Math.min(1, d.score / 0.8), detail: `${pct(d.score / 0.8)}%` }))} color="#ffffff" />
-        </Card>
-      </div>
-
-      <MasterTodoList onNavigate={onNavigate} />
     </div>
   )
 }
@@ -149,7 +143,7 @@ function WeeklyScoreChart({ data }) {
   )
 }
 
-function MasterTodoList({ onNavigate }) {
+function MasterTodoList({ onExpand }) {
   const { state, actions } = useStore()
 
   const DOMAIN_CONFIG = {
@@ -198,17 +192,17 @@ function MasterTodoList({ onNavigate }) {
               <div key={`${td.domain}-${td.id}`}
                 className="flex items-center gap-3 rounded-lg bg-white/[0.025] px-3 py-2.5 text-sm">
                 <button onClick={() => conf.toggle(td.id)}
-                  className="grid h-5 w-5 shrink-0 place-items-center border text-[11px] transition"
-                  style={{ borderColor: td.done ? '#fff' : 'rgba(255,255,255,.18)', background: td.done ? '#fff' : 'transparent', color: td.done ? '#000' : 'transparent' }}>✓</button>
+                  className="grid h-5 w-5 shrink-0 place-items-center border transition"
+                  style={{ borderColor: td.done ? '#fff' : 'rgba(255,255,255,.18)', background: td.done ? '#fff' : 'transparent', color: td.done ? '#000' : 'transparent' }}><Check size={12} /></button>
                 <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: PRIO_COLOR[td.priority] || '#555' }} />
                 <span className={`flex-1 truncate ${td.done ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{td.title}</span>
-                <button onClick={() => onNavigate(td.domain)}
+                <button onClick={() => onExpand(td.domain)}
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-widest transition hover:opacity-80"
-                  style={{ background: `${conf.color}20`, color: conf.color, fontFamily: 'Courier New, monospace' }}>
+                  style={{ background: `${conf.color}20`, color: conf.color, fontFamily: 'var(--font-mono)' }}>
                   {conf.name}
                 </button>
                 {td.deadline && (
-                  <span className="shrink-0 text-[11px]" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'Courier New, monospace' }}>
+                  <span className="shrink-0 text-[11px]" style={{ color: overdue ? '#f87171' : '#444', fontFamily: 'var(--font-mono)' }}>
                     {overdue ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}
                   </span>
                 )}
@@ -226,38 +220,54 @@ function QuickWinsPanel() {
   const toast = useToast()
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newEmoji, setNewEmoji] = useState('⚡')
+  const [newIcon, setNewIcon] = useState('Zap')
   const [newPts, setNewPts] = useState('1')
+  const [cueFor, setCueFor] = useState(null)
+  const [cueText, setCueText] = useState('')
 
-  const today = todayKey()
   const items = state.quickWins?.items || []
-  const todayWins = state.quickWins?.days?.[today] || []
+  const days = state.quickWins?.days || {}
+  const today = todayKey()
+  const dayWins = days[today] || []
 
-  const todayPts = items
-    .filter((item) => todayWins.includes(item.id))
+  // Graceful consistency: "active X of last 14 days" — no punitive streak reset.
+  const activeDays = lastNDays(14).filter((k) => (days[k]?.length || 0) > 0).length
+
+  const dayPts = items
+    .filter((item) => dayWins.includes(item.id))
     .reduce((a, item) => a + (item.points || 1), 0)
 
-  const toggle = (item) => {
-    const wasDone = todayWins.includes(item.id)
-    actions.toggleQuickWin(today, item.id)
-    if (!wasDone) {
-      toast({ icon: item.emoji, title: item.name, sub: `+${item.points} pt${item.points !== 1 ? 's' : ''}`, color: '#ffffff' })
+  // Mini month-calendar grid, à la a bullet-journal "month overview" — current month only.
+  const month = thisMonth()
+  const monthCells = [...Array(monthStartOffset(month)).fill(null), ...monthDayKeys(month)]
+
+  const openCue = (item) => { setCueFor(item.id); setCueText(item.cue || ''); setAdding(false) }
+  const saveCue = (e) => {
+    e.preventDefault()
+    actions.setQuickWinCue(cueFor, cueText.trim())
+    setCueFor(null); setCueText('')
+  }
+  const toggle = (item, dateKey) => {
+    const wasDone = (days[dateKey] || []).includes(item.id)
+    actions.toggleQuickWin(dateKey, item.id)
+    if (!wasDone && dateKey === today) {
+      toast({ icon: item.emoji, title: item.name, sub: `+${item.points} XP`, color: '#ffffff' })
     }
   }
 
   const addWin = (e) => {
     e.preventDefault()
     if (!newName.trim()) return
-    actions.addQuickWin({ name: newName.trim(), emoji: newEmoji, points: Math.max(1, Math.min(5, Number(newPts) || 1)) })
-    setNewName(''); setNewEmoji('⚡'); setNewPts('1'); setAdding(false)
+    actions.addQuickWin({ name: newName.trim(), emoji: newIcon, points: Math.max(1, Math.min(5, Number(newPts) || 1)) })
+    setNewName(''); setNewIcon('Zap'); setNewPts('1'); setAdding(false)
   }
 
   return (
-    <Card>
+    <div>
       <SectionTitle right={
-        <div className="flex items-center gap-3">
-          {todayPts > 0 && (
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>+{todayPts} pts today</span>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {dayPts > 0 && (
+            <span className="text-xs font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>+{dayPts} XP today</span>
           )}
           <button onClick={() => setAdding((v) => !v)}
             className="op-label hover:text-white transition">{adding ? 'Cancel' : '+ Custom win'}</button>
@@ -266,54 +276,165 @@ function QuickWinsPanel() {
         Quick Wins
       </SectionTitle>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {items.map((item) => {
-          const done = todayWins.includes(item.id)
-          return (
-            <div key={item.id} className="relative group">
-              <button onClick={() => toggle(item)}
-                className="flex w-full items-center gap-2 rounded px-3 py-2.5 text-left text-sm transition"
-                style={{
-                  background: done ? '#ffffff' : 'rgba(255,255,255,0.04)',
-                  color: done ? '#050505' : '#888',
-                  border: `1px solid ${done ? '#fff' : 'rgba(255,255,255,0.08)'}`,
-                }}>
-                <span className="text-base">{item.emoji}</span>
-                <span className="flex-1 text-xs leading-tight">{item.name}</span>
-                <span className="shrink-0 text-[10px] font-bold" style={{ fontFamily: 'Courier New, monospace', color: done ? '#050505' : '#555' }}>
-                  {done ? '✓' : `+${item.points}`}
-                </span>
-              </button>
-              <button onClick={() => actions.deleteQuickWin(item.id)}
-                className="absolute -right-1.5 -top-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-sm bg-[#0d0d0d] border border-white/10 text-[10px] text-slate-600 hover:text-rose-400">
-                ✕
-              </button>
+      <div className="space-y-2.5">
+        {items.length === 0 && (
+          <div className="glass rounded-2xl border-dashed border-white/15 p-5 text-center">
+            <p className="text-sm text-slate-500">No quick wins yet — add one below to start your habit tracker.</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((item) => (
+          <div key={item.id} className="glass glass-hover flex flex-col rounded-2xl p-3.5" style={{ '--glow': '#ffffff' }}>
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300">
+                <ItemIcon icon={item.emoji} size={16} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-white">{item.name}</span>
+                  <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-bold text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>+{item.points || 1} XP</span>
+                </div>
+                {item.cue && (
+                  <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                    <span className="text-slate-500">After</span> {item.cue}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button onClick={() => openCue(item)} title="Set a cue (when/where you'll do it)"
+                  className="btn-icon btn-icon-xs text-slate-600 hover:text-white"><Pencil size={11} /></button>
+                <button onClick={() => actions.deleteQuickWin(item.id)} title="Delete"
+                  className="btn-icon btn-icon-xs text-slate-600 hover:text-rose-400"><X size={12} /></button>
+              </div>
             </div>
+
+            {cueFor === item.id && (
+              <form onSubmit={saveCue} className="mt-3 flex items-center gap-2 border-t border-white/8 pt-3">
+                <span className="shrink-0 text-xs text-slate-500">After</span>
+                <input value={cueText} onChange={(e) => setCueText(e.target.value)} autoFocus
+                  placeholder="e.g. my morning coffee / lunch / brushing teeth"
+                  className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+                <button type="submit" className="btn-ghost">Save</button>
+                <button type="button" onClick={() => { setCueFor(null); setCueText('') }} className="op-label hover:text-white">Cancel</button>
+              </form>
+            )}
+
+            <div className="mt-3 inline-grid grid-cols-7 gap-0.5">
+              {WEEKDAY_LETTERS.map((l, i) => (
+                <div key={`h${i}`} className="grid h-3 w-3 place-items-center text-[7px] text-slate-700">{l}</div>
+              ))}
+              {monthCells.map((k, i) => {
+                if (!k) return <div key={`b${i}`} className="h-3 w-3" />
+                const done = (days[k] || []).includes(item.id)
+                const isToday = k === today
+                const isFuture = k > today
+                if (isFuture) {
+                  return (
+                    <div key={k} className="grid h-3 w-3 place-items-center">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
+                    </div>
+                  )
+                }
+                return (
+                  <button key={k} onClick={() => toggle(item, k)} title={k}
+                    className="grid h-3 w-3 place-items-center transition hover:opacity-70">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{
+                      background: done ? '#ffffff' : 'rgba(255,255,255,0.08)',
+                      boxShadow: isToday ? '0 0 0 1.5px rgba(255,255,255,0.4)' : 'none',
+                    }} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+        </div>
+
+        {adding && (
+          <div className="glass rounded-2xl p-3.5">
+            <form onSubmit={addWin} className="space-y-2">
+              <div className="flex gap-2 items-center">
+                <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Win name…" autoFocus
+                  className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
+                <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
+                  className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
+                  style={{ fontFamily: 'var(--font-mono)' }}>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} XP</option>)}
+                </select>
+                <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+                  style={{ fontFamily: 'var(--font-mono)' }}>Add</button>
+              </div>
+              <IconPicker icons={QUICKWIN_ICONS} value={newIcon} onChange={setNewIcon} />
+            </form>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-1">
+        <p className="text-[11px] text-slate-600">
+          Each win earns XP instantly · tap any day to fill in your history · doing {state.quickWins?.dailyTarget || 3}/day adds a small bonus to your Pulse
+        </p>
+        <span className="text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
+          Active {activeDays}/14 days
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function FocusWidget({ onExpand }) {
+  const { state, actions } = useStore()
+  const wk = weekKeyOf()
+  const focus = state.focus || { weekKey: '', priorities: [], ticked: [] }
+  const current = focus.weekKey === wk && (focus.priorities?.length > 0)
+  const ticked = focus.ticked || []
+
+  if (!current) {
+    return (
+      <button onClick={() => onExpand('review')}
+        className="glass glass-hover group flex w-full items-center justify-between gap-4 rounded-2xl border-dashed border-white/15 p-5 text-left transition">
+        <div className="flex items-center gap-4">
+          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Target size={22} /></span>
+          <div>
+            <div className="op-label">Objectives</div>
+            <div className="text-sm text-slate-400">Not set — run a 5-min weekly review to pick your 1–3 priorities.</div>
+          </div>
+        </div>
+        <span className="shrink-0 flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition group-hover:bg-white group-hover:text-black" style={{ fontFamily: 'var(--font-mono)' }}>
+          Set focus <ArrowRight size={12} />
+        </span>
+      </button>
+    )
+  }
+
+  const done = focus.priorities.filter((_, i) => ticked.includes(i)).length
+
+  return (
+    <Card>
+      <SectionTitle right={
+        <span className="flex items-center gap-3">
+          <span className="op-label">{done}/{focus.priorities.length} done</span>
+          <button onClick={() => onExpand('review')} className="op-label hover:text-white transition">Edit</button>
+        </span>
+      }>
+        <span className="flex items-center gap-1.5"><Target size={13} /> Objectives</span>
+      </SectionTitle>
+      <div className="space-y-1.5">
+        {focus.priorities.map((p, i) => {
+          const on = ticked.includes(i)
+          return (
+            <button key={i} onClick={() => actions.toggleFocusPriority(i)}
+              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.06]">
+              <span className="grid h-5 w-5 shrink-0 place-items-center border transition"
+                style={{ borderColor: on ? '#fff' : 'rgba(255,255,255,.18)', background: on ? '#fff' : 'transparent', color: on ? '#000' : 'transparent' }}><Check size={12} /></span>
+              <span className={`flex-1 text-sm ${on ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{p}</span>
+            </button>
           )
         })}
       </div>
-
-      {adding && (
-        <form onSubmit={addWin} className="mt-3 flex gap-2 items-center border-t border-white/8 pt-3">
-          <input value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)}
-            className="w-10 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-center text-white outline-none"
-            maxLength={2} />
-          <input value={newName} onChange={(e) => setNewName(e.target.value)}
-            placeholder="Win name…" autoFocus
-            className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30" />
-          <select value={newPts} onChange={(e) => setNewPts(e.target.value)}
-            className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none"
-            style={{ fontFamily: 'Courier New, monospace' }}>
-            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n} className="bg-[#0d0d0d]">+{n} pt{n !== 1 ? 's' : ''}</option>)}
-          </select>
-          <button type="submit" className="rounded border border-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
-            style={{ fontFamily: 'Courier New, monospace' }}>Add</button>
-        </form>
-      )}
-
-      <p className="mt-2.5 text-[11px] text-slate-600">
-        Each win earns Virtue Points instantly · doing 3/day adds a small bonus to your Life Score
-      </p>
+      <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
     </Card>
   )
 }
@@ -321,12 +442,58 @@ function QuickWinsPanel() {
 function summary(ls) {
   const p = pct(ls.score)
   const weakest = [...ls.domains].sort((a, b) => a.score - b.score)[0]
-  if (p >= 90) return 'On fire this week. Keep the streak alive.'
+  if (p >= 90) return 'On fire this week. Stay consistent.'
   if (p >= 65) return `Strong week. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
   return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
 }
 
-function VicesWidget({ onNavigate }) {
+function JournalWidget({ onExpand }) {
+  const { state, actions } = useStore()
+  const toast = useToast()
+  const days = state.journal.days
+  const today = todayKey()
+  const entry = days[today] || {}
+
+  const setMood = (n) => {
+    const had = entry.mood != null
+    actions.setJournalDay(today, { mood: n })
+    if (!had) toast({ icon: 'Feather', title: 'Journal logged', sub: `+${earnRate(state, 'journal')} XP`, color: '#06b6d4' })
+  }
+
+  return (
+    <div className="glass glass-hover rounded-2xl p-5" style={{ '--glow': '#06b6d4' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><ItemIcon icon="Feather" size={22} /></span>
+          <div>
+            <div className="op-label">Field Notes</div>
+            <div className="text-sm text-slate-400">{entry.mood != null ? 'Logged today — tap to update' : 'One honest minute before you go'}</div>
+          </div>
+        </div>
+        <button onClick={() => onExpand('journal')}
+          className="flex items-center gap-1.5 rounded border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+          style={{ fontFamily: 'var(--font-mono)' }}>
+          Field Notes <ArrowRight size={12} />
+        </button>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} onClick={() => setMood(n)}
+            className="grid h-10 w-10 place-items-center rounded-lg border text-sm font-bold transition"
+            style={{
+              borderColor: entry.mood === n ? MOOD_COLORS[n - 1] : 'rgba(255,255,255,.12)',
+              background: entry.mood === n ? MOOD_COLORS[n - 1] : 'rgba(255,255,255,.04)',
+              color: entry.mood === n ? '#000' : '#888',
+            }}>{n}</button>
+        ))}
+        <span className="ml-2 text-[11px] text-slate-600">How was today? 1 rough · 5 great</span>
+      </div>
+    </div>
+  )
+}
+
+function VicesWidget({ onExpand }) {
   const { state } = useStore()
   const bal = balance(state)
   const thisM = earnedInMonth(state, thisMonth())
@@ -336,13 +503,14 @@ function VicesWidget({ onNavigate }) {
   const next = vices.find((v) => v.pointCost > bal) || vices[vices.length - 1]
 
   return (
-    <button onClick={() => onNavigate('vices')}
-      className="glass group flex w-full flex-wrap items-center justify-between gap-4 rounded-xl p-5 text-left transition hover:border-white/20">
+    <button onClick={() => onExpand('vices')}
+      className="glass glass-hover group flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-left transition"
+      style={{ '--glow': '#ec4899' }}>
       <div className="flex items-center gap-4">
-        <span className="grid h-11 w-11 place-items-center border border-white/10 text-xl">🍺</span>
+        <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10"><Beer size={22} /></span>
         <div>
-          <div className="op-label">Virtue points</div>
-          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Courier New, monospace' }}>{bal} pts</div>
+          <div className="op-label">XP</div>
+          <div className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-mono)' }}>{bal} XP</div>
         </div>
       </div>
       <div className="flex items-center gap-6 text-sm">
@@ -355,10 +523,10 @@ function VicesWidget({ onNavigate }) {
         {next && (
           <div>
             <div className="op-label">{bal >= next.pointCost ? 'Top vice' : 'Next unlock'}</div>
-            <div className="font-semibold text-white">{next.emoji} {next.name} · {next.pointCost}</div>
+            <div className="flex items-center gap-1.5 font-semibold text-white"><ItemIcon icon={next.emoji} size={14} /> {next.name} · {next.pointCost}</div>
           </div>
         )}
-        <span className="text-slate-600 transition group-hover:translate-x-0.5">→</span>
+        <span className="text-slate-600 transition group-hover:translate-x-0.5"><ArrowRight size={16} /></span>
       </div>
     </button>
   )
