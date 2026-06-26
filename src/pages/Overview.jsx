@@ -15,6 +15,7 @@ import { ItemIcon, IconPicker, QUICKWIN_ICONS } from '../lib/icons.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import BentoCard from '../components/BentoCard.jsx'
 import SectionSummary from '../components/BentoSummaries.jsx'
+import CoachCard from '../components/CoachCard.jsx'
 import Money from './Money.jsx'
 import Fitness from './Fitness.jsx'
 import Study from './Study.jsx'
@@ -49,6 +50,9 @@ export default function Overview({ expandedId, onExpand }) {
 
   return (
     <div className="space-y-6">
+      {/* AI coaching read — pinned to the top of HQ */}
+      <CoachCard />
+
       {/* Hero — Pulse, centre stage */}
       <div className="glass glass-hover relative overflow-hidden rounded-2xl p-6 sm:p-8" style={{ '--glow': grade.color }}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">

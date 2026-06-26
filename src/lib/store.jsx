@@ -83,6 +83,9 @@ function migrate(state) {
   if (!state.focus.ticked) state.focus.ticked = []
   // Daily journal — "The Daily Loop"
   if (!state.journal) state.journal = seed.journal
+  // AI coaching briefings cache.
+  if (!state.coach) state.coach = seed.coach
+  if (!state.coach.reports) state.coach.reports = {}
   // Retire the old vice-debt mechanism: drop the penalty-rate setting and
   // strip standalone penalty ledger rows (real vice spends keep a viceId).
   if (state.vices) {
@@ -362,6 +365,16 @@ export function StoreProvider({ children }) {
     setJournalDay: (dateKey, patch) => update((d) => {
       const day = (d.journal.days[dateKey] ||= {})
       Object.assign(day, patch)
+    }),
+
+    // ---------- AI coaching briefing ----------
+    setCoachReport: (slot, report) => update((d) => {
+      if (!d.coach) d.coach = { reports: {} }
+      if (!d.coach.reports) d.coach.reports = {}
+      d.coach.reports[`${todayKey()}|${slot}`] = report
+      // Keep only the most recent handful of briefings.
+      const keys = Object.keys(d.coach.reports).sort()
+      while (keys.length > 6) delete d.coach.reports[keys.shift()]
     }),
 
     // ---------- Business / side-hustle projects ----------

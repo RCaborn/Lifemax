@@ -194,6 +194,10 @@ export function mergeStates(local, remote) {
     journal: {
       days: mergeDayMap(local.journal?.days, remote.journal?.days, (a, b) => mergeDayObj(a, b, newerWins)),
     },
+    // AI briefings are keyed by date|slot — union them; newer blob wins a clash.
+    coach: {
+      reports: mergeSettings(local.coach?.reports, remote.coach?.reports, newerWins),
+    },
     targetHistory: mergeTargetHistory(local.targetHistory, remote.targetHistory, newerWins),
   }
 }

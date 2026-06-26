@@ -72,6 +72,10 @@ function seedFocus() { return { weekKey: '', priorities: [], ticked: [] } }
 // followThrough }. followThrough reflects on the PREVIOUS day's `tomorrow` plan.
 function seedJournal() { return { days: {} } }
 
+// AI "HQ Briefing" reports, cached by `${dateKey}|${slot}`. The Anthropic API
+// key lives in localStorage (see lib/ai.js), never in this synced blob.
+function seedCoach() { return { reports: {} } }
+
 export function buildSeedState() {
   return {
     version: 2,
@@ -87,6 +91,7 @@ export function buildSeedState() {
     reviews: seedReviews(),
     focus: seedFocus(),
     journal: seedJournal(),
+    coach: seedCoach(),
     targetHistory: [],
   }
 }
