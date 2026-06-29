@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles } from 'lucide-react'
+import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles, CalendarPlus } from 'lucide-react'
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
 import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey } from '../lib/dates.js'
+import { focusBlockUrl } from '../lib/calendar.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
@@ -425,6 +426,8 @@ function FocusWidget({ onExpand }) {
   const dayIdx = (new Date().getDay() + 6) % 7 // Mon=0 … Sun=6
   const showNudge = dayIdx >= 2 && dayIdx <= 5 && openCount > 0
 
+  const calUrl = focusBlockUrl(focus, review?.ai?.intentions)
+
   return (
     <Card>
       <SectionTitle right={
@@ -454,13 +457,21 @@ function FocusWidget({ onExpand }) {
           )
         })}
       </div>
-      {showNudge ? (
-        <p className="mt-2.5 text-[11px]" style={{ color: '#a78bfa' }}>
-          Mid-week check — {openCount} still open. One small move today keeps {openCount === 1 ? 'it' : 'them'} alive.
-        </p>
-      ) : (
-        <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
-      )}
+      <div className="mt-2.5 flex items-center justify-between gap-3">
+        {showNudge ? (
+          <p className="text-[11px]" style={{ color: '#a78bfa' }}>
+            Mid-week check — {openCount} still open. One small move today keeps {openCount === 1 ? 'it' : 'them'} alive.
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
+        )}
+        {calUrl && (
+          <a href={calUrl} target="_blank" rel="noreferrer"
+            className="shrink-0 flex items-center gap-1.5 text-[11px] text-slate-500 transition hover:text-white" title="Add a focus block to Google Calendar">
+            <CalendarPlus size={13} /> Block time
+          </a>
+        )}
+      </div>
     </Card>
   )
 }
