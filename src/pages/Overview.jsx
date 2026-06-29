@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Target, Beer, Check, Pencil, X, ArrowRight } from 'lucide-react'
+import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles, CalendarPlus } from 'lucide-react'
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey } from '../lib/dates.js'
+import { focusBlockUrl } from '../lib/calendar.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
@@ -388,7 +389,9 @@ function FocusWidget({ onExpand }) {
   const { state, actions } = useStore()
   const wk = weekKeyOf()
   const focus = state.focus || { weekKey: '', priorities: [], ticked: [] }
-  const current = focus.weekKey === wk && (focus.priorities?.length > 0)
+  // Show the current week's focus, and also an upcoming week's (e.g. priorities
+  // set during the Sunday-evening review) so saving never blanks the card.
+  const current = (focus.priorities?.length > 0) && focus.weekKey >= wk
   const ticked = focus.ticked || []
 
   if (!current) {
@@ -410,6 +413,20 @@ function FocusWidget({ onExpand }) {
   }
 
   const done = focus.priorities.filter((_, i) => ticked.includes(i)).length
+  const openCount = focus.priorities.length - done
+
+  // Provenance: the review that produced this focus is the one for the week
+  // before focus.weekKey (setFocus pins priorities to reviewedWeek + 7).
+  const fStart = parseKey(focus.weekKey)
+  fStart.setDate(fStart.getDate() - 7)
+  const review = (state.reviews || []).find((r) => r.weekKey === toKey(fStart))
+  const reviewSummary = review?.ai?.summary
+
+  // Gentle mid-week nudge (Wed–Sat) while priorities are still open. Never punitive.
+  const dayIdx = (new Date().getDay() + 6) % 7 // Mon=0 … Sun=6
+  const showNudge = dayIdx >= 2 && dayIdx <= 5 && openCount > 0
+
+  const calUrl = focusBlockUrl(focus, review?.ai?.intentions)
 
   return (
     <Card>
@@ -421,6 +438,12 @@ function FocusWidget({ onExpand }) {
       }>
         <span className="flex items-center gap-1.5"><Target size={13} /> Objectives</span>
       </SectionTitle>
+      {reviewSummary && (
+        <p className="mb-3 flex items-start gap-1.5 text-[12px] leading-relaxed text-slate-500">
+          <Sparkles size={12} className="mt-0.5 shrink-0" style={{ color: '#a78bfa' }} />
+          <span><span className="text-slate-600">From your review · </span>{reviewSummary}</span>
+        </p>
+      )}
       <div className="space-y-1.5">
         {focus.priorities.map((p, i) => {
           const on = ticked.includes(i)
@@ -434,7 +457,21 @@ function FocusWidget({ onExpand }) {
           )
         })}
       </div>
-      <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
+      <div className="mt-2.5 flex items-center justify-between gap-3">
+        {showNudge ? (
+          <p className="text-[11px]" style={{ color: '#a78bfa' }}>
+            Mid-week check — {openCount} still open. One small move today keeps {openCount === 1 ? 'it' : 'them'} alive.
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
+        )}
+        {calUrl && (
+          <a href={calUrl} target="_blank" rel="noreferrer"
+            className="shrink-0 flex items-center gap-1.5 text-[11px] text-slate-500 transition hover:text-white" title="Add a focus block to Google Calendar">
+            <CalendarPlus size={13} /> Block time
+          </a>
+        )}
+      </div>
     </Card>
   )
 }

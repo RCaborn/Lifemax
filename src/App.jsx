@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Menu, Cloud, Download, Upload, RotateCcw } from 'lucide-react'
+import { Menu, Cloud, Download, Upload, RotateCcw, Sparkles, ArrowRight } from 'lucide-react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import SyncModal from './components/SyncModal.jsx'
+import Modal from './components/Modal.jsx'
 import { BENTO_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
+import { reviewWindowOpen, reviewTargetWeek } from './lib/ai.js'
+
+const REVIEW_DISMISS_KEY = 'lifemax.reviewPromptDismissed'
 
 export default function App() {
   const { state, actions, sync } = useStore()
@@ -17,6 +21,23 @@ export default function App() {
   const [installEvent, setInstallEvent] = useState(null)
   const [showSync, setShowSync] = useState(false)
   const fileRef = useRef(null)
+
+  // Sunday-evening → Monday weekly-review nudge. Shows once per app open within
+  // the window until the week's review is done (or dismissed for the session).
+  const reviewTarget = reviewTargetWeek()
+  const [showReviewPrompt, setShowReviewPrompt] = useState(() => {
+    try {
+      if (!reviewWindowOpen()) return false
+      const done = (state.reviews || []).some((r) => r.weekKey === reviewTarget.weekKey)
+      const dismissed = sessionStorage.getItem(REVIEW_DISMISS_KEY) === reviewTarget.weekKey
+      return !done && !dismissed
+    } catch { return false }
+  })
+  const startReview = () => { setShowReviewPrompt(false); expandAndScroll('review') }
+  const dismissReview = () => {
+    try { sessionStorage.setItem(REVIEW_DISMISS_KEY, reviewTarget.weekKey) } catch { /* ignore */ }
+    setShowReviewPrompt(false)
+  }
 
   const expandAndScroll = (id) => {
     setExpandedId(id)
@@ -128,6 +149,30 @@ export default function App() {
       </div>
 
       {showSync && <SyncModal onClose={() => setShowSync(false)} />}
+
+      {showReviewPrompt && (
+        <Modal title="Weekly review" onClose={dismissReview}>
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10" style={{ color: '#a78bfa' }}>
+              <Sparkles size={20} />
+            </span>
+            <div>
+              <p className="text-sm text-slate-200">Your week is done — let's debrief it.</p>
+              <p className="mt-1 text-[13px] text-slate-500">
+                Claude will read {reviewTarget.label}, ask a few targeted questions, and set next week's priorities with you. Takes a couple of minutes.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-2">
+            <button onClick={startReview}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded border border-white py-2.5 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+              style={{ fontFamily: 'var(--font-mono)' }}>
+              Start review <ArrowRight size={14} />
+            </button>
+            <button onClick={dismissReview} className="btn-ghost px-4 py-2.5">Later</button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

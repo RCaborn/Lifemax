@@ -83,9 +83,10 @@ function migrate(state) {
   if (!state.focus.ticked) state.focus.ticked = []
   // Daily journal — "The Daily Loop"
   if (!state.journal) state.journal = seed.journal
-  // AI coaching briefings cache.
+  // AI coaching briefings cache + in-progress weekly-review transcript.
   if (!state.coach) state.coach = seed.coach
   if (!state.coach.reports) state.coach.reports = {}
+  if (state.coach.reviewDraft === undefined) state.coach.reviewDraft = null
   // Retire the old vice-debt mechanism: drop the penalty-rate setting and
   // strip standalone penalty ledger rows (real vice spends keep a viceId).
   if (state.vices) {
@@ -350,11 +351,21 @@ export function StoreProvider({ children }) {
 
     // ---------- Weekly review + focus ----------
     addReview: (r) => update((d) => {
-      d.reviews.push({ id: rid(), ts: todayKey(), ...r })
+      // One review per week — redoing a review replaces it (keeping the id so
+      // cloud merge collapses it too) rather than pushing a duplicate row.
+      const i = d.reviews.findIndex((x) => x.weekKey === r.weekKey)
+      const row = { id: i >= 0 ? d.reviews[i].id : rid(), ts: todayKey(), ...r }
+      if (i >= 0) d.reviews[i] = row; else d.reviews.push(row)
     }),
     setFocus: (weekKey, priorities) => update((d) => {
       d.focus = { weekKey, priorities: priorities.filter((p) => p && p.trim()).slice(0, 3), ticked: [] }
     }),
+    // In-progress AI weekly-review transcript (survives reload + Sun→Mon gap).
+    setReviewDraft: (weekKey, messages) => update((d) => {
+      if (!d.coach) d.coach = { reports: {}, reviewDraft: null }
+      d.coach.reviewDraft = { weekKey, messages }
+    }),
+    clearReviewDraft: () => update((d) => { if (d.coach) d.coach.reviewDraft = null }),
     toggleFocusPriority: (index) => update((d) => {
       const t = (d.focus.ticked ||= [])
       const i = t.indexOf(index)
