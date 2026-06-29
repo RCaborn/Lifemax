@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Sparkles, Send, ArrowRight, Check, RotateCcw } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from '../components/Toast.jsx'
+import { toKey } from '../lib/dates.js'
 import {
   hasApiKey, setApiKey,
   reviewTargetWeek, buildReviewDigest, weeklyReviewTurn, draftOutcome,
@@ -80,7 +81,7 @@ export default function WeeklyReviewChat({ onDone }) {
   const saveOutcome = () => {
     const priorities = outcome.priorities.map((p) => p.trim()).filter(Boolean).slice(0, 3)
     actions.addReview({
-      weekKey,
+      weekKey, // the week being reviewed (for history)
       score: buildReviewDigest(state, target.weekStart).week_score,
       worked: outcome.worked,
       didnt: outcome.didnt,
@@ -94,7 +95,12 @@ export default function WeeklyReviewChat({ onDone }) {
         at: new Date().toISOString(),
       },
     })
-    actions.setFocus(weekKey, priorities)
+    // Priorities are for the week AHEAD — pin them to the upcoming week so they
+    // show in Objectives during the week they're meant for (not the one we just
+    // reviewed, which would vanish at the Sunday→Monday rollover).
+    const upcoming = new Date(target.weekStart)
+    upcoming.setDate(upcoming.getDate() + 7)
+    actions.setFocus(toKey(upcoming), priorities)
     actions.clearReviewDraft()
     setSaved(true)
     toast({ icon: 'NotebookPen', title: 'Review saved', sub: priorities.length ? `${priorities.length} priorit${priorities.length === 1 ? 'y' : 'ies'} set` : 'Reflection logged', color: ACCENT })

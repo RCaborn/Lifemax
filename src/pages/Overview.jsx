@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Target, Beer, Check, Pencil, X, ArrowRight } from 'lucide-react'
+import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles } from 'lucide-react'
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, startOfWeek, toKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
@@ -410,6 +410,18 @@ function FocusWidget({ onExpand }) {
   }
 
   const done = focus.priorities.filter((_, i) => ticked.includes(i)).length
+  const openCount = focus.priorities.length - done
+
+  // Provenance: the review that set THIS week's focus is the one for the
+  // previous week (you review last week → priorities land on this week).
+  const prevStart = startOfWeek()
+  prevStart.setDate(prevStart.getDate() - 7)
+  const review = (state.reviews || []).find((r) => r.weekKey === toKey(prevStart))
+  const reviewSummary = review?.ai?.summary
+
+  // Gentle mid-week nudge (Wed–Sat) while priorities are still open. Never punitive.
+  const dayIdx = (new Date().getDay() + 6) % 7 // Mon=0 … Sun=6
+  const showNudge = dayIdx >= 2 && dayIdx <= 5 && openCount > 0
 
   return (
     <Card>
@@ -421,6 +433,12 @@ function FocusWidget({ onExpand }) {
       }>
         <span className="flex items-center gap-1.5"><Target size={13} /> Objectives</span>
       </SectionTitle>
+      {reviewSummary && (
+        <p className="mb-3 flex items-start gap-1.5 text-[12px] leading-relaxed text-slate-500">
+          <Sparkles size={12} className="mt-0.5 shrink-0" style={{ color: '#a78bfa' }} />
+          <span><span className="text-slate-600">From your review · </span>{reviewSummary}</span>
+        </p>
+      )}
       <div className="space-y-1.5">
         {focus.priorities.map((p, i) => {
           const on = ticked.includes(i)
@@ -434,7 +452,13 @@ function FocusWidget({ onExpand }) {
           )
         })}
       </div>
-      <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
+      {showNudge ? (
+        <p className="mt-2.5 text-[11px]" style={{ color: '#a78bfa' }}>
+          Mid-week check — {openCount} still open. One small move today keeps {openCount === 1 ? 'it' : 'them'} alive.
+        </p>
+      ) : (
+        <p className="mt-2.5 text-[11px] text-slate-600">Fewer, deliberate priorities beat maximising everything at once.</p>
+      )}
     </Card>
   )
 }
