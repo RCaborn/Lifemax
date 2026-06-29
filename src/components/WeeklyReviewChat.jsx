@@ -217,7 +217,11 @@ function Thinking() {
 }
 
 function Outcome({ outcome, setOutcome, onSave }) {
-  const setPriority = (i, v) => setOutcome((o) => ({ ...o, priorities: o.priorities.map((x, idx) => (idx === i ? v : x)) }))
+  const setPriority = (i, v) => setOutcome((o) => {
+    const arr = o.priorities.length ? [...o.priorities] : ['']
+    arr[i] = v
+    return { ...o, priorities: arr }
+  })
   const rows = outcome.priorities.length ? outcome.priorities : ['']
   return (
     <div className="rounded-xl p-4" style={{ background: `${ACCENT}10`, border: `1px solid ${ACCENT}33` }}>

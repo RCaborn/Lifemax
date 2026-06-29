@@ -3,7 +3,7 @@ import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles } from 'lucide-rea
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, startOfWeek, toKey } from '../lib/dates.js'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey } from '../lib/dates.js'
 import { pct, gradeFor } from '../lib/format.js'
 import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
@@ -388,7 +388,9 @@ function FocusWidget({ onExpand }) {
   const { state, actions } = useStore()
   const wk = weekKeyOf()
   const focus = state.focus || { weekKey: '', priorities: [], ticked: [] }
-  const current = focus.weekKey === wk && (focus.priorities?.length > 0)
+  // Show the current week's focus, and also an upcoming week's (e.g. priorities
+  // set during the Sunday-evening review) so saving never blanks the card.
+  const current = (focus.priorities?.length > 0) && focus.weekKey >= wk
   const ticked = focus.ticked || []
 
   if (!current) {
@@ -412,11 +414,11 @@ function FocusWidget({ onExpand }) {
   const done = focus.priorities.filter((_, i) => ticked.includes(i)).length
   const openCount = focus.priorities.length - done
 
-  // Provenance: the review that set THIS week's focus is the one for the
-  // previous week (you review last week → priorities land on this week).
-  const prevStart = startOfWeek()
-  prevStart.setDate(prevStart.getDate() - 7)
-  const review = (state.reviews || []).find((r) => r.weekKey === toKey(prevStart))
+  // Provenance: the review that produced this focus is the one for the week
+  // before focus.weekKey (setFocus pins priorities to reviewedWeek + 7).
+  const fStart = parseKey(focus.weekKey)
+  fStart.setDate(fStart.getDate() - 7)
+  const review = (state.reviews || []).find((r) => r.weekKey === toKey(fStart))
   const reviewSummary = review?.ai?.summary
 
   // Gentle mid-week nudge (Wed–Sat) while priorities are still open. Never punitive.

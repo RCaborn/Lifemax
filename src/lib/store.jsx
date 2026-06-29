@@ -351,7 +351,11 @@ export function StoreProvider({ children }) {
 
     // ---------- Weekly review + focus ----------
     addReview: (r) => update((d) => {
-      d.reviews.push({ id: rid(), ts: todayKey(), ...r })
+      // One review per week — redoing a review replaces it (keeping the id so
+      // cloud merge collapses it too) rather than pushing a duplicate row.
+      const i = d.reviews.findIndex((x) => x.weekKey === r.weekKey)
+      const row = { id: i >= 0 ? d.reviews[i].id : rid(), ts: todayKey(), ...r }
+      if (i >= 0) d.reviews[i] = row; else d.reviews.push(row)
     }),
     setFocus: (weekKey, priorities) => update((d) => {
       d.focus = { weekKey, priorities: priorities.filter((p) => p && p.trim()).slice(0, 3), ticked: [] }
