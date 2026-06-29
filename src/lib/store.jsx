@@ -83,10 +83,13 @@ function migrate(state) {
   if (!state.focus.ticked) state.focus.ticked = []
   // Daily journal — "The Daily Loop"
   if (!state.journal) state.journal = seed.journal
-  // AI coaching briefings cache + in-progress weekly-review transcript.
+  // AI coaching briefings cache + in-progress weekly-review / campaign transcripts.
   if (!state.coach) state.coach = seed.coach
   if (!state.coach.reports) state.coach.reports = {}
   if (state.coach.reviewDraft === undefined) state.coach.reviewDraft = null
+  if (state.coach.campaignDraft === undefined) state.coach.campaignDraft = null
+  // Monthly campaign debriefs (reward-point re-weighting history).
+  if (!state.campaigns) state.campaigns = seed.campaigns
   // Retire the old vice-debt mechanism: drop the penalty-rate setting and
   // strip standalone penalty ledger rows (real vice spends keep a viceId).
   if (state.vices) {
@@ -348,6 +351,10 @@ export function StoreProvider({ children }) {
     deleteQuickWin: (id) => update((d) => { d.quickWins.items = d.quickWins.items.filter((x) => x.id !== id) }),
     // Implementation intention: "After [cue], I will [win]." (Gollwitzer 2006)
     setQuickWinCue: (id, cue) => update((d) => { const w = d.quickWins.items.find((x) => x.id === id); if (w) w.cue = cue }),
+    setQuickWinPoints: (id, points) => update((d) => {
+      const w = d.quickWins.items.find((x) => x.id === id)
+      if (w) w.points = Math.max(1, Math.min(15, Math.round(Number(points) || 1)))
+    }),
 
     // ---------- Weekly review + focus ----------
     addReview: (r) => update((d) => {
@@ -362,10 +369,32 @@ export function StoreProvider({ children }) {
     }),
     // In-progress AI weekly-review transcript (survives reload + Sun→Mon gap).
     setReviewDraft: (weekKey, messages) => update((d) => {
-      if (!d.coach) d.coach = { reports: {}, reviewDraft: null }
+      if (!d.coach) d.coach = { reports: {}, reviewDraft: null, campaignDraft: null }
       d.coach.reviewDraft = { weekKey, messages }
     }),
     clearReviewDraft: () => update((d) => { if (d.coach) d.coach.reviewDraft = null }),
+
+    // ---------- Monthly campaign debrief (reward-point re-weighting) ----------
+    setCampaignDraft: (ym, messages) => update((d) => {
+      if (!d.coach) d.coach = { reports: {}, reviewDraft: null, campaignDraft: null }
+      d.coach.campaignDraft = { ym, messages }
+    }),
+    clearCampaignDraft: () => update((d) => { if (d.coach) d.coach.campaignDraft = null }),
+    // Merge the new daily earn-rates (career/business rates are preserved) and
+    // set each re-weighted quick win's point value.
+    applyCampaignWeights: ({ earnRates = {}, quickWins = [] }) => update((d) => {
+      d.vices.earnRates = { ...(d.vices.earnRates || {}), ...earnRates }
+      for (const q of quickWins) {
+        const w = d.quickWins.items.find((x) => x.id === q.id)
+        if (w) w.points = q.points
+      }
+    }),
+    addCampaign: (c) => update((d) => {
+      if (!d.campaigns) d.campaigns = []
+      const i = d.campaigns.findIndex((x) => x.ym === c.ym)
+      const row = { id: i >= 0 ? d.campaigns[i].id : rid(), ts: todayKey(), ...c }
+      if (i >= 0) d.campaigns[i] = row; else d.campaigns.push(row)
+    }),
     toggleFocusPriority: (index) => update((d) => {
       const t = (d.focus.ticked ||= [])
       const i = t.indexOf(index)

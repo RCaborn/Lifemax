@@ -184,6 +184,7 @@ export function mergeStates(local, remote) {
       days: mergeDayMap(lq.days, rq.days, (a, b) => mergeIdList(a, b)),
     },
     reviews: unionById(local.reviews, remote.reviews, newerWins),
+    campaigns: unionById(local.campaigns, remote.campaigns, newerWins),
     // Focus is the current week's hand-picked priorities — take the winner's
     // whole set (prefer one that actually has priorities).
     focus: (local.focus?.priorities?.length || remote.focus?.priorities?.length)
@@ -199,6 +200,7 @@ export function mergeStates(local, remote) {
     coach: {
       reports: mergeSettings(local.coach?.reports, remote.coach?.reports, newerWins),
       reviewDraft: pick(local.coach?.reviewDraft, remote.coach?.reviewDraft, newerWins, emptySetting),
+      campaignDraft: pick(local.coach?.campaignDraft, remote.coach?.campaignDraft, newerWins, emptySetting),
     },
     targetHistory: mergeTargetHistory(local.targetHistory, remote.targetHistory, newerWins),
   }

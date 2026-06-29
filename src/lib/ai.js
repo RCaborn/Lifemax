@@ -13,8 +13,8 @@
 import { lifeScore, weeklyScoreHistory, weekScoreScaled } from './score.js'
 import { DOMAIN_MAP } from './domains.js'
 import { pct, gradeFor } from './format.js'
-import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel } from './dates.js'
-import { balance } from './vices.js'
+import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel, monthKey, DEFAULT_WAKE_TARGET } from './dates.js'
+import { balance, DEFAULT_EARN_RATES } from './vices.js'
 
 const KEY = 'lifemax.anthropic.key'
 const MODEL = 'claude-sonnet-4-6'
@@ -337,21 +337,21 @@ export function draftOutcome(messages = []) {
   return null
 }
 
-// One turn of the review. `messages` is the running conversation. Returns either
-// { type: 'question', text, assistant } or { type: 'finish', outcome, assistant }.
-// Pass { force: true } to compel a conclusion (used at the turn cap).
-export async function weeklyReviewTurn(messages, { force = false } = {}) {
+// Shared engine for an interactive, tool-concluded chat (weekly review + monthly
+// campaign). `messages` is the running conversation; returns either
+// { type:'question', text, assistant } or { type:'finish', outcome, assistant }.
+async function runChatTurn(messages, { system, finishTool, normalize, force = false }) {
   const apiKey = getApiKey()
   if (!apiKey) throw new Error('No Claude API key set.')
   const body = {
     model: MODEL,
     max_tokens: 1024,
     thinking: { type: 'disabled' },
-    system: REVIEW_SYSTEM,
+    system,
     messages,
-    tools: [FINISH_TOOL],
+    tools: [finishTool],
   }
-  if (force) body.tool_choice = { type: 'tool', name: 'finish_review' }
+  if (force) body.tool_choice = { type: 'tool', name: finishTool.name }
 
   let res
   try {
@@ -377,11 +377,211 @@ export async function weeklyReviewTurn(messages, { force = false } = {}) {
   }
 
   const data = await res.json()
-  if (data.stop_reason === 'refusal') throw new Error('Claude declined to continue the review.')
+  if (data.stop_reason === 'refusal') throw new Error('Claude declined to continue.')
   const content = data.content || []
-  const tool = content.find((b) => b.type === 'tool_use' && b.name === 'finish_review')
-  if (tool) return { type: 'finish', outcome: normalizeOutcome(tool.input), assistant: content }
+  const tool = content.find((b) => b.type === 'tool_use' && b.name === finishTool.name)
+  if (tool) return { type: 'finish', outcome: normalize(tool.input), assistant: content }
   const text = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()
   if (!text) throw new Error('Claude returned an empty reply.')
   return { type: 'question', text, assistant: content }
+}
+
+// One turn of the weekly review. Pass { force: true } at the turn cap.
+export function weeklyReviewTurn(messages, { force = false } = {}) {
+  return runChatTurn(messages, { system: REVIEW_SYSTEM, finishTool: FINISH_TOOL, normalize: normalizeOutcome, force })
+}
+
+// ===========================================================================
+// Monthly Campaign Debrief — a once-a-month conversation that reflects on the
+// month and RE-WEIGHTS the daily reward points ("Earn My Vices" economy): harder
+// + higher-value habits earn more, drifted-from / lower-value ones earn less.
+// Only the daily levers — never career/business, never the Life Score / Pulse.
+// ===========================================================================
+
+// Daily earn-rate keys the campaign is allowed to re-weight (career_hour and
+// milestone are deliberately excluded).
+const CAMPAIGN_RATE_KEYS = ['run', 'workout', 'stretch', 'steps_10k', 'wake_target', 'pages_20', 'study_hour', 'journal']
+const RATE_LABELS = {
+  run: 'Run', workout: 'Workout', stretch: 'Stretch (per day)', steps_10k: 'Step goal (per day)',
+  wake_target: 'Wake on time (per day)', pages_20: 'Reading goal (per day)', study_hour: 'Study (per hour)', journal: 'Journal (per day)',
+}
+
+function monthInfo(ym) {
+  const [y, m] = ym.split('-').map(Number) // m is 1-based
+  const daysInMonth = new Date(y, m, 0).getDate()
+  const now = new Date()
+  const elapsed = monthKey(now) === ym ? now.getDate() : daysInMonth
+  const label = new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  return { y, m, daysInMonth, elapsed, label }
+}
+
+// The month the campaign reflects on: the current month in its last 3 days, or
+// the just-ended month in the first 4 days of a new one.
+export function campaignTargetMonth(date = new Date()) {
+  let y = date.getFullYear(), m = date.getMonth() // 0-based
+  if (date.getDate() <= 4) { m -= 1; if (m < 0) { m = 11; y -= 1 } }
+  const ym = `${y}-${String(m + 1).padStart(2, '0')}`
+  return { ym, ...monthInfo(ym) }
+}
+
+// Pop-up window: last 3 days of a month through the first 4 of the next.
+export function campaignWindowOpen(date = new Date()) {
+  const d = date.getDate()
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  return d >= daysInMonth - 2 || d <= 4
+}
+
+// Compact monthly digest: per-habit adherence + each habit's CURRENT point value
+// (so the model proposes deltas), plus the month's weekly-review summaries.
+export function buildCampaignDigest(state, ym) {
+  const mi = monthInfo(ym)
+  const inMonth = (days) => Object.entries(days || {}).filter(([k]) => k.startsWith(ym + '-')).map(([, v]) => v)
+  const sum = (a) => a.reduce((x, y) => x + y, 0)
+  const rates = { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
+
+  const f = state.fitness || { days: {}, targets: {} }
+  const fd = inMonth(f.days)
+  const stepTarget = f.targets?.stepsDaily || 10000
+  const wakeT = f.targets?.wakeTarget || DEFAULT_WAKE_TARGET
+  const s = state.study || { days: {}, targets: {} }
+  const sd = inMonth(s.days)
+  const pageTarget = (s.targets?.pagesWeekly || 140) / 7
+  const jd = inMonth(state.journal?.days)
+
+  const activity = {
+    run: `${sum(fd.map((d) => d.runs || 0))} runs`,
+    workout: `${sum(fd.map((d) => d.workouts || 0))} workouts`,
+    stretch: `${fd.filter((d) => d.stretch).length}/${mi.elapsed} days`,
+    steps_10k: `${fd.filter((d) => (d.steps || 0) >= stepTarget).length}/${mi.elapsed} days`,
+    wake_target: `${fd.filter((d) => d.wake).length}/${mi.elapsed} days logged`,
+    pages_20: `${sd.filter((d) => (d.pages || 0) >= pageTarget).length}/${mi.elapsed} days`,
+    study_hour: `${sum(sd.map((d) => d.hours || 0)).toFixed(0)}h total`,
+    journal: `${jd.filter((d) => d.mood != null).length}/${mi.elapsed} days`,
+  }
+  const daily_habits = CAMPAIGN_RATE_KEYS.map((k) => ({ key: k, label: RATE_LABELS[k], current_points: rates[k], this_month: activity[k] }))
+
+  const qw = state.quickWins || { items: [], days: {} }
+  const qwDays = Object.entries(qw.days || {}).filter(([k]) => k.startsWith(ym + '-'))
+  const quick_wins = (qw.items || []).map((it) => ({
+    id: it.id, label: it.name, current_points: it.points || 1,
+    days_done: qwDays.filter(([, ids]) => (ids || []).includes(it.id)).length, of_days: mi.elapsed,
+  }))
+
+  const weekly_reviews = (state.reviews || [])
+    .filter((r) => r.weekKey?.slice(0, 7) === ym)
+    .map((r) => ({ week: r.weekKey, summary: r.ai?.summary || null, priorities: r.priorities || [] }))
+
+  return {
+    name: state.profile?.name || 'there',
+    month: mi.label,
+    score_trend_last8_weeks: weeklyScoreHistory(state, 8).map((w) => w.value),
+    daily_habits,
+    quick_wins,
+    weekly_reviews,
+    objectives_now: (state.focus?.priorities || []),
+  }
+}
+
+const CAMPAIGN_SYSTEM = `You are the user's performance coach inside "Lifemax", running their MONTHLY campaign debrief. This is the big-picture cousin of the weekly review: you reflect on the whole month, then RE-WEIGHT the daily reward points.
+
+About the points: Lifemax has an "Earn My Vices" economy — doing daily habits earns points the user spends on treats. Every daily habit has a point value. You are adjusting ONLY these reward points. You are NOT touching the Life Score / Pulse (a separate performance metric) and NOT touching career or business — only the daily levers in the digest: the daily_habits (run, workout, stretch, steps, wake, reading, study-hour, journal) and each quick_win.
+
+You are given a JSON digest: each habit's CURRENT point value and how often it actually happened this month, the month's weekly-review summaries, and current objectives.
+
+How to run it:
+- Open with a short, honest read of the month (2–3 sentences), then ask your FIRST question.
+- Ask ONE question per turn, 2–4 questions total. Focus them on: what they most want to lean into next month, and what they're ready to let go of or care less about. Ground questions in the data (e.g. "you ran 4 times but journalled 28/30 days — which matters more to you going in?").
+- Be a thinking partner, warm but direct.
+
+Re-weighting principles (apply when you call finish_campaign):
+- Harder / higher-effort habits → worth MORE.
+- What they say they value most for the coming month → slightly MORE.
+- Habits they've drifted from or value less → FEWER points (deliberately letting them fade is fine — subtraction is a feature, not a punishment).
+- Keep values sensible (roughly 1–12), keep most habits stable, and only move what there's a real reason to move. Don't inflate everything.
+- Return a short, plain reason for each change you make.
+
+When you have enough, call finish_campaign with: a warm summary of the month, an optional one-line theme for the coming month, the new earn_rates (only the daily keys you're changing), new points for any quick_wins you're changing, and a changes list (label, from, to, why) for everything you moved. Don't call the tool on your first turn; ask at least two questions first.
+
+Use British English. Be concise. No markdown, no emoji.`
+
+const FINISH_CAMPAIGN_TOOL = {
+  name: 'finish_campaign',
+  description: 'Conclude the monthly debrief with re-weighted daily reward points.',
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      summary: { type: 'string', description: 'A warm 2–3 sentence read of the month.' },
+      theme: { type: 'string', description: 'Optional one-line theme for the coming month.' },
+      earn_rates: {
+        type: 'object',
+        additionalProperties: false,
+        description: 'New point values for the daily built-in habits you are changing.',
+        properties: Object.fromEntries(CAMPAIGN_RATE_KEYS.map((k) => [k, { type: 'number' }])),
+      },
+      quick_wins: {
+        type: 'array',
+        description: 'New point values for any quick wins you are changing.',
+        items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, points: { type: 'number' } }, required: ['id', 'points'] },
+      },
+      changes: {
+        type: 'array',
+        description: 'One entry per habit you moved.',
+        items: { type: 'object', additionalProperties: false, properties: { label: { type: 'string' }, from: { type: 'number' }, to: { type: 'number' }, why: { type: 'string' } }, required: ['label', 'to'] },
+      },
+    },
+    required: ['summary', 'earn_rates', 'quick_wins'],
+  },
+}
+
+const clampPts = (n) => Math.max(1, Math.min(15, Math.round(Number(n) || 1)))
+
+function normalizeCampaign(o = {}) {
+  const earnRates = {}
+  for (const k of CAMPAIGN_RATE_KEYS) if (o.earn_rates && o.earn_rates[k] != null) earnRates[k] = clampPts(o.earn_rates[k])
+  const quickWins = Array.isArray(o.quick_wins)
+    ? o.quick_wins.filter((q) => q && q.id != null).map((q) => ({ id: q.id, points: clampPts(q.points) }))
+    : []
+  const changes = Array.isArray(o.changes)
+    ? o.changes.filter((c) => c && c.label).map((c) => ({ label: c.label, from: c.from ?? null, to: clampPts(c.to), why: c.why || '' }))
+    : []
+  return { summary: o.summary || '', theme: o.theme || '', earnRates, quickWins, changes }
+}
+
+// Build labelled old→new rows from a campaign outcome, for the editable apply
+// card. Each row: { kind:'rate'|'qw', key?|id?, label, from, to, why }.
+export function campaignChangeRows(state, outcome) {
+  if (!outcome) return []
+  const rates = { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
+  const qwMap = Object.fromEntries((state.quickWins?.items || []).map((i) => [i.id, i]))
+  const whyOf = (label) => (outcome.changes || []).find((c) => c.label === label)?.why || ''
+  const rows = []
+  for (const [key, to] of Object.entries(outcome.earnRates || {})) {
+    const label = RATE_LABELS[key] || key
+    rows.push({ kind: 'rate', key, label, from: rates[key], to, why: whyOf(label) })
+  }
+  for (const q of outcome.quickWins || []) {
+    const it = qwMap[q.id]
+    if (!it) continue
+    rows.push({ kind: 'qw', id: q.id, label: it.name, from: it.points || 1, to: q.points, why: whyOf(it.name) })
+  }
+  return rows
+}
+
+// Clamp a hand-edited point value to the allowed range.
+export const clampPoints = (n) => clampPts(n)
+
+// Recover a concluded campaign from a resumed draft (mirrors draftOutcome).
+export function draftCampaignOutcome(messages = []) {
+  const last = messages[messages.length - 1]
+  if (last?.role === 'assistant' && Array.isArray(last.content)) {
+    const t = last.content.find((b) => b.type === 'tool_use' && b.name === 'finish_campaign')
+    if (t) return normalizeCampaign(t.input)
+  }
+  return null
+}
+
+// One turn of the monthly campaign debrief.
+export function campaignTurn(messages, { force = false } = {}) {
+  return runChatTurn(messages, { system: CAMPAIGN_SYSTEM, finishTool: FINISH_CAMPAIGN_TOOL, normalize: normalizeCampaign, force })
 }
