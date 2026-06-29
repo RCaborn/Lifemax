@@ -374,6 +374,11 @@ function weekScore(state, weekStartDate) {
   return domainAvg + qwBonus + journalBonus
 }
 
+// Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse scale).
+export function weekScoreScaled(state, weekStart) {
+  return Math.round(Math.min(100, weekScore(state, weekStart) / FULL_AT * 100))
+}
+
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.
 export function weeklyScoreHistory(state, weeks = 26) {
   const today = new Date()
