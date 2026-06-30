@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Menu, Cloud, Download, Upload, RotateCcw, Sparkles, ArrowRight } from 'lucide-react'
+import { Menu, Cloud, Download, Upload, RotateCcw, Sparkles, ArrowRight, Flag } from 'lucide-react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import SyncModal from './components/SyncModal.jsx'
@@ -7,9 +7,10 @@ import Modal from './components/Modal.jsx'
 import { BENTO_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
-import { reviewWindowOpen, reviewTargetWeek } from './lib/ai.js'
+import { reviewWindowOpen, reviewTargetWeek, campaignWindowOpen, campaignTargetMonth } from './lib/ai.js'
 
 const REVIEW_DISMISS_KEY = 'lifemax.reviewPromptDismissed'
+const CAMPAIGN_DISMISS_KEY = 'lifemax.campaignPromptDismissed'
 
 export default function App() {
   const { state, actions, sync } = useStore()
@@ -37,6 +38,22 @@ export default function App() {
   const dismissReview = () => {
     try { sessionStorage.setItem(REVIEW_DISMISS_KEY, reviewTarget.weekKey) } catch { /* ignore */ }
     setShowReviewPrompt(false)
+  }
+
+  // Month-end → start-of-month campaign debrief nudge (lives on the Vault page).
+  const campaignTarget = campaignTargetMonth()
+  const [showCampaignPrompt, setShowCampaignPrompt] = useState(() => {
+    try {
+      if (!campaignWindowOpen()) return false
+      const done = (state.campaigns || []).some((c) => c.ym === campaignTarget.ym)
+      const dismissed = sessionStorage.getItem(CAMPAIGN_DISMISS_KEY) === campaignTarget.ym
+      return !done && !dismissed
+    } catch { return false }
+  })
+  const startCampaign = () => { setShowCampaignPrompt(false); expandAndScroll('vices') }
+  const dismissCampaign = () => {
+    try { sessionStorage.setItem(CAMPAIGN_DISMISS_KEY, campaignTarget.ym) } catch { /* ignore */ }
+    setShowCampaignPrompt(false)
   }
 
   const expandAndScroll = (id) => {
@@ -150,7 +167,7 @@ export default function App() {
 
       {showSync && <SyncModal onClose={() => setShowSync(false)} />}
 
-      {showReviewPrompt && (
+      {showReviewPrompt && !showCampaignPrompt && (
         <Modal title="Weekly review" onClose={dismissReview}>
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10" style={{ color: '#a78bfa' }}>
@@ -170,6 +187,30 @@ export default function App() {
               Start review <ArrowRight size={14} />
             </button>
             <button onClick={dismissReview} className="btn-ghost px-4 py-2.5">Later</button>
+          </div>
+        </Modal>
+      )}
+
+      {showCampaignPrompt && (
+        <Modal title="Monthly debrief" onClose={dismissCampaign}>
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10" style={{ color: '#a78bfa' }}>
+              <Flag size={20} />
+            </span>
+            <div>
+              <p className="text-sm text-slate-200">{campaignTarget.label} is a wrap — time for your campaign debrief.</p>
+              <p className="mt-1 text-[13px] text-slate-500">
+                Claude will reflect on the month, then re-weight your daily reward points with you — more for what's hard and matters, less for what you're letting go. Your Pulse is never touched.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-2">
+            <button onClick={startCampaign}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded border border-white py-2.5 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black"
+              style={{ fontFamily: 'var(--font-mono)' }}>
+              Start debrief <ArrowRight size={14} />
+            </button>
+            <button onClick={dismissCampaign} className="btn-ghost px-4 py-2.5">Later</button>
           </div>
         </Modal>
       )}

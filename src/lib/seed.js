@@ -76,7 +76,11 @@ function seedJournal() { return { days: {} } }
 // weekly-review transcript (reviewDraft) so a review survives a reload and the
 // Sun→Mon gap. The Anthropic API key lives in localStorage (see lib/ai.js),
 // never in this synced blob.
-function seedCoach() { return { reports: {}, reviewDraft: null } }
+function seedCoach() { return { reports: {}, reviewDraft: null, campaignDraft: null } }
+
+// Monthly campaign debriefs — each records the month reviewed and the reward-point
+// re-weighting that was applied. One per "YYYY-MM".
+function seedCampaigns() { return [] }
 
 export function buildSeedState() {
   return {
@@ -91,6 +95,7 @@ export function buildSeedState() {
     vices: seedVices(),
     quickWins: seedQuickWins(),
     reviews: seedReviews(),
+    campaigns: seedCampaigns(),
     focus: seedFocus(),
     journal: seedJournal(),
     coach: seedCoach(),

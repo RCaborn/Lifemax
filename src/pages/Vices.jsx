@@ -12,6 +12,7 @@ import { confetti } from '../lib/confetti.js'
 import Modal from '../components/Modal.jsx'
 import { Card, SectionTitle } from '../components/ui.jsx'
 import { ItemIcon, IconPicker, VICE_ICONS } from '../lib/icons.jsx'
+import CampaignDebriefChat from '../components/CampaignDebriefChat.jsx'
 
 const ACCENT = '#ffffff'
 const SPEND = '#f43f5e'
@@ -76,6 +77,12 @@ export default function Vices() {
           </div>
         )}
       </div>
+
+      {/* Monthly campaign debrief — re-weights the point values below */}
+      <Card>
+        <SectionTitle right={<span className="op-label" style={{ color: '#a78bfa' }}>monthly · AI</span>}>Campaign debrief</SectionTitle>
+        <CampaignDebriefChat />
+      </Card>
 
       {/* How you earn */}
       <Card>
