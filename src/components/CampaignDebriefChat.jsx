@@ -162,7 +162,7 @@ export default function CampaignDebriefChat({ onDone }) {
         {error && (
           <div className="rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3">
             <p className="text-sm text-rose-300">{error}</p>
-            <button onClick={() => advance(messages, questionCount >= MAX_TURNS)} className="btn-ghost mt-2">Try again</button>
+            <button onClick={() => advance(messages, questionCount + 1 >= MAX_TURNS)} className="btn-ghost mt-2">Try again</button>
           </div>
         )}
         {outcome && <Outcome outcome={outcome} rows={rows} setRow={setRow} onApply={apply} />}
