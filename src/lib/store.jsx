@@ -450,9 +450,13 @@ export function StoreProvider({ children }) {
       snapshotTargets(d, pre)
     }),
     // Hours worked is the scored business metric (revenue is tracked separately).
+    // Prune a day back to nothing when hours resolve to 0 — a blank/zeroed entry
+    // must never activate the domain or drag the Pulse.
     setBusinessDay: (dateKey, patch) => update((d) => {
-      const day = ((d.business.days ||= {})[dateKey] ||= { hours: 0 })
-      Object.assign(day, patch)
+      const days = (d.business.days ||= {})
+      const next = { ...(days[dateKey] || {}), ...patch }
+      if (Number(next.hours) > 0) days[dateKey] = next
+      else delete days[dateKey]
     }),
     setBusinessHoursTarget: (hours) => update((d) => {
       const pre = d.targetHistory?.length ? null : collectTargets(d)

@@ -1,8 +1,13 @@
-import { clamp01, money } from './format.js'
+import { clamp01 } from './format.js'
 import { monthKey, toKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
+
+// Business is scored on hours in. All three scorers (monthly / live / history)
+// resolve the weekly hours goal through this one helper so they can never drift;
+// a 0 or blank goal falls back to the default rather than scoring 0.
+const bizHoursTarget = (weekly) => Number(weekly) || 5
 
 // Average of each logged day's wake-up score (rewards consistency near target),
 // plus the mean wake time for display. days = array of day objects with optional .wake.
@@ -113,7 +118,7 @@ export function businessScore(state, ym) {
 
   const weeks = weeksElapsed(ym)
   const monthHours = sum(daysOfMonth(b.days, ym).map((d) => d.hours || 0))
-  const hoursTarget = (b.hoursWeekly || 5) * weeks
+  const hoursTarget = bizHoursTarget(b.hoursWeekly) * weeks
   const hoursVal = clamp01(hoursTarget ? monthHours / hoursTarget : 0)
 
   const monthRevenue = sum(projects.flatMap((p) =>
@@ -152,7 +157,10 @@ export function isDomainActive(state, id) {
   if (id === 'fitness' || id === 'study') return true
   if (id === 'money')    return (state.money?.incomeSources?.length ?? 0) > 0
   if (id === 'career')   return (state.career?.jobs?.length ?? 0) > 0 || (state.career?.skills?.length ?? 0) > 0
-  if (id === 'business') return (state.business?.projects?.length ?? 0) > 0 || Object.keys(state.business?.days || {}).length > 0
+  // Business now counts once you've actually logged hours (the scored metric).
+  // Having a project alone doesn't drag the Pulse; revenue-era users with no
+  // hours simply stay out until they start logging.
+  if (id === 'business') return Object.keys(state.business?.days || {}).length > 0
   return true
 }
 
@@ -207,7 +215,7 @@ function weekDomainScores(state) {
   const mResult = moneyScore(state, ym)
   const bz = state.business || { days: {}, hoursWeekly: 5 }
   const bWeekHours = sum(keys.map((k) => bz.days?.[k]?.hours || 0))
-  const bHoursTarget = bz.hoursWeekly || 5
+  const bHoursTarget = bizHoursTarget(bz.hoursWeekly)
   const businessParts = [
     { label: 'Hours worked', value: clamp01(bHoursTarget ? bWeekHours / bHoursTarget : 0), detail: `${bWeekHours.toFixed(1)}h / ${bHoursTarget}h this week` },
   ]
@@ -352,9 +360,9 @@ function weekScore(state, weekStartDate) {
   const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
   const b = state.business || { days: {}, hoursWeekly: 5 }
-  const bHoursTarget = ht?.business?.hoursWeekly ?? b.hoursWeekly ?? 5
+  const bHoursTarget = bizHoursTarget(ht?.business?.hoursWeekly ?? b.hoursWeekly)
   const bWeekHours = sum(keys.map((k) => b.days?.[k]?.hours || 0))
-  const businessScoreVal = clamp01(bHoursTarget ? bWeekHours / bHoursTarget : 0)
+  const businessScoreVal = clamp01(bWeekHours / bHoursTarget)
 
   const allDomains = [
     { id: 'fitness',  score: fitScore },
@@ -363,7 +371,12 @@ function weekScore(state, weekStartDate) {
     { id: 'career',   score: careerScoreVal },
     { id: 'business', score: businessScoreVal },
   ]
-  const activeDomains = allDomains.filter((d) => isDomainActive(state, d.id))
+  // Business only counts from the week hours-tracking began — so switching to the
+  // hours metric never retroactively rewrites revenue-era weeks down to 0.
+  const bizKeys = Object.keys(state.business?.days || {})
+  const firstBizHours = bizKeys.length ? bizKeys.sort()[0] : null
+  const bizActiveThisWeek = firstBizHours != null && firstBizHours <= keys[keys.length - 1]
+  const activeDomains = allDomains.filter((d) => (d.id === 'business' ? bizActiveThisWeek : isDomainActive(state, d.id)))
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
 
   const qw = state.quickWins || { items: [], days: {} }
