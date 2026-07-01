@@ -20,6 +20,7 @@ export const DEFAULT_EARN_RATES = {
   pages_20: 4,     // per day hitting the reading target
   study_hour: 3,   // per hour studied
   career_hour: 3,  // per skill hour logged
+  business_hour: 3, // per hour worked on a side hustle
   milestone: 8,    // per side-hustle milestone shipped
   journal: 3,      // per day's journal entry
 }
@@ -33,6 +34,7 @@ export const EARN_LABELS = {
   pages_20: { label: 'Reading goal hit', icon: 'BookOpen', domain: 'study' },
   study_hour: { label: 'Study hour', icon: 'Timer', domain: 'study' },
   career_hour: { label: 'Skill hour', icon: 'GraduationCap', domain: 'career' },
+  business_hour: { label: 'Business hour', icon: 'TrendingUp', domain: 'business' },
   milestone: { label: 'Milestone shipped', icon: 'Flag', domain: 'business' },
   stake: { label: 'Stake won', icon: 'Target', domain: 'stakes' },
   journal: { label: 'Journal entry', icon: 'Feather', domain: 'journal' },
@@ -89,6 +91,12 @@ export function earnedEvents(state) {
       const whole = Math.floor(hours)
       if (whole > 0) out.push({ date, source: 'career_hour', qty: whole, points: whole * rates.career_hour })
     }
+  }
+
+  // Business hours worked — each whole hour logged earns XP (like study/career)
+  for (const [date, d] of Object.entries(state.business?.days || {})) {
+    const whole = Math.floor(d.hours || 0)
+    if (whole > 0) out.push({ date, source: 'business_hour', qty: whole, points: whole * rates.business_hour })
   }
 
   // Side-hustle milestones — each one shipped earns a chunky reward

@@ -35,7 +35,7 @@ function collectTargets(d) {
     fitness: { ...d.fitness.targets },
     study: { ...d.study.targets },
     career: { monthlyApplyTarget: d.career.monthlyApplyTarget, monthlySkillTarget: d.career.monthlySkillTarget },
-    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget },
+    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget, hoursWeekly: d.business.hoursWeekly },
     money: { savingsRate: d.money?.targets?.savingsRate ?? 0.2 },
     quickWins: { dailyTarget: d.quickWins?.dailyTarget ?? 3 },
   }
@@ -62,6 +62,8 @@ function migrate(state) {
   if (!state.business) state.business = seed.business
   if (!state.business.todos) state.business.todos = []
   if (!state.business.projects) state.business.projects = []
+  if (!state.business.days) state.business.days = {}
+  if (state.business.hoursWeekly == null) state.business.hoursWeekly = seed.business.hoursWeekly
   if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
   if (!state.quickWins) state.quickWins = seed.quickWins
   if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
@@ -445,6 +447,16 @@ export function StoreProvider({ children }) {
     setBusinessIncomeTarget: (amount) => update((d) => {
       const pre = d.targetHistory?.length ? null : collectTargets(d)
       d.business.monthlyIncomeTarget = Number(amount) || 0
+      snapshotTargets(d, pre)
+    }),
+    // Hours worked is the scored business metric (revenue is tracked separately).
+    setBusinessDay: (dateKey, patch) => update((d) => {
+      const day = ((d.business.days ||= {})[dateKey] ||= { hours: 0 })
+      Object.assign(day, patch)
+    }),
+    setBusinessHoursTarget: (hours) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      d.business.hoursWeekly = Math.max(0, Number(hours) || 0)
       snapshotTargets(d, pre)
     }),
 

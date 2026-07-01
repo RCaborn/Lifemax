@@ -165,6 +165,8 @@ export function mergeStates(local, remote) {
     },
     business: {
       monthlyIncomeTarget: pick(lb.monthlyIncomeTarget, rb.monthlyIncomeTarget, newerWins, emptySetting),
+      hoursWeekly: pick(lb.hoursWeekly, rb.hoursWeekly, newerWins, emptySetting),
+      days: mergeDayMap(lb.days, rb.days, (a, b) => mergeDayObj(a, b, newerWins)),
       projects: unionById(lb.projects, rb.projects, newerWins, mergeProject),
       todos: unionById(lb.todos, rb.todos, newerWins),
     },

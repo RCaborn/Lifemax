@@ -103,14 +103,18 @@ export function careerScore(state, ym) {
   return { score: avg(parts.map((p) => p.value)), parts, apps, skillHours }
 }
 
-// Business score is driven purely by income vs the monthly goal — a tiny sale
-// shouldn't "smash the game" via participation credit. Milestones still earn XP
-// and are surfaced as stat tiles; they just don't inflate the score.
+// Business is scored on HOURS WORKED vs the goal — at an early stage, showing up
+// and putting the reps in is the metric that matters; revenue is lumpy and often
+// lags. Revenue and milestones are still tracked and surfaced as stat tiles (and
+// milestones still earn XP); they just don't drive the score.
 export function businessScore(state, ym) {
-  const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
+  const b = state.business || { projects: [], monthlyIncomeTarget: 500, hoursWeekly: 5, days: {} }
   const projects = b.projects || []
-  const target = b.monthlyIncomeTarget || 500
-  const cur = state.money?.currency || '£'
+
+  const weeks = weeksElapsed(ym)
+  const monthHours = sum(daysOfMonth(b.days, ym).map((d) => d.hours || 0))
+  const hoursTarget = (b.hoursWeekly || 5) * weeks
+  const hoursVal = clamp01(hoursTarget ? monthHours / hoursTarget : 0)
 
   const monthRevenue = sum(projects.flatMap((p) =>
     (p.revenue || []).filter((r) => r.date?.startsWith(ym + '-')).map((r) => Number(r.amount) || 0)))
@@ -118,11 +122,10 @@ export function businessScore(state, ym) {
     (p.milestones || []).filter((m) => m.done && m.doneAt?.startsWith(ym + '-')).length))
   const active = projects.filter((p) => ['building', 'launched', 'earning'].includes(p.status))
 
-  const income = clamp01(target ? monthRevenue / target : 0)
   const parts = [
-    { label: 'Income', value: income, detail: `${money(monthRevenue, cur)} of ${money(target, cur)}` },
+    { label: 'Hours worked', value: hoursVal, detail: `${monthHours.toFixed(1)}h of ${hoursTarget.toFixed(0)}h` },
   ]
-  return { score: income, parts, monthRevenue, milestonesThisMonth, activeCount: active.length }
+  return { score: hoursVal, parts, monthHours, hoursTarget, monthRevenue, milestonesThisMonth, activeCount: active.length }
 }
 
 export const SCORERS = {
@@ -149,7 +152,7 @@ export function isDomainActive(state, id) {
   if (id === 'fitness' || id === 'study') return true
   if (id === 'money')    return (state.money?.incomeSources?.length ?? 0) > 0
   if (id === 'career')   return (state.career?.jobs?.length ?? 0) > 0 || (state.career?.skills?.length ?? 0) > 0
-  if (id === 'business') return (state.business?.projects?.length ?? 0) > 0
+  if (id === 'business') return (state.business?.projects?.length ?? 0) > 0 || Object.keys(state.business?.days || {}).length > 0
   return true
 }
 
@@ -200,16 +203,21 @@ function weekDomainScores(state) {
     { label: 'Skill hours', value: clamp01(wSkillHrs / ((c.monthlySkillTarget || 10) / 4.33)), detail: `${wSkillHrs.toFixed(1)}h this week` },
   ]
 
-  // Money + Business: monthly by nature
+  // Money is monthly by nature; Business is scored on this week's hours worked.
   const mResult = moneyScore(state, ym)
-  const bResult = businessScore(state, ym)
+  const bz = state.business || { days: {}, hoursWeekly: 5 }
+  const bWeekHours = sum(keys.map((k) => bz.days?.[k]?.hours || 0))
+  const bHoursTarget = bz.hoursWeekly || 5
+  const businessParts = [
+    { label: 'Hours worked', value: clamp01(bHoursTarget ? bWeekHours / bHoursTarget : 0), detail: `${bWeekHours.toFixed(1)}h / ${bHoursTarget}h this week` },
+  ]
 
   return [
     { id: 'fitness',  score: avg(fitParts.map((p) => p.value)),    parts: fitParts },
     { id: 'money',    score: mResult.score,                         parts: mResult.parts },
     { id: 'study',    score: avg(studyParts.map((p) => p.value)),   parts: studyParts },
     { id: 'career',   score: avg(careerParts.map((p) => p.value)),  parts: careerParts },
-    { id: 'business', score: bResult.score,                         parts: bResult.parts },
+    { id: 'business', score: avg(businessParts.map((p) => p.value)), parts: businessParts },
   ]
 }
 
@@ -343,12 +351,10 @@ function weekScore(state, weekStartDate) {
   const ym = monthKey(new Date(keys[3]))
   const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
-  const b = state.business || { projects: [], monthlyIncomeTarget: 500 }
-  const bProjects = b.projects || []
-  const bMonthlyTarget = ht?.business?.monthlyIncomeTarget ?? b.monthlyIncomeTarget ?? 500
-  const bTarget = bMonthlyTarget / 4.33
-  const weekRevenue = sum(bProjects.flatMap((p) => (p.revenue || []).filter((r) => keySet.has(r.date)).map((r) => Number(r.amount) || 0)))
-  const businessScoreVal = clamp01(bTarget ? weekRevenue / bTarget : 0)
+  const b = state.business || { days: {}, hoursWeekly: 5 }
+  const bHoursTarget = ht?.business?.hoursWeekly ?? b.hoursWeekly ?? 5
+  const bWeekHours = sum(keys.map((k) => b.days?.[k]?.hours || 0))
+  const businessScoreVal = clamp01(bHoursTarget ? bWeekHours / bHoursTarget : 0)
 
   const allDomains = [
     { id: 'fitness',  score: fitScore },
