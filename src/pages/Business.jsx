@@ -3,7 +3,7 @@ import { X, Check, Flag } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { businessScore } from '../lib/score.js'
-import { thisMonth, monthKey, monthShort, daysUntil } from '../lib/dates.js'
+import { thisMonth, monthKey, monthShort, daysUntil, todayKey, thisWeekKeys } from '../lib/dates.js'
 import { money, pct } from '../lib/format.js'
 import ProgressRing from '../components/ProgressRing.jsx'
 import MonthNav from '../components/MonthNav.jsx'
@@ -30,16 +30,17 @@ export default function Business() {
 
   const sc = businessScore(state, ym)
   const projects = b.projects || []
-  const totalEarned = projects.reduce((a, p) => a + (p.revenue || []).reduce((x, r) => x + (Number(r.amount) || 0), 0), 0)
   const trend = revenueByMonth(projects)
 
   return (
     <div className="space-y-6">
       <Header score={sc.score} ym={ym} setYm={setYm} />
 
+      <HoursLogger state={state} actions={actions} />
+
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatTile label="Hours this month" value={`${sc.monthHours.toFixed(1)}h`} sub={`goal ${sc.hoursTarget.toFixed(0)}h`} color={C.color} />
         <StatTile label="Income this month" value={money(sc.monthRevenue, cur)} sub={`goal ${money(b.monthlyIncomeTarget, cur)}`} color="#22c55e" />
-        <StatTile label="Earned all-time" value={money(totalEarned, cur)} color={C.color} />
         <StatTile label="Active hustles" value={sc.activeCount} color={C.color} />
         <StatTile label="Milestones shipped" value={sc.milestonesThisMonth} sub="this month" color="#38bdf8" />
       </div>
@@ -53,8 +54,8 @@ export default function Business() {
           <div className="rounded-lg bg-white/[0.02] p-5 text-sm text-slate-500">
             <p className="text-slate-300">No projects yet — add your first hustle below.</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Your score is based on <span className="text-slate-400">Income</span> — money in vs your monthly goal.
-              Shipping a milestone still earns XP.
+              Your score is based on <span className="text-slate-400">hours worked</span> — log the reps above.
+              Revenue and shipped milestones are still tracked (and milestones earn XP); they just don't drive the score.
             </p>
           </div>
         ) : (
@@ -100,6 +101,57 @@ function revenueByMonth(projects, months = 6) {
       a + (p.revenue || []).filter((r) => r.date?.startsWith(ym + '-')).reduce((x, r) => x + (Number(r.amount) || 0), 0), 0)
     return { label: monthShort(ym), value }
   })
+}
+
+function HoursLogger({ state, actions }) {
+  const today = todayKey()
+  const todayHours = state.business?.days?.[today]?.hours || 0
+  const weekHours = thisWeekKeys().reduce((a, k) => a + (state.business?.days?.[k]?.hours || 0), 0)
+  const target = state.business?.hoursWeekly || 5
+  const setToday = (v) => actions.setBusinessDay(today, { hours: Math.max(0, Math.round((Number(v) || 0) * 100) / 100) })
+  const bump = (delta) => setToday(Math.max(0, Math.round((todayHours + delta) * 4) / 4))
+  const wkPct = Math.min(100, target ? (weekHours / target) * 100 : 0)
+
+  return (
+    <Card>
+      <SectionTitle right={<HoursGoalEditor value={target} onChange={actions.setBusinessHoursTarget} />}>Hours worked</SectionTitle>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+        <div>
+          <div className="op-label mb-1.5">Logged today</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => bump(-0.25)} className="grid h-9 w-9 place-items-center rounded border border-white/15 text-lg text-white transition hover:bg-white/10">−</button>
+            <div className="flex items-center gap-1 rounded border border-white/10 bg-white/5 px-2">
+              <input type="number" step="0.25" min="0" value={todayHours || ''} onChange={(e) => setToday(e.target.value)} placeholder="0"
+                className="w-16 bg-transparent py-1.5 text-center text-lg font-bold text-white outline-none" style={{ fontFamily: 'var(--font-mono)' }} />
+              <span className="pr-1 text-sm text-slate-500">h</span>
+            </div>
+            <button onClick={() => bump(0.25)} className="grid h-9 w-9 place-items-center rounded border border-white/15 text-lg text-white transition hover:bg-white/10">＋</button>
+          </div>
+        </div>
+        <div className="min-w-[180px] flex-1">
+          <div className="mb-1 flex justify-between text-[11px] text-slate-500">
+            <span>This week</span>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{weekHours.toFixed(2).replace(/\.?0+$/, '')}h / {target}h</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-white/8">
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${wkPct}%`, background: C.color }} />
+          </div>
+          <p className="mt-1.5 text-[11px] text-slate-600">Hours in is the score at this stage — revenue is tracked below.</p>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function HoursGoalEditor({ value, onChange }) {
+  return (
+    <label className="op-label flex items-center gap-1.5">
+      Goal
+      <input type="number" step="0.5" min="0" value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-14 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-right text-xs text-white outline-none focus:border-white/30"
+        style={{ fontFamily: 'var(--font-mono)' }} /> h/wk
+    </label>
+  )
 }
 
 function Header({ score, ym, setYm }) {

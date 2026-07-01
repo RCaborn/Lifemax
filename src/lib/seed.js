@@ -23,7 +23,9 @@ function seedCareer() {
 function seedBusiness() {
   return {
     projects: [],            // each side hustle: { id, name, emoji, status, createdAt, revenue:[], milestones:[] }
-    monthlyIncomeTarget: 500, // £/mo goal across all hustles
+    days: {},                // per-day effort log: { [dateKey]: { hours } } — the SCORED metric
+    hoursWeekly: 5,          // hours/week goal — hours-in is the metric at an early stage
+    monthlyIncomeTarget: 500, // £/mo revenue goal — tracked for progress, not scored
     todos: [],
   }
 }

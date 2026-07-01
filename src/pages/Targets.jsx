@@ -136,13 +136,14 @@ function CareerTargets({ state, actions }) {
 
 function BusinessTargets({ state, actions, cur }) {
   const b = state.business
-  const set = (v) => actions.setBusinessIncomeTarget(v)
   return (
     <Card glow={DOMAIN_MAP.business.color}>
       <SectionTitle><span className="flex items-center gap-1.5"><ItemIcon icon="TrendingUp" size={13} /> Business</span></SectionTitle>
       <div className="space-y-3">
-        <TargetField label="Income goal" unit={`${cur}/month`} value={b.monthlyIncomeTarget} step={50} onChange={set}
-          hint="Revenue across all side hustles" />
+        <TargetField label="Hours worked" unit="/week" value={b.hoursWeekly} step={0.5} onChange={(v) => actions.setBusinessHoursTarget(v)}
+          hint="This is what's scored — hours in beat lumpy revenue early on" />
+        <TargetField label="Revenue goal" unit={`${cur}/month`} value={b.monthlyIncomeTarget} step={50} onChange={(v) => actions.setBusinessIncomeTarget(v)}
+          hint="Tracked for progress — doesn't affect your score" />
       </div>
     </Card>
   )

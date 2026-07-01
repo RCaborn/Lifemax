@@ -35,7 +35,7 @@ function collectTargets(d) {
     fitness: { ...d.fitness.targets },
     study: { ...d.study.targets },
     career: { monthlyApplyTarget: d.career.monthlyApplyTarget, monthlySkillTarget: d.career.monthlySkillTarget },
-    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget },
+    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget, hoursWeekly: d.business.hoursWeekly },
     money: { savingsRate: d.money?.targets?.savingsRate ?? 0.2 },
     quickWins: { dailyTarget: d.quickWins?.dailyTarget ?? 3 },
   }
@@ -62,6 +62,8 @@ function migrate(state) {
   if (!state.business) state.business = seed.business
   if (!state.business.todos) state.business.todos = []
   if (!state.business.projects) state.business.projects = []
+  if (!state.business.days) state.business.days = {}
+  if (state.business.hoursWeekly == null) state.business.hoursWeekly = seed.business.hoursWeekly
   if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
   if (!state.quickWins) state.quickWins = seed.quickWins
   if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
@@ -445,6 +447,20 @@ export function StoreProvider({ children }) {
     setBusinessIncomeTarget: (amount) => update((d) => {
       const pre = d.targetHistory?.length ? null : collectTargets(d)
       d.business.monthlyIncomeTarget = Number(amount) || 0
+      snapshotTargets(d, pre)
+    }),
+    // Hours worked is the scored business metric (revenue is tracked separately).
+    // Prune a day back to nothing when hours resolve to 0 — a blank/zeroed entry
+    // must never activate the domain or drag the Pulse.
+    setBusinessDay: (dateKey, patch) => update((d) => {
+      const days = (d.business.days ||= {})
+      const next = { ...(days[dateKey] || {}), ...patch }
+      if (Number(next.hours) > 0) days[dateKey] = next
+      else delete days[dateKey]
+    }),
+    setBusinessHoursTarget: (hours) => update((d) => {
+      const pre = d.targetHistory?.length ? null : collectTargets(d)
+      d.business.hoursWeekly = Math.max(0, Number(hours) || 0)
       snapshotTargets(d, pre)
     }),
 

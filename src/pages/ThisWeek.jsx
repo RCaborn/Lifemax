@@ -28,6 +28,8 @@ export default function ThisWeek() {
   const weekAvgWake = weekWakes.length ? minToTime(weekWakes.reduce((a, w) => a + timeToMin(w), 0) / weekWakes.length) : null
   const weekPages = studyDays.reduce((a, d) => a + (d.pages || 0), 0)
   const weekHours = studyDays.reduce((a, d) => a + (d.hours || 0), 0)
+  const weekBizHours = weekKeys.reduce((a, k) => a + (state.business?.days?.[k]?.hours || 0), 0)
+  const bizTarget = state.business?.hoursWeekly || 5
 
   const weekStart = startOfWeek()
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
@@ -40,7 +42,7 @@ export default function ThisWeek() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Sitrep</h1>
         <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{weekLabel}</p>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           <WeekStat label="Runs" value={`${weekRuns}/${t.runsPerWeek || 3}`} hit={weekRuns >= (t.runsPerWeek || 3)} />
           <WeekStat label="Workouts" value={`${weekWorkouts}/${t.workoutsPerWeek || 3}`} hit={weekWorkouts >= (t.workoutsPerWeek || 3)} />
           <WeekStat label="Stretch" value={`${weekStretch}/7`} hit={weekStretch >= 5} />
@@ -48,6 +50,7 @@ export default function ThisWeek() {
           <WeekStat label="Avg wake" value={weekAvgWake || '—'} hit={weekWakeScore >= 0.8} />
           <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesWeekly || 140)} />
           <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursWeekly || 9)} />
+          <WeekStat label="Biz hrs" value={`${weekBizHours.toFixed(1)}h`} hit={weekBizHours >= bizTarget} />
         </div>
       </div>
 
@@ -72,10 +75,12 @@ function WeekStat({ label, value, hit }) {
 function DayCard({ dateKey, dayName, isToday, state, actions }) {
   const f = state.fitness.days[dateKey] || {}
   const s = state.study.days[dateKey] || {}
-  const hasData = f.runs || f.workouts || f.stretch || f.steps || f.wake || s.pages || s.hours
+  const bz = state.business?.days?.[dateKey] || {}
+  const hasData = f.runs || f.workouts || f.stretch || f.steps || f.wake || s.pages || s.hours || bz.hours
 
   const setF = (patch) => actions.setFitnessDay(dateKey, patch)
   const setS = (patch) => actions.setStudyDay(dateKey, patch)
+  const setBz = (patch) => actions.setBusinessDay(dateKey, patch)
 
   const d = new Date(dateKey + 'T00:00:00')
   const dateLabel = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
@@ -104,6 +109,7 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
         <DayTime icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
         <DayNum icon="BookOpen" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
         <DayNum icon="Timer" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
+        <DayNum icon="TrendingUp" label="Biz hrs" value={bz.hours || 0} color="#eab308" onChange={(v) => setBz({ hours: v })} placeholder="0" step="0.25" />
       </div>
     </div>
   )
