@@ -1,5 +1,5 @@
 import { clamp01 } from './format.js'
-import { monthKey, toKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
+import { monthKey, toKey, parseKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
@@ -306,12 +306,19 @@ function targetsForWeek(state, weekStartKey) {
 // sub-scores exposed (delta chips compare arbitrary weeks). Mirrors lifeScore()
 // exactly: active-domain filtering + quick wins / journal bonuses. Uses
 // historical target snapshots so past weeks aren't affected by target changes.
-export function weekBreakdown(state, weekStartDate) {
-  const keys = Array.from({ length: 7 }, (_, i) => {
+//
+// Optional throughDow (0 = Mon … 6 = Sun) truncates the summed window so a
+// partial in-progress week can be compared like-for-like against the same
+// portion of a previous week (denominators stay full-week on both sides, so
+// the comparison is fair "pace by this weekday"). Omit for full-week scoring —
+// the history chart's numbers are untouched.
+export function weekBreakdown(state, weekStartDate, throughDow = 6) {
+  const fullKeys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
     d.setDate(weekStartDate.getDate() + i)
     return toKey(d)
   })
+  const keys = fullKeys.slice(0, Math.max(0, Math.min(6, throughDow)) + 1)
   const keySet = new Set(keys)
 
   const ht = targetsForWeek(state, toKey(weekStartDate))
@@ -357,7 +364,11 @@ export function weekBreakdown(state, weekStartDate) {
     clamp01(weekSkillHours / (monthlySkillTarget / 4.33)),
   ])
 
-  const ym = monthKey(new Date(keys[3]))
+  // Anchor the money month on the week's midpoint via parseKey (local time) —
+  // new Date('YYYY-MM-DD') parses as UTC and lands on the wrong day/month in
+  // UTC-negative timezones. Always use the full week's midpoint so a truncated
+  // window can't shift the month.
+  const ym = monthKey(parseKey(fullKeys[3]))
   const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
   const b = state.business || { days: {}, hoursWeekly: 5 }
@@ -403,9 +414,15 @@ function weekScore(state, weekStartDate) {
   return weekBreakdown(state, weekStartDate).total
 }
 
-// Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse scale).
-export function weekScoreScaled(state, weekStart) {
-  return Math.round(Math.min(100, weekScore(state, weekStart) / FULL_AT * 100))
+// Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse
+// scale). Pass throughDow to score only Mon..that weekday (pace comparisons).
+export function weekScoreScaled(state, weekStart, throughDow = 6) {
+  return Math.round(Math.min(100, weekBreakdown(state, weekStart, throughDow).total / FULL_AT * 100))
+}
+
+// 0–100 display scale for a single domain's raw weekly sub-score (radar + chips).
+export function domainScoreScaled(raw) {
+  return Math.min(100, Math.round((raw / 0.8) * 100))
 }
 
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.

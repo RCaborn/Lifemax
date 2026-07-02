@@ -34,4 +34,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LIFEMAX_USER_ID: ${{ secrets.LIFEMAX_USER_ID }}
-        run: python garmin/sync_garmin.py --days "${{ inputs.days || '3' }}"
+          # Dispatch input reaches the shell via env (never interpolated into the
+          # script text), so a crafted input can't inject commands into a step
+          # that holds secrets.
+          SYNC_DAYS: ${{ inputs.days || '3' }}
+        run: python garmin/sync_garmin.py --days "$SYNC_DAYS"

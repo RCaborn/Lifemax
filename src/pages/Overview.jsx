@@ -49,10 +49,13 @@ export default function Overview({ expandedId, onExpand }) {
   const grade = gradeFor(ls.score)
   const weeklyHistory = weeklyScoreHistory(state)
 
-  // Week-over-week Pulse delta (same scale as the ring / history chart).
+  // Week-over-week Pulse delta — this week's Mon→today window vs the SAME
+  // window of last week (like-for-like pace), so Monday mornings don't read
+  // as a giant phantom regression against a complete week.
+  const dow = (new Date().getDay() + 6) % 7
   const prevWeekStart = startOfWeek()
   prevWeekStart.setDate(prevWeekStart.getDate() - 7)
-  const pulseDelta = weekScoreScaled(state, startOfWeek()) - weekScoreScaled(state, prevWeekStart)
+  const pulseDelta = weekScoreScaled(state, startOfWeek(), dow) - weekScoreScaled(state, prevWeekStart, dow)
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'

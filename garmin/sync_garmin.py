@@ -99,24 +99,35 @@ def fetch_wakes(garth, keys):
 
 
 def fetch_activities(garth, keys):
-    """{date: {"runs": n, "workouts": n}} from the recent activity list."""
-    try:
-        rows = garth.connectapi(
-            "/activitylist-service/activities/search/activities",
-            params={"start": 0, "limit": 100},
-        ) or []
-    except Exception as e:
-        print(f"WARN: activities fetch failed ({type(e).__name__})", file=sys.stderr)
-        return {}
+    """{date: {"runs": n, "workouts": n}} from the activity list. Paginates
+    (newest first) until the page is older than the sync window, so a big
+    --days backfill doesn't silently miss activities beyond the first page."""
     wanted = set(keys)
+    oldest_wanted = min(keys)
     out = {}
-    for a in rows:
-        d = str(a.get("startTimeLocal") or "")[:10]
-        if d not in wanted:
-            continue
-        type_key = ((a.get("activityType") or {}).get("typeKey") or "").lower()
-        slot = out.setdefault(d, {"runs": 0, "workouts": 0})
-        slot["runs" if RUN_HINT in type_key else "workouts"] += 1
+    start = 0
+    for _ in range(10):  # hard cap: 10 pages / 1000 activities
+        try:
+            rows = garth.connectapi(
+                "/activitylist-service/activities/search/activities",
+                params={"start": start, "limit": 100},
+            ) or []
+        except Exception as e:
+            print(f"WARN: activities fetch failed ({type(e).__name__})", file=sys.stderr)
+            return out
+        page_dates = []
+        for a in rows:
+            d = str(a.get("startTimeLocal") or "")[:10]
+            if d:
+                page_dates.append(d)
+            if d not in wanted:
+                continue
+            type_key = ((a.get("activityType") or {}).get("typeKey") or "").lower()
+            slot = out.setdefault(d, {"runs": 0, "workouts": 0})
+            slot["runs" if RUN_HINT in type_key else "workouts"] += 1
+        if len(rows) < 100 or (page_dates and min(page_dates) < oldest_wanted):
+            break
+        start += 100
     return out
 
 

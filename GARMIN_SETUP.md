@@ -53,8 +53,13 @@ each time — so a missed run self-heals the next morning.
 
 - It touches **only** the fitness daily logs — nothing else in your state.
 - **Never lowers a value**: if you logged 12,000 steps manually and Garmin says
-  8,000, your 12,000 stays. Steps/runs/workouts take the max.
-- **Never overwrites a wake time you set** — it only fills empty ones.
+  8,000, your 12,000 stays. Steps/runs/workouts take the max — and the app's own
+  device merge applies the same max rule, so even a manual log that hadn't
+  synced yet when the autopilot ran survives the next pull.
+- **Never overwrites a wake time you set** — it only fills empty ones. (The one
+  residual edge: a wake time set offline that hadn't pushed before the autopilot
+  filled that day's wake can lose the tiebreak on the next pull — same class as
+  the existing two-device caveat in SUPABASE_SETUP.md.)
 - Writes use the same optimistic-concurrency guard as the app itself: if a
   device pushed in the meantime, the Action re-reads, re-merges and retries.
 - If there's nothing new, it writes nothing at all.

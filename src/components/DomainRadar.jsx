@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { useStore } from '../lib/store.jsx'
-import { weekBreakdown } from '../lib/score.js'
+import { weekBreakdown, domainScoreScaled } from '../lib/score.js'
 import { startOfWeek } from '../lib/dates.js'
 import { DOMAIN_MAP } from '../lib/domains.js'
 import { ItemIcon } from '../lib/icons.jsx'
@@ -13,25 +13,35 @@ const MONO = 'var(--font-mono)'
 export default function DomainRadar({ ls }) {
   const { state } = useStore()
 
+  // ls is a pure function of state, so keying the memo on state alone is safe
+  // and lets it actually cache across parent re-renders.
   const { data, deltas } = useMemo(() => {
-    const cur = weekBreakdown(state, startOfWeek())
+    // Compare this week's Mon→today window against the SAME window of last
+    // week (like-for-like pace), on the same capped display scale the radar
+    // uses — so an arrow can never contradict the chart or report a phantom
+    // regression on a Monday morning.
+    const dow = (new Date().getDay() + 6) % 7
+    const cur = weekBreakdown(state, startOfWeek(), dow)
     const prevStart = startOfWeek()
     prevStart.setDate(prevStart.getDate() - 7)
-    const prev = weekBreakdown(state, prevStart)
+    const prev = weekBreakdown(state, prevStart, dow)
     const prevById = Object.fromEntries(prev.domains.map((d) => [d.id, d]))
 
     const data = ls.domains.map((d) => ({
       name: DOMAIN_MAP[d.id].name,
-      value: Math.min(100, Math.round((d.score / 0.8) * 100)),
+      value: domainScoreScaled(d.score),
     }))
     const deltas = cur.domains
-      .filter((d) => d.active)
+      // Money is scored monthly — a week-over-week arrow for it is meaningless
+      // (inert mid-month, spuriously red every 1st) — so it sits out.
+      .filter((d) => d.active && d.id !== 'money')
       .map((d) => ({
         id: d.id,
-        delta: Math.round(((d.score - (prevById[d.id]?.score || 0)) / 0.8) * 100),
+        delta: domainScoreScaled(d.score) - domainScoreScaled(prevById[d.id]?.score || 0),
       }))
     return { data, deltas }
-  }, [state, ls])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
 
   return (
     <div>
