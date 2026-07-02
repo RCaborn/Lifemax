@@ -14,7 +14,8 @@ import { lifeScore, weeklyScoreHistory, weekScoreScaled } from './score.js'
 import { DOMAIN_MAP } from './domains.js'
 import { pct, gradeFor } from './format.js'
 import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel, monthKey, DEFAULT_WAKE_TARGET } from './dates.js'
-import { balance, DEFAULT_EARN_RATES } from './vices.js'
+import { balance, totalEarned, DEFAULT_EARN_RATES } from './vices.js'
+import { rankFor } from './ranks.js'
 
 const KEY = 'lifemax.anthropic.key'
 const MODEL = 'claude-sonnet-4-6'
@@ -98,6 +99,7 @@ export function buildDigest(state, slot) {
     follow_through_pct: ftRate == null ? null : pct(ftRate),
     active_habit_days_14d: activeHabitDays,
     xp_balance: balance(state),
+    xp_rank: rankFor(totalEarned(state)).name,
     objectives,
     recent_field_notes: recentJournal,
   }

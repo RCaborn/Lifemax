@@ -1,0 +1,20 @@
+{
+  "_comment": "Proves every merge rule: garmin lower steps kept out, unset wake filled, set wake kept, higher runs raised, workouts raised, stretch + untouched dates preserved.",
+  "state": {
+    "version": 2,
+    "updatedAt": "2026-06-30T08:00:00.000Z",
+    "fitness": {
+      "targets": { "runsPerWeek": 3, "workoutsPerWeek": 3, "stepsDaily": 10000, "wakeTarget": "06:30" },
+      "days": {
+        "2026-06-29": { "runs": 1, "workouts": 0, "stretch": true, "steps": 12000, "wake": "06:20" },
+        "2026-06-30": { "runs": 0, "workouts": 1, "stretch": false, "steps": 3000 },
+        "2026-06-27": { "runs": 2, "workouts": 0, "stretch": true, "steps": 9000, "wake": "07:00" }
+      }
+    }
+  },
+  "garmin": {
+    "2026-06-29": { "steps": 8000, "wake": "06:45", "runs": 1, "workouts": 1 },
+    "2026-06-30": { "steps": 10500, "wake": "06:50", "runs": 1, "workouts": 0 },
+    "2026-07-01": { "steps": 4200, "wake": "07:10", "runs": 0, "workouts": 1 }
+  }
+}

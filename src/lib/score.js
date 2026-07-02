@@ -302,10 +302,11 @@ function targetsForWeek(state, weekStartKey) {
   return best
 }
 
-// Internal: raw 0-1 weekly aggregate for a given Mon-start window (used by history chart).
-// Mirrors lifeScore() exactly: active-domain filtering + quick wins / journal bonuses.
-// Uses historical target snapshots so past weeks aren't affected by target changes.
-function weekScore(state, weekStartDate) {
+// Raw weekly aggregate for a given Mon-start window, with the per-domain
+// sub-scores exposed (delta chips compare arbitrary weeks). Mirrors lifeScore()
+// exactly: active-domain filtering + quick wins / journal bonuses. Uses
+// historical target snapshots so past weeks aren't affected by target changes.
+export function weekBreakdown(state, weekStartDate) {
   const keys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
     d.setDate(weekStartDate.getDate() + i)
@@ -376,7 +377,11 @@ function weekScore(state, weekStartDate) {
   const bizKeys = Object.keys(state.business?.days || {})
   const firstBizHours = bizKeys.length ? bizKeys.sort()[0] : null
   const bizActiveThisWeek = firstBizHours != null && firstBizHours <= keys[keys.length - 1]
-  const activeDomains = allDomains.filter((d) => (d.id === 'business' ? bizActiveThisWeek : isDomainActive(state, d.id)))
+  const domains = allDomains.map((d) => ({
+    ...d,
+    active: d.id === 'business' ? bizActiveThisWeek : isDomainActive(state, d.id),
+  }))
+  const activeDomains = domains.filter((d) => d.active)
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
 
   const qw = state.quickWins || { items: [], days: {} }
@@ -390,7 +395,12 @@ function weekScore(state, weekStartDate) {
   const jLogged = keys.filter((k) => jDays[k]?.mood != null).length
   const journalBonus = clamp01(jLogged / keys.length) * 0.03
 
-  return domainAvg + qwBonus + journalBonus
+  return { total: domainAvg + qwBonus + journalBonus, domains }
+}
+
+// Back-compat internal: the single weekly number the history chart uses.
+function weekScore(state, weekStartDate) {
+  return weekBreakdown(state, weekStartDate).total
 }
 
 // Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse scale).

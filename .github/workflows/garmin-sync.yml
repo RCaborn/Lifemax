@@ -1,0 +1,37 @@
+# Garmin autopilot — pulls steps / wake time / runs & workouts from Garmin
+# Connect every morning and patches them into the Lifemax cloud-sync blob.
+# Inert until the three secrets exist; see GARMIN_SETUP.md for the 5-minute setup.
+name: Garmin autopilot
+
+on:
+  schedule:
+    - cron: '30 5 * * *' # 05:30 UTC daily — devices idle, yesterday's data complete
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Days back to sync (bump for a backfill)'
+        default: '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: garmin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r garmin/requirements.txt
+      - name: Sync Garmin → Lifemax
+        env:
+          GARTH_TOKEN: ${{ secrets.GARTH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LIFEMAX_USER_ID: ${{ secrets.LIFEMAX_USER_ID }}
+        run: python garmin/sync_garmin.py --days "${{ inputs.days || '3' }}"

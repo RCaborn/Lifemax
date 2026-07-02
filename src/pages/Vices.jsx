@@ -3,9 +3,10 @@ import { Settings, X, PartyPopper } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from '../components/Toast.jsx'
 import {
-  balance, totalSpent, earnedInMonth, fullLedger, cooldownRemaining,
+  balance, totalSpent, totalEarned, earnedInMonth, fullLedger, cooldownRemaining,
   DEFAULT_EARN_RATES, EARN_LABELS, VICE_CATEGORIES,
 } from '../lib/vices.js'
+import RankBadge from '../components/RankBadge.jsx'
 import { thisMonth } from '../lib/dates.js'
 import { pct } from '../lib/format.js'
 import { confetti } from '../lib/confetti.js'
@@ -51,7 +52,7 @@ export default function Vices() {
       <div className="glass relative overflow-hidden rounded-2xl p-6">
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="op-label">The Vault</p>
+            <p className="op-label flex items-center gap-2.5">The Vault <RankBadge xp={totalEarned(state)} variant="compact" /></p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-5xl font-black" style={{ color: '#fff', fontFamily: MONO }}>{bal}</span>
               <span className="text-lg font-semibold" style={{ color: '#666' }}>XP</span>
