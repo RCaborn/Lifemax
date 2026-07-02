@@ -1,5 +1,5 @@
 import { clamp01 } from './format.js'
-import { monthKey, toKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
+import { monthKey, toKey, parseKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
@@ -302,15 +302,23 @@ function targetsForWeek(state, weekStartKey) {
   return best
 }
 
-// Internal: raw 0-1 weekly aggregate for a given Mon-start window (used by history chart).
-// Mirrors lifeScore() exactly: active-domain filtering + quick wins / journal bonuses.
-// Uses historical target snapshots so past weeks aren't affected by target changes.
-function weekScore(state, weekStartDate) {
-  const keys = Array.from({ length: 7 }, (_, i) => {
+// Raw weekly aggregate for a given Mon-start window, with the per-domain
+// sub-scores exposed (delta chips compare arbitrary weeks). Mirrors lifeScore()
+// exactly: active-domain filtering + quick wins / journal bonuses. Uses
+// historical target snapshots so past weeks aren't affected by target changes.
+//
+// Optional throughDow (0 = Mon … 6 = Sun) truncates the summed window so a
+// partial in-progress week can be compared like-for-like against the same
+// portion of a previous week (denominators stay full-week on both sides, so
+// the comparison is fair "pace by this weekday"). Omit for full-week scoring —
+// the history chart's numbers are untouched.
+export function weekBreakdown(state, weekStartDate, throughDow = 6) {
+  const fullKeys = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate)
     d.setDate(weekStartDate.getDate() + i)
     return toKey(d)
   })
+  const keys = fullKeys.slice(0, Math.max(0, Math.min(6, throughDow)) + 1)
   const keySet = new Set(keys)
 
   const ht = targetsForWeek(state, toKey(weekStartDate))
@@ -356,7 +364,11 @@ function weekScore(state, weekStartDate) {
     clamp01(weekSkillHours / (monthlySkillTarget / 4.33)),
   ])
 
-  const ym = monthKey(new Date(keys[3]))
+  // Anchor the money month on the week's midpoint via parseKey (local time) —
+  // new Date('YYYY-MM-DD') parses as UTC and lands on the wrong day/month in
+  // UTC-negative timezones. Always use the full week's midpoint so a truncated
+  // window can't shift the month.
+  const ym = monthKey(parseKey(fullKeys[3]))
   const mScore = moneyScore(state, ym, { savingsRate: ht?.money?.savingsRate })
 
   const b = state.business || { days: {}, hoursWeekly: 5 }
@@ -376,7 +388,11 @@ function weekScore(state, weekStartDate) {
   const bizKeys = Object.keys(state.business?.days || {})
   const firstBizHours = bizKeys.length ? bizKeys.sort()[0] : null
   const bizActiveThisWeek = firstBizHours != null && firstBizHours <= keys[keys.length - 1]
-  const activeDomains = allDomains.filter((d) => (d.id === 'business' ? bizActiveThisWeek : isDomainActive(state, d.id)))
+  const domains = allDomains.map((d) => ({
+    ...d,
+    active: d.id === 'business' ? bizActiveThisWeek : isDomainActive(state, d.id),
+  }))
+  const activeDomains = domains.filter((d) => d.active)
   const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
 
   const qw = state.quickWins || { items: [], days: {} }
@@ -390,12 +406,23 @@ function weekScore(state, weekStartDate) {
   const jLogged = keys.filter((k) => jDays[k]?.mood != null).length
   const journalBonus = clamp01(jLogged / keys.length) * 0.03
 
-  return domainAvg + qwBonus + journalBonus
+  return { total: domainAvg + qwBonus + journalBonus, domains }
 }
 
-// Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse scale).
-export function weekScoreScaled(state, weekStart) {
-  return Math.round(Math.min(100, weekScore(state, weekStart) / FULL_AT * 100))
+// Back-compat internal: the single weekly number the history chart uses.
+function weekScore(state, weekStartDate) {
+  return weekBreakdown(state, weekStartDate).total
+}
+
+// Scaled 0–100 score for an arbitrary Mon-start week (matches the chart/Pulse
+// scale). Pass throughDow to score only Mon..that weekday (pace comparisons).
+export function weekScoreScaled(state, weekStart, throughDow = 6) {
+  return Math.round(Math.min(100, weekBreakdown(state, weekStart, throughDow).total / FULL_AT * 100))
+}
+
+// 0–100 display scale for a single domain's raw weekly sub-score (radar + chips).
+export function domainScoreScaled(raw) {
+  return Math.min(100, Math.round((raw / 0.8) * 100))
 }
 
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.

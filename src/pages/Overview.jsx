@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles, CalendarPlus } from 'lucide-react'
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
-import { lifeScore, weeklyScoreHistory } from '../lib/score.js'
-import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey } from '../lib/dates.js'
+import { lifeScore, weeklyScoreHistory, weekScoreScaled } from '../lib/score.js'
+import DomainRadar from '../components/DomainRadar.jsx'
+import ConsistencyGrid from '../components/ConsistencyGrid.jsx'
+import RankBadge from '../components/RankBadge.jsx'
+import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey, startOfWeek } from '../lib/dates.js'
 import { focusBlockUrl } from '../lib/calendar.js'
 import { pct, gradeFor } from '../lib/format.js'
-import { balance, earnedInMonth, earnRate } from '../lib/vices.js'
+import { balance, earnedInMonth, earnRate, totalEarned } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
@@ -46,6 +49,14 @@ export default function Overview({ expandedId, onExpand }) {
   const grade = gradeFor(ls.score)
   const weeklyHistory = weeklyScoreHistory(state)
 
+  // Week-over-week Pulse delta — this week's Mon→today window vs the SAME
+  // window of last week (like-for-like pace), so Monday mornings don't read
+  // as a giant phantom regression against a complete week.
+  const dow = (new Date().getDay() + 6) % 7
+  const prevWeekStart = startOfWeek()
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7)
+  const pulseDelta = weekScoreScaled(state, startOfWeek(), dow) - weekScoreScaled(state, prevWeekStart, dow)
+
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
@@ -65,9 +76,15 @@ export default function Overview({ expandedId, onExpand }) {
                 <span className="grid h-12 w-12 place-items-center rounded-lg border font-black text-2xl"
                   style={{ borderColor: `${grade.color}55`, color: grade.color, fontFamily: 'var(--font-mono)' }}>{grade.letter}</span>
                 <div>
-                  <div className="font-semibold" style={{ color: grade.color }}>{grade.label}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold" style={{ color: grade.color }}>{grade.label}</span>
+                    <PulseDelta delta={pulseDelta} />
+                  </div>
                   <div className="text-sm text-slate-500">{summary(ls)}</div>
                 </div>
+              </div>
+              <div className="mt-4">
+                <RankBadge xp={totalEarned(state)} />
               </div>
               <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
                 80% of weekly targets = score 100 · resets Monday
@@ -77,12 +94,20 @@ export default function Overview({ expandedId, onExpand }) {
               <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Pulse" />
             </div>
           </div>
-          <div className="min-w-0 flex-1 lg:border-l lg:border-white/8 lg:pl-8">
-            <SectionTitle>Pulse — 6 months weekly</SectionTitle>
-            <WeeklyScoreChart data={weeklyHistory} />
+          <div className="flex min-w-0 flex-1 flex-col gap-6 lg:border-l lg:border-white/8 lg:pl-8 xl:flex-row">
+            <div className="w-full shrink-0 xl:w-64">
+              <SectionTitle>Balance — this week</SectionTitle>
+              <DomainRadar ls={ls} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <SectionTitle>Pulse — 6 months weekly</SectionTitle>
+              <WeeklyScoreChart data={weeklyHistory} />
+            </div>
           </div>
         </div>
       </div>
+
+      <ConsistencyGrid />
 
       <FocusWidget onExpand={onExpand} />
 
@@ -110,6 +135,19 @@ export default function Overview({ expandedId, onExpand }) {
         })}
       </div>
     </div>
+  )
+}
+
+// ▲ +12 vs last week — status-colored, steady band of ±1 stays quiet.
+function PulseDelta({ delta }) {
+  const style = delta >= 2 ? { color: '#22c55e' } : delta <= -2 ? { color: '#f43f5e' } : null
+  const text = delta >= 2 ? `▲ +${delta}` : delta <= -2 ? `▼ ${delta}` : '— steady'
+  return (
+    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+      style={{ fontFamily: 'var(--font-mono)', ...(style || { color: '#64748b' }) }}
+      title="Pulse vs last week">
+      {text}
+    </span>
   )
 }
 

@@ -65,6 +65,20 @@ function mergeDayObj(a = {}, b = {}, newerWins) {
   return out
 }
 
+// Fitness days get field-aware rules so the Garmin autopilot (or a second
+// device) can never beat a not-yet-pushed manual log via newer-blob-wins:
+// counts/steps take the max (both describe the same real day), stretch is a
+// sticky true. Wake keeps the generic tiebreak — Garmin only ever fills empty
+// wakes, so a genuine wake conflict means two manual edits.
+function mergeFitnessDay(a = {}, b = {}, newerWins) {
+  const out = mergeDayObj(a, b, newerWins)
+  for (const k of ['steps', 'runs', 'workouts']) {
+    if (a?.[k] != null || b?.[k] != null) out[k] = Math.max(a?.[k] || 0, b?.[k] || 0)
+  }
+  if (a?.stretch || b?.stretch) out.stretch = true
+  return out
+}
+
 // A day of quick-win ids (array of strings): union the ids.
 function mergeIdList(a = [], b = []) {
   return Array.from(new Set([...(a || []), ...(b || [])]))
@@ -137,7 +151,7 @@ export function mergeStates(local, remote) {
 
     fitness: {
       targets: mergeSettings(lf.targets, rf.targets, newerWins),
-      days: mergeDayMap(lf.days, rf.days, (a, b) => mergeDayObj(a, b, newerWins)),
+      days: mergeDayMap(lf.days, rf.days, (a, b) => mergeFitnessDay(a, b, newerWins)),
       todos: unionById(lf.todos, rf.todos, newerWins),
     },
     money: {
