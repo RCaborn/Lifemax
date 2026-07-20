@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Menu, Cloud, Download, Upload, RotateCcw, Sparkles, ArrowRight, Flag } from 'lucide-react'
+import { Menu, HardDrive, Download, Upload, RotateCcw, Sparkles, ArrowRight, Flag } from 'lucide-react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
-import SyncModal from './components/SyncModal.jsx'
+import DataModal from './components/DataModal.jsx'
 import Modal from './components/Modal.jsx'
 import { BENTO_MAP } from './lib/domains.js'
 import { useStore } from './lib/store.jsx'
@@ -13,14 +13,14 @@ const REVIEW_DISMISS_KEY = 'lifemax.reviewPromptDismissed'
 const CAMPAIGN_DISMISS_KEY = 'lifemax.campaignPromptDismissed'
 
 export default function App() {
-  const { state, actions, sync } = useStore()
+  const { state, actions } = useStore()
   const [expandedId, setExpandedId] = useState(() => {
     const h = location.hash.replace('#', '')
     return BENTO_MAP[h] ? h : null
   })
   const [navOpen, setNavOpen] = useState(false)
   const [installEvent, setInstallEvent] = useState(null)
-  const [showSync, setShowSync] = useState(false)
+  const [showData, setShowData] = useState(false)
   const fileRef = useRef(null)
 
   // Sunday-evening → Monday weekly-review nudge. Shows once per app open within
@@ -138,14 +138,8 @@ export default function App() {
                 <Download size={13} /> Install
               </button>
             )}
-            <button onClick={() => setShowSync(true)} className="btn-ghost" title="Cloud sync across devices">
-              <span className="relative flex items-center gap-1.5">
-                <Cloud size={13} /> {sync.session ? 'Synced' : 'Sync'}
-                {sync.configured && (
-                  <span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full"
-                    style={{ background: sync.status === 'error' ? '#f43f5e' : sync.status === 'syncing' ? '#38bdf8' : sync.session ? '#22c55e' : '#eab308' }} />
-                )}
-              </span>
+            <button onClick={() => setShowData(true)} className="btn-ghost flex items-center gap-1.5" title="Your data & backups">
+              <HardDrive size={13} /> Data
             </button>
             <button onClick={exportData} className="btn-ghost flex items-center gap-1.5" title="Download a backup"><Download size={13} /> Export</button>
             <button onClick={() => fileRef.current?.click()} className="btn-ghost flex items-center gap-1.5" title="Restore from backup"><Upload size={13} /> Import</button>
@@ -165,7 +159,10 @@ export default function App() {
         </footer>
       </div>
 
-      {showSync && <SyncModal onClose={() => setShowSync(false)} />}
+      {showData && (
+        <DataModal onClose={() => setShowData(false)} onExport={exportData}
+          onImportClick={() => fileRef.current?.click()} />
+      )}
 
       {showReviewPrompt && !showCampaignPrompt && (
         <Modal title="Weekly review" onClose={dismissReview}>

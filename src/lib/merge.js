@@ -1,11 +1,12 @@
 // Schema-aware union-merge of two whole Lifemax state blobs.
 //
-// Sync stores the entire state as one JSON blob per user. When two devices have
-// both edited, a naive "last write wins" overwrite throws away one side's work.
-// This merge instead UNIONS everything additive — day-keyed logs and id-keyed
-// lists — so neither device loses an entry. Only genuine same-record / same-field
-// clashes fall back to a coarse newer-blob-wins tiebreak (the `updatedAt` stamp
-// each blob carries).
+// Used when this device adopts a blob from elsewhere (a shared data file, an
+// imported backup from another machine). When two copies have both been edited,
+// a naive "last write wins" overwrite throws away one side's work. This merge
+// instead UNIONS everything additive — day-keyed logs and id-keyed lists — so
+// neither copy loses an entry. Only genuine same-record / same-field clashes
+// fall back to a coarse newer-blob-wins tiebreak (the `updatedAt` stamp each
+// blob carries).
 //
 // Accepted tradeoff: union-by-id resurrects a record deleted on one device but
 // still present on the other. For a personal tracker a reappearing row is far
@@ -65,11 +66,10 @@ function mergeDayObj(a = {}, b = {}, newerWins) {
   return out
 }
 
-// Fitness days get field-aware rules so the Garmin autopilot (or a second
-// device) can never beat a not-yet-pushed manual log via newer-blob-wins:
-// counts/steps take the max (both describe the same real day), stretch is a
-// sticky true. Wake keeps the generic tiebreak — Garmin only ever fills empty
-// wakes, so a genuine wake conflict means two manual edits.
+// Fitness days get field-aware rules so a second copy of the data can never
+// beat a manual log via newer-blob-wins: counts/steps take the max (both
+// describe the same real day), stretch is a sticky true. Wake keeps the
+// generic tiebreak — a genuine wake conflict means two manual edits.
 function mergeFitnessDay(a = {}, b = {}, newerWins) {
   const out = mergeDayObj(a, b, newerWins)
   for (const k of ['steps', 'runs', 'workouts']) {

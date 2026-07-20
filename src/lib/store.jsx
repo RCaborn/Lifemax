@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
-import { mergeStates } from './merge.js'
 import { todayKey, weekKeyOf } from './dates.js'
 import { ICONS } from './icons.jsx'
-import * as sync from './sync.js'
+import { snapshotBackup, listBackups, restoreBackup } from './backup.js'
 
 const nowIso = () => new Date().toISOString()
 
@@ -131,16 +130,8 @@ export function StoreProvider({ children }) {
   const [state, setState] = useState(load)
   const timer = useRef(null)
 
-  // --- Cloud sync (optional) ---
-  const [session, setSession] = useState(null)
-  const [syncStatus, setSyncStatus] = useState(sync.isSyncConfigured() ? 'idle' : 'off') // off|idle|syncing|error
-  const stateRef = useRef(state)
-  const applyingRemote = useRef(false) // suppresses the echo push when we adopt a remote blob
-  const dirty = useRef(false) // true once this device has un-pushed local edits
-  const pushTimer = useRef(null)
-  useEffect(() => { stateRef.current = state }, [state])
-
-  // Local cache — always on, keeps the app instant + offline-capable.
+  // Local persistence — the single source of truth. Debounced so rapid edits
+  // (steppers, typing) collapse into one write.
   useEffect(() => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -149,101 +140,34 @@ export function StoreProvider({ children }) {
     return () => clearTimeout(timer.current)
   }, [state])
 
-  // Once-a-day local safety snapshot (the restore list lives in SyncModal).
-  useEffect(() => { sync.snapshotBackup(stateRef.current, { dailyOnly: true }) }, [])
+  // Once-a-day local safety snapshot (the restore list lives in DataModal).
+  useEffect(() => { snapshotBackup(state, { dailyOnly: true }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pull the remote blob and MERGE it with local if it's newer than what we last
-  // saw. Merging (vs. replacing) means neither device's logs are ever dropped.
-  const pullAndMaybeAdopt = useCallback(async () => {
-    if (!sync.isSyncConfigured()) return
+  // One-time cleanup of keys left behind by the retired cloud-sync layer.
+  useEffect(() => {
     try {
-      setSyncStatus('syncing')
-      const remote = await sync.pullState()
-      if (remote) {
-        if (remote.updatedAt !== sync.getLastRemoteAt() && remote.data?.version === 2) {
-          sync.snapshotBackup(stateRef.current) // safety net before we change local state
-          const merged = mergeStates(stateRef.current, migrate(structuredClone(remote.data)))
-          // Pure adopt (no un-synced local edits) → suppress the echo push. If we
-          // DO have local edits, leave dirty set so the push effect propagates the
-          // merged superset back up (guarded, with conflict retry).
-          if (!dirty.current) applyingRemote.current = true
-          setState(merged)
-          stateRef.current = merged
-          sync.setLastRemoteAt(remote.updatedAt)
-        }
-      } else {
-        // First device for this account — seed the remote with what we have.
-        const res = await sync.pushState(stateRef.current)
-        if (res?.updatedAt) sync.setLastRemoteAt(res.updatedAt)
+      for (const k of ['lifemax.supabase.cfg', 'lifemax.supabase.auth', 'lifemax.sync.lastRemoteAt']) {
+        localStorage.removeItem(k)
       }
-      setSyncStatus('idle')
-    } catch { setSyncStatus('error') }
+    } catch { /* ignore */ }
   }, [])
 
-  // Push local edits up with optimistic concurrency. On a conflict (the remote
-  // advanced since we last synced) pull, merge, and retry — so a push can never
-  // clobber the other device's edits.
-  const pushNow = useCallback(async () => {
-    if (!session || !sync.isSyncConfigured()) return
-    try {
-      setSyncStatus('syncing')
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const res = await sync.pushState(stateRef.current, sync.getLastRemoteAt())
-        if (!res) break
-        if (res.updatedAt) { sync.setLastRemoteAt(res.updatedAt); dirty.current = false; break }
-        if (res.conflict) {
-          const remote = await sync.pullState()
-          if (!remote || remote.data?.version !== 2) break
-          sync.snapshotBackup(stateRef.current)
-          applyingRemote.current = true
-          const merged = mergeStates(stateRef.current, migrate(structuredClone(remote.data)))
-          setState(merged)
-          stateRef.current = merged
-          sync.setLastRemoteAt(remote.updatedAt)
-          // loop: re-push the merged superset
-        }
-      }
-      setSyncStatus('idle')
-    } catch { setSyncStatus('error') }
-  }, [session])
-
-  // Establish session, listen for auth changes, and re-pull on focus / reconnect.
-  useEffect(() => {
-    if (!sync.isSyncConfigured()) return
-    let cancelled = false
-    let unsub = () => {}
-    sync.getSession().then((s) => { if (!cancelled) { setSession(s); if (s) pullAndMaybeAdopt() } })
-    sync.onAuthChange((s) => { setSession(s); if (s) pullAndMaybeAdopt() })
-      .then((fn) => { if (cancelled) fn(); else unsub = fn })
-    const onWake = () => { if (sync.isSyncConfigured()) pullAndMaybeAdopt() }
-    window.addEventListener('focus', onWake)
-    window.addEventListener('online', onWake)
-    return () => { cancelled = true; unsub(); window.removeEventListener('focus', onWake); window.removeEventListener('online', onWake) }
-  }, [pullAndMaybeAdopt])
-
-  // Push local edits up (debounced). Skips the render that came from adopting a
-  // remote blob, and only fires when there are genuine local edits to send.
-  useEffect(() => {
-    if (applyingRemote.current) { applyingRemote.current = false; return }
-    if (!session || !sync.isSyncConfigured()) return
-    if (!dirty.current) return
-    clearTimeout(pushTimer.current)
-    pushTimer.current = setTimeout(() => { pushNow() }, 1200)
-    return () => clearTimeout(pushTimer.current)
-  }, [state, session, pushNow])
-
   const update = useCallback((fn) => {
-    dirty.current = true
     setState((s) => { const d = structuredClone(s); fn(d); d.updatedAt = nowIso(); return d })
   }, [])
 
   const actions = {
     update,
     setProfileName: (name) => update((d) => { d.profile.name = name }),
-    resetAll: () => { dirty.current = true; setState(() => { const d = buildSeedState(); d.updatedAt = nowIso(); return d }) },
+    resetAll: () => {
+      snapshotBackup(state) // last-chance recovery point before wiping
+      setState(() => { const d = buildSeedState(); d.updatedAt = nowIso(); return d })
+    },
     importState: (obj) => {
-      if (obj && obj.version === 2) { dirty.current = true; setState(() => { const d = migrate(obj); d.updatedAt = nowIso(); return d }) }
-      else alert('That file is not a Lifemax v2 backup.')
+      if (obj && obj.version === 2) {
+        snapshotBackup(state) // recovery point before the import replaces everything
+        setState(() => { const d = migrate(obj); d.updatedAt = nowIso(); return d })
+      } else alert('That file is not a Lifemax v2 backup.')
     },
 
     // ---------- Stakes ----------
@@ -471,24 +395,15 @@ export function StoreProvider({ children }) {
     deleteBusinessTodo: (id) => update((d) => { d.business.todos = d.business.todos.filter((x) => x.id !== id) }),
   }
 
-  const syncApi = {
-    configured: sync.isSyncConfigured(),
-    configSource: sync.getSyncConfig()?.source || null,
-    session,
-    email: session?.user?.email || null,
-    status: session ? syncStatus : (sync.isSyncConfigured() ? 'idle' : 'off'),
-    saveConfig: (url, key) => { sync.setSyncConfig(url, key); setSyncStatus('idle') },
-    clearConfig: () => { sync.clearSyncConfig(); setSession(null); setSyncStatus('off') },
-    sendCode: (email) => sync.sendCode(email),
-    verifyCode: async (email, code) => { const s = await sync.verifyCode(email, code); setSession(s); await pullAndMaybeAdopt(); return s },
-    signOut: async () => { await sync.signOut(); setSession(null); setSyncStatus(sync.isSyncConfigured() ? 'idle' : 'off') },
-    syncNow: () => pullAndMaybeAdopt(),
-    // Local rolling backups (recovery UI in SyncModal).
-    listBackups: () => sync.listBackups(),
-    restoreBackup: (key) => { const data = sync.restoreBackup(key); if (data) actions.importState(data); return !!data },
+  // Local rolling backups (recovery UI in DataModal). Restore routes through
+  // importState, which snapshots the current state first — so even a restore
+  // is itself undoable.
+  const backups = {
+    list: () => listBackups(),
+    restore: (key) => { const data = restoreBackup(key); if (data) actions.importState(data); return !!data },
   }
 
-  return <StoreCtx.Provider value={{ state, actions, sync: syncApi }}>{children}</StoreCtx.Provider>
+  return <StoreCtx.Provider value={{ state, actions, backups }}>{children}</StoreCtx.Provider>
 }
 
 export function useStore() {
