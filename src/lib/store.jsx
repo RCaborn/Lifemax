@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { buildSeedState } from './seed.js'
+import { mergeStates } from './merge.js'
 import { todayKey, weekKeyOf } from './dates.js'
 import { ICONS } from './icons.jsx'
 import { snapshotBackup, listBackups, restoreBackup } from './backup.js'
+import * as fs from './filesync.js'
 
 const nowIso = () => new Date().toISOString()
 
@@ -129,6 +131,8 @@ function load() {
 export function StoreProvider({ children }) {
   const [state, setState] = useState(load)
   const timer = useRef(null)
+  const stateRef = useRef(state)
+  useEffect(() => { stateRef.current = state }, [state])
 
   // Local persistence — the single source of truth. Debounced so rapid edits
   // (steppers, typing) collapse into one write.
@@ -151,6 +155,72 @@ export function StoreProvider({ children }) {
       }
     } catch { /* ignore */ }
   }, [])
+
+  // --- Save-to-file (optional mirror; localStorage stays primary) -----------
+  // The handle lives in a ref + IndexedDB only — never in state (state is
+  // structuredClone'd and JSON'd; a live handle would break both).
+  const handleRef = useRef(null)
+  const [fileStatus, setFileStatus] = useState('off') // off|linked|needs-permission|error
+  const fileTimer = useRef(null)
+  const skipNextWrite = useRef(false) // adoption already wrote the file — skip the echo
+
+  // Merge the file's blob into local state if it differs. Snapshot first, then
+  // write the merged superset back so both sides converge on one updatedAt —
+  // identical stamps make the next adopt a no-op (no write→read loop).
+  const adoptFromFile = useCallback(async (handle) => {
+    try {
+      const fileData = await fs.readFile(handle)
+      if (!fileData) { // empty/new file — seed it with what we have
+        await fs.writeFile(handle, stateRef.current)
+        return
+      }
+      if (fileData.version !== 2 || !fileData.updatedAt) return // not a Lifemax blob — leave it alone
+      if (fileData.updatedAt === stateRef.current.updatedAt) return
+      snapshotBackup(stateRef.current)
+      const merged = mergeStates(stateRef.current, migrate(structuredClone(fileData)))
+      skipNextWrite.current = true
+      setState(merged)
+      stateRef.current = merged
+      await fs.writeFile(handle, merged)
+    } catch { setFileStatus('error') }
+  }, [])
+
+  // On launch: recover the saved handle. Silent re-adopt when permission
+  // survived; otherwise surface a "reconnect" state (browsers drop write
+  // permission between sessions and re-asking needs a user gesture).
+  useEffect(() => {
+    if (!fs.isSupported()) return
+    let cancelled = false
+    fs.getHandle().then(async (handle) => {
+      if (cancelled || !handle) return
+      handleRef.current = handle
+      const perm = await fs.permissionState(handle)
+      if (perm === 'granted') { setFileStatus('linked'); adoptFromFile(handle) }
+      else setFileStatus('needs-permission')
+    })
+    return () => { cancelled = true }
+  }, [adoptFromFile])
+
+  // Re-adopt when the tab wakes up — that's when another device may have
+  // advanced the shared file.
+  useEffect(() => {
+    if (!fs.isSupported()) return
+    const onWake = () => { if (handleRef.current && fileStatus === 'linked') adoptFromFile(handleRef.current) }
+    window.addEventListener('focus', onWake)
+    return () => window.removeEventListener('focus', onWake)
+  }, [fileStatus, adoptFromFile])
+
+  // Write-through: mirror every state change to the file, debounced. Failures
+  // degrade silently to an error dot — localStorage still has everything.
+  useEffect(() => {
+    if (fileStatus !== 'linked' || !handleRef.current) return
+    if (skipNextWrite.current) { skipNextWrite.current = false; return }
+    clearTimeout(fileTimer.current)
+    fileTimer.current = setTimeout(() => {
+      fs.writeFile(handleRef.current, stateRef.current).catch(() => setFileStatus('error'))
+    }, 2000)
+    return () => clearTimeout(fileTimer.current)
+  }, [state, fileStatus])
 
   const update = useCallback((fn) => {
     setState((s) => { const d = structuredClone(s); fn(d); d.updatedAt = nowIso(); return d })
@@ -403,7 +473,35 @@ export function StoreProvider({ children }) {
     restore: (key) => { const data = restoreBackup(key); if (data) actions.importState(data); return !!data },
   }
 
-  return <StoreCtx.Provider value={{ state, actions, backups }}>{children}</StoreCtx.Provider>
+  // Save-to-file controls (DataModal). link/reconnect run inside a click —
+  // the pickers and permission prompt require a user gesture.
+  const file = {
+    supported: fs.isSupported(),
+    status: fileStatus,
+    linkNew: async () => {
+      const handle = await fs.linkNewFile()
+      handleRef.current = handle
+      await fs.writeFile(handle, stateRef.current)
+      setFileStatus('linked')
+    },
+    linkExisting: async () => {
+      const handle = await fs.linkExistingFile()
+      if (!(await fs.requestPermission(handle))) throw new Error('Write access was declined.')
+      handleRef.current = handle
+      setFileStatus('linked')
+      await adoptFromFile(handle)
+    },
+    reconnect: async () => {
+      const handle = handleRef.current || (await fs.getHandle())
+      if (!handle) { setFileStatus('off'); return }
+      handleRef.current = handle
+      if (await fs.requestPermission(handle)) { setFileStatus('linked'); await adoptFromFile(handle) }
+    },
+    unlink: async () => { await fs.unlink(); handleRef.current = null; setFileStatus('off') },
+    syncNow: () => { if (handleRef.current && fileStatus === 'linked') return adoptFromFile(handleRef.current) },
+  }
+
+  return <StoreCtx.Provider value={{ state, actions, backups, file }}>{children}</StoreCtx.Provider>
 }
 
 export function useStore() {

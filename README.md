@@ -66,6 +66,7 @@ VITE_BASE=/ npm run build
 - Everything is stored in your browser's **localStorage** — private, instant, offline.
 - **Rolling backups**: the app snapshots your data daily and before anything destructive (import, restore, reset). Restore any of the last 7 snapshots from the **Data** modal.
 - **Export / Import**: download your entire history as one JSON file; import it on any other device. Do this occasionally — clearing browser data wipes localStorage.
+- **Data file (Chrome/Edge)**: from the **Data** modal, link a `lifemax-data.json` file and the app mirrors every change into it live. Keep that file in Dropbox/iCloud/Syncthing and open Lifemax on another machine pointing at the same file — changes are **merged** (union of both sides' logs), not overwritten. Best used one device at a time.
 - **No env vars, no keys, no server.** The optional AI coach uses your own Anthropic API key, which is stored only in your browser's localStorage and sent only to Anthropic, directly from your browser.
 
 ---

@@ -13,7 +13,7 @@ const REVIEW_DISMISS_KEY = 'lifemax.reviewPromptDismissed'
 const CAMPAIGN_DISMISS_KEY = 'lifemax.campaignPromptDismissed'
 
 export default function App() {
-  const { state, actions } = useStore()
+  const { state, actions, file } = useStore()
   const [expandedId, setExpandedId] = useState(() => {
     const h = location.hash.replace('#', '')
     return BENTO_MAP[h] ? h : null
@@ -138,8 +138,14 @@ export default function App() {
                 <Download size={13} /> Install
               </button>
             )}
-            <button onClick={() => setShowData(true)} className="btn-ghost flex items-center gap-1.5" title="Your data & backups">
-              <HardDrive size={13} /> Data
+            <button onClick={() => setShowData(true)} className="btn-ghost" title="Your data & backups">
+              <span className="relative flex items-center gap-1.5">
+                <HardDrive size={13} /> Data
+                {file.status !== 'off' && (
+                  <span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full"
+                    style={{ background: file.status === 'error' ? '#f43f5e' : file.status === 'needs-permission' ? '#eab308' : '#22c55e' }} />
+                )}
+              </span>
             </button>
             <button onClick={exportData} className="btn-ghost flex items-center gap-1.5" title="Download a backup"><Download size={13} /> Export</button>
             <button onClick={() => fileRef.current?.click()} className="btn-ghost flex items-center gap-1.5" title="Restore from backup"><Upload size={13} /> Import</button>

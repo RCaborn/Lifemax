@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, Upload, History, HardDrive, Sparkles } from 'lucide-react'
+import { Download, Upload, History, HardDrive, Sparkles, FolderSync } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { buildDemoState } from '../lib/demo.js'
 import { useToast } from './Toast.jsx'
@@ -10,7 +10,7 @@ const MONO = 'var(--font-mono)'
 // Your data, in one place: where it lives, how to get it out, and how to roll
 // back if something ever looks wrong.
 export default function DataModal({ onClose, onExport, onImportClick }) {
-  const { actions, backups } = useStore()
+  const { actions, backups, file } = useStore()
   const toast = useToast()
 
   const loadDemo = () => {
@@ -39,6 +39,8 @@ export default function DataModal({ onClose, onExport, onImportClick }) {
           </div>
         </div>
 
+        <FileSection file={file} toast={toast} />
+
         <BackupList backups={backups} toast={toast} onClose={onClose} />
 
         <button onClick={loadDemo} className="flex w-full items-center justify-center gap-1.5 rounded border border-white/10 py-2 text-[13px] text-slate-500 transition hover:border-white/25 hover:text-slate-300">
@@ -46,6 +48,66 @@ export default function DataModal({ onClose, onExport, onImportClick }) {
         </button>
       </div>
     </Modal>
+  )
+}
+
+// Live mirror of your data to one JSON file. Put the file in a folder that
+// already syncs (Dropbox / iCloud / Syncthing) and your data follows you
+// across devices — merged, not overwritten, when both sides changed.
+function FileSection({ file, toast }) {
+  const [busy, setBusy] = useState(false)
+  const run = (fn, okMsg) => async () => {
+    setBusy(true)
+    try { await fn(); if (okMsg) toast({ icon: 'FolderSync', title: okMsg, color: '#22c55e' }) }
+    catch (e) { if (e?.name !== 'AbortError') toast({ icon: 'TriangleAlert', title: 'File link failed', sub: e?.message || '', color: '#f43f5e' }) }
+    finally { setBusy(false) }
+  }
+
+  const STATUS = {
+    linked: { label: 'Mirroring to your file', color: '#22c55e' },
+    'needs-permission': { label: 'Reconnect needed (browser reset file access)', color: '#eab308' },
+    error: { label: 'Last write failed — data is still safe locally', color: '#f43f5e' },
+  }[file.status]
+
+  return (
+    <div className="rounded-xl bg-white/[0.03] p-4">
+      <div className="op-label flex items-center gap-1.5"><FolderSync size={11} /> Data file</div>
+      {!file.supported ? (
+        <p className="mt-1 text-[11px] text-slate-600">
+          Your browser can’t do live file saving (Chrome and Edge can). Use Export / Import above to move data between devices.
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-[13px] text-slate-500">
+            Keep a live copy of your data in one JSON file. Point it at a synced folder
+            (Dropbox, iCloud, Syncthing…) to carry your data across devices — best used one device at a time.
+          </p>
+          {STATUS && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full" style={{ background: STATUS.color }} />
+              <span className="text-[13px]" style={{ color: STATUS.color }}>{STATUS.label}</span>
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {file.status === 'off' && (
+              <>
+                <button disabled={busy} onClick={run(file.linkNew, 'Data file created')} className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50">Create data file</button>
+                <button disabled={busy} onClick={run(file.linkExisting, 'Data file linked')} className="flex-1 rounded border border-white/20 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50">Link existing file</button>
+              </>
+            )}
+            {file.status === 'needs-permission' && (
+              <button disabled={busy} onClick={run(file.reconnect, 'Data file reconnected')} className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50">Reconnect data file</button>
+            )}
+            {(file.status === 'linked' || file.status === 'error') && (
+              <>
+                <button disabled={busy} onClick={run(file.syncNow, 'Checked the file')} className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50">Check file now</button>
+                <button disabled={busy} onClick={run(file.unlink)} className="flex-1 rounded border border-white/20 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50">Unlink</button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
