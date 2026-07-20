@@ -70,7 +70,7 @@ export default function Overview({ expandedId, onExpand }) {
                     <span className="font-semibold" style={{ color: grade.color }}>{grade.label}</span>
                     <PulseDelta delta={pulseDelta} />
                   </div>
-                  <div className="text-sm text-slate-500">{summary(ls)}</div>
+                  <div className="text-sm text-slate-500">{summary(ls, state)}</div>
                 </div>
               </div>
               {isEnabled(state, 'vices') && (
@@ -338,12 +338,13 @@ function FocusWidget({ onExpand }) {
   )
 }
 
-function summary(ls) {
+function summary(ls, state) {
   const p = pct(ls.score)
   const weakest = [...ls.domains].sort((a, b) => a.score - b.score)[0]
+  if (!weakest) return 'No scored modules enabled — turn some on in Modules.'
   if (p >= 90) return 'On fire this week. Stay consistent.'
-  if (p >= 65) return `Strong week. Biggest lever: ${moduleById(weakest.id)?.name || weakest.id}.`
-  return `Pick one win today — ${moduleById(weakest.id)?.name || weakest.id} needs the most attention.`
+  if (p >= 65) return `Strong week. Biggest lever: ${moduleById(state, weakest.id)?.name || weakest.id}.`
+  return `Pick one win today — ${moduleById(state, weakest.id)?.name || weakest.id} needs the most attention.`
 }
 
 

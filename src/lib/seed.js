@@ -29,6 +29,7 @@ export function buildSeedState() {
     focus: seedFocus(),
     coach: seedCoach(),
     targetHistory: [],
+    customModules: [], // user-defined trackers (data-defined modules)
     preferences: seedPreferences(),
   }
   // Every module seeds its own slice — a module folder fully owns its data.

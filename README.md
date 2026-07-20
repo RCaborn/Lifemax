@@ -19,6 +19,8 @@
 - **🎯 Contracts** — commitment stakes: put something on the line, link it to a target, and Lifemax auto-judges the outcome.
 - **📓 Field notes** — one honest minute a day: mood, today's win, tomorrow's plan.
 - **🤖 AI coach** *(optional)* — plug in your own Anthropic API key and Claude reads your week, gives a morning/evening briefing, runs your weekly review and monthly debrief interactively.
+- **🧩 Modular by design** — every feature above is a module. Switch modules on/off (data kept), reorder them, tune how much each weighs in your Pulse, and arrange the HQ widgets — all from the **Modules** page.
+- **🛠️ Build your own trackers** — create custom modules in-app, no code: name it, add metrics (counters, numbers, checkboxes), set weekly targets and XP. They score, earn and chart exactly like built-ins. Developers can go further with code modules — see [docs/MODULES.md](docs/MODULES.md).
 - **Installable PWA** — pin it to your dock/taskbar; works fully offline.
 
 Want to see it alive? Open the app → **Data** (top-right) → **Load demo data** for six weeks of sample activity (your real data is snapshotted first).
@@ -75,10 +77,11 @@ VITE_BASE=/ npm run build
 
 React 18 + Vite · Tailwind CSS v4 (CSS-first config) · Recharts · vite-plugin-pwa. Plain JavaScript, no TypeScript.
 
-- **One state blob.** The whole app state is a single versioned object (see `buildSeedState()` in `src/lib/seed.js`), owned by `src/lib/store.jsx` (React context + ~70 action creators), persisted to localStorage with debounce, migrated on load.
-- **Derived, not stored.** Scores (`src/lib/score.js`) and the XP economy (`src/lib/vices.js`) are pure functions computed from your logged activity on every render — editing history recalculates everything cleanly.
-- **Feature pages** live in `src/pages/`, shared UI in `src/components/`, logic in `src/lib/`.
-- **Module system in progress:** features are being carved into self-contained, toggleable modules behind a registry — enabling custom, user-defined trackers. Watch this space (or `docs/MODULES.md` once it lands).
+- **Everything is a module.** Each feature lives in `src/modules/<id>/` and declares its contributions in a manifest — page, collapsed summary, HQ widget, Pulse scorer, XP rules, AI-digest fragment, stake targets, settings card. The registry (`src/lib/registry.js`) composes whatever is registered; adding a feature is a folder plus one line in `src/modules/index.js`. Full guide: [docs/MODULES.md](docs/MODULES.md).
+- **One state blob.** The whole app state is a single versioned object owned by `src/lib/store.jsx` (React context + actions), persisted to localStorage with debounce and migrated on load — old exports import forever. Modules seed and migrate their own slices.
+- **Derived, not stored.** The Pulse (`src/lib/score.js`) and the XP economy (`src/lib/xp.js`) are engines that fold over module contributions on every render — editing history recalculates everything cleanly, and user preferences (enable/disable/order/weights) reshape the numbers instantly.
+- **Custom trackers are data-defined modules**: definitions live in your state blob and are bridged into real manifests at runtime (`src/modules/custom.jsx`) — so they ride through the same registry, scoring and XP paths as built-ins.
+- **Tests**: `npm test` (vitest) covers migration compatibility, the two-copy merge, scoring under preferences, and the registry.
 
 ---
 

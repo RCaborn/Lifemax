@@ -61,7 +61,7 @@ export function buildDigest(state, slot) {
   const grade = gradeFor(ls.score)
   const domains = ls.domains
     .filter((d) => d.active !== false)
-    .map((d) => ({ name: moduleById(d.id)?.name || d.id, score: pct(Math.min(1, d.score / 0.8)) }))
+    .map((d) => ({ name: moduleById(state, d.id)?.name || d.id, score: pct(Math.min(1, d.score / 0.8)) }))
     .sort((a, b) => b.score - a.score)
 
   const days = state.journal?.days || {}

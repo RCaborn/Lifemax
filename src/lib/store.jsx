@@ -57,7 +57,8 @@ export function migrate(state) {
   if (!state.coach.reports) state.coach.reports = {}
   if (state.coach.reviewDraft === undefined) state.coach.reviewDraft = null
   if (state.coach.campaignDraft === undefined) state.coach.campaignDraft = null
-  // v3: module composition preferences.
+  // v3: custom trackers + module composition preferences.
+  if (!state.customModules) state.customModules = []
   if (!state.preferences) state.preferences = {}
   if (!state.preferences.modules) state.preferences.modules = { order: null, disabled: [], weights: {} }
   if (!state.preferences.modules.disabled) state.preferences.modules.disabled = []
@@ -236,6 +237,42 @@ export function StoreProvider({ children }) {
       ;[ids[i], ids[j]] = [ids[j], ids[i]]
       const w = ((d.preferences ||= {}).widgets ||= { order: null, hidden: [] })
       w.order = ids
+    }),
+
+    // ---------- Custom trackers (data-defined modules) ----------
+    addCustomModule: (def) => update((d) => {
+      ;(d.customModules ||= []).push({
+        id: 'custom_' + rid().slice(0, 8),
+        name: 'New tracker', icon: 'Zap', color: '#38bdf8', tagline: '',
+        scored: true, createdAt: todayKey(), metrics: [], days: {},
+        ...def,
+      })
+    }),
+    // Metric keys stay stable across edits — day logs are keyed by them.
+    updateCustomModule: (id, patch) => update((d) => {
+      const t = (d.customModules || []).find((x) => x.id === id)
+      if (t) Object.assign(t, patch)
+    }),
+    deleteCustomModule: (id) => update((d) => {
+      d.customModules = (d.customModules || []).filter((x) => x.id !== id)
+      // Drop it from preferences too so nothing dangles.
+      const mods = d.preferences?.modules
+      if (mods) {
+        mods.disabled = (mods.disabled || []).filter((x) => x !== id)
+        if (mods.order) mods.order = mods.order.filter((x) => x !== id)
+        if (mods.weights) delete mods.weights[id]
+      }
+    }),
+    // Prune a day back to nothing when every metric resolves empty — a zeroed
+    // entry must never activate the tracker or drag the Pulse.
+    setCustomDay: (moduleId, dateKey, patch) => update((d) => {
+      const t = (d.customModules || []).find((x) => x.id === moduleId)
+      if (!t) return
+      const days = (t.days ||= {})
+      const next = { ...(days[dateKey] || {}), ...patch }
+      const hasAnything = Object.values(next).some((v) => v === true || (Number(v) || 0) > 0)
+      if (hasAnything) days[dateKey] = next
+      else delete days[dateKey]
     }),
 
     // ---------- Generic module todos (state[moduleId].todos) ----------

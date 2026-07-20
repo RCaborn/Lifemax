@@ -20,7 +20,7 @@ export default function Targets() {
     <div className="space-y-6">
       <Header ls={ls} grade={grade} />
 
-      <DomainScoreBars ls={ls} />
+      <DomainScoreBars ls={ls} state={state} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {cards.map((m) => (
@@ -55,13 +55,13 @@ function Header({ ls, grade }) {
   )
 }
 
-function DomainScoreBars({ ls }) {
+function DomainScoreBars({ ls, state }) {
   return (
     <Card>
       <SectionTitle>Live domain scores</SectionTitle>
       <div className="space-y-2.5">
         {ls.domains.map((d) => {
-          const meta = moduleById(d.id)
+          const meta = moduleById(state, d.id)
           if (!meta) return null
           return (
             <div key={d.id} className="flex items-center gap-3">

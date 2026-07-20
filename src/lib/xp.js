@@ -52,7 +52,7 @@ export function earnLabels() {
 export function earnedEvents(state) {
   const rates = ratesOf(state)
   const out = []
-  for (const m of allModules()) {
+  for (const m of allModules(state)) {
     if (m.xp?.events) out.push(...m.xp.events(state, rates))
   }
   out.sort((a, b) => (a.date < b.date ? 1 : -1))
@@ -112,6 +112,12 @@ export function fullLedger(state) {
       const item = qwMap[e.source.slice(3)]
       label = item?.name || 'Quick win'
       icon = item?.emoji || 'Zap'
+    } else if (e.source.startsWith('cm_')) {
+      // cm_<trackerId>_<metricKey> — resolve against the tracker definition.
+      const def = (state.customModules || []).find((d) => e.source.startsWith(`cm_${d.id}_`))
+      const metric = def?.metrics?.find((m) => e.source === `cm_${def.id}_${m.key}`)
+      label = def ? `${def.name}${metric ? ` · ${metric.label}` : ''}` + (e.qty > 1 ? ` ×${e.qty}` : '') : e.source
+      icon = def?.icon || 'Zap'
     } else {
       label = (labels[e.source]?.label || e.source) + (e.qty > 1 ? ` ×${e.qty}` : '')
       icon = labels[e.source]?.icon || 'Sparkles'

@@ -219,6 +219,14 @@ export function mergeStates(local, remote) {
       campaignDraft: pick(local.coach?.campaignDraft, remote.coach?.campaignDraft, newerWins, emptySetting),
     },
     targetHistory: mergeTargetHistory(local.targetHistory, remote.targetHistory, newerWins),
+    // Custom trackers: union by id; a tracker on both sides keeps the newer
+    // definition (name/metrics are settings-like) but UNIONS its day logs so
+    // neither device's entries are lost.
+    customModules: unionById(local.customModules, remote.customModules, newerWins, (a, b, nw) => ({
+      ...(nw ? a : b),
+      ...(nw ? b : a),
+      days: mergeDayMap(a.days, b.days, (x, y) => mergeDayObj(x, y, nw)),
+    })),
     // Module composition preferences — order/disabled/weights are settings-like:
     // real values beat missing ones, newer blob breaks true conflicts.
     preferences: {

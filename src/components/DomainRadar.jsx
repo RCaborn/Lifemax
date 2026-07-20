@@ -28,7 +28,7 @@ export default function DomainRadar({ ls }) {
     const prevById = Object.fromEntries(prev.domains.map((d) => [d.id, d]))
 
     const data = ls.domains.map((d) => ({
-      name: moduleById(d.id)?.name || d.id,
+      name: moduleById(state, d.id)?.name || d.id,
       value: domainScoreScaled(d.score),
     }))
     const deltas = cur.domains
@@ -62,8 +62,8 @@ export default function DomainRadar({ ls }) {
       <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         {deltas.map(({ id, delta }) => (
           <span key={id} className="flex items-center gap-1 text-[11px]" style={{ fontFamily: MONO }}
-            title={`${moduleById(id)?.name || id}: ${delta > 0 ? '+' : ''}${delta} vs last week`}>
-            <span className="text-slate-500"><ItemIcon icon={moduleById(id)?.icon} size={11} /></span>
+            title={`${moduleById(state, id)?.name || id}: ${delta > 0 ? '+' : ''}${delta} vs last week`}>
+            <span className="text-slate-500"><ItemIcon icon={moduleById(state, id)?.icon} size={11} /></span>
             <TrendArrow delta={delta} />
           </span>
         ))}
