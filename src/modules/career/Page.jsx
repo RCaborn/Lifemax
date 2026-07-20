@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
-import { useStore } from '../lib/store.jsx'
-import { DOMAIN_MAP } from '../lib/domains.js'
-import { careerScore } from '../lib/score.js'
-import { thisMonth, daysUntil } from '../lib/dates.js'
-import { pct } from '../lib/format.js'
-import ProgressRing from '../components/ProgressRing.jsx'
-import MonthNav from '../components/MonthNav.jsx'
-import { Card, SectionTitle, StatTile, ScoreBars } from '../components/ui.jsx'
-import { ItemIcon } from '../lib/icons.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { DOMAIN_MAP } from '../../lib/domains.js'
+import { careerScore } from '../../lib/score.js'
+import { thisMonth, daysUntil } from '../../lib/dates.js'
+import { pct } from '../../lib/format.js'
+import ProgressRing from '../../components/ProgressRing.jsx'
+import MonthNav from '../../components/MonthNav.jsx'
+import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
+import { ItemIcon } from '../../lib/icons.jsx'
 
 const C = DOMAIN_MAP.career
 const STATUS = {

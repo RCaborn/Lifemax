@@ -1,21 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useStore } from '../lib/store.jsx'
-import { useToast } from '../components/Toast.jsx'
-import { earnRate } from '../lib/vices.js'
-import { toKey, todayKey, parseKey, lastNDays } from '../lib/dates.js'
-import { pct } from '../lib/format.js'
-import { Card, SectionTitle, StatTile } from '../components/ui.jsx'
-import { ItemIcon } from '../lib/icons.jsx'
-import ProgressRing from '../components/ProgressRing.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { useToast } from '../../components/Toast.jsx'
+import { earnRate } from '../../lib/vices.js'
+import { toKey, todayKey, parseKey, lastNDays } from '../../lib/dates.js'
+import { pct } from '../../lib/format.js'
+import { Card, SectionTitle, StatTile } from '../../components/ui.jsx'
+import { ItemIcon } from '../../lib/icons.jsx'
+import ProgressRing from '../../components/ProgressRing.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
+import { MOOD_COLORS, FOLLOW_OPTIONS, followThroughRate } from './lib.js'
+
 const C = { color: '#06b6d4', icon: 'Feather', name: 'Field Notes', tagline: 'One honest minute a day' }
-export const MOOD_COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#22c55e']
-export const FOLLOW_OPTIONS = [
-  { id: 'yes', label: 'Nailed it', color: '#22c55e' },
-  { id: 'partial', label: 'Partial', color: '#fbbf24' },
-  { id: 'no', label: "Didn't get to it", color: '#f87171' },
-]
 
 function shiftKey(key, delta) {
   const d = parseKey(key)
@@ -23,14 +19,6 @@ function shiftKey(key, delta) {
   return toKey(d)
 }
 function avg(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length }
-
-// % of closed "tomorrow" loops actually followed through (yes=1, partial=0.5, no=0).
-export function followThroughRate(days) {
-  const entries = Object.values(days).filter((d) => d?.followThrough)
-  if (!entries.length) return null
-  const score = entries.reduce((a, d) => a + (d.followThrough === 'yes' ? 1 : d.followThrough === 'partial' ? 0.5 : 0), 0)
-  return score / entries.length
-}
 
 function isActiveDay(state, k) {
   if ((state.quickWins?.days?.[k]?.length || 0) > 0) return true

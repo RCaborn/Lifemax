@@ -72,7 +72,7 @@ export function buildDemoState() {
       win: chance(0.6) ? pick(wins) : '',
       friction: chance(0.4) ? pick(frictions) : '',
       tomorrow: '',
-      followThrough: chance(0.6),
+      ...(chance(0.6) ? { followThrough: pick(['yes', 'yes', 'partial', 'no']) } : {}),
     }
   }
 

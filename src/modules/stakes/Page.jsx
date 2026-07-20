@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { CircleCheck, CircleX, X, Check, Hourglass, AlarmClock, Gift } from 'lucide-react'
-import { useStore } from '../lib/store.jsx'
-import { useToast } from '../components/Toast.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { useToast } from '../../components/Toast.jsx'
 import {
   LINK_TARGETS, evaluate, daysLeft, durationPresets, suggestPoints, STAKE_STATUS,
-} from '../lib/stakes.js'
-import { toKey } from '../lib/dates.js'
-import { pct } from '../lib/format.js'
-import { confetti } from '../lib/confetti.js'
-import Modal from '../components/Modal.jsx'
-import { Card, SectionTitle } from '../components/ui.jsx'
+} from '../../lib/stakes.js'
+import { toKey } from '../../lib/dates.js'
+import { pct } from '../../lib/format.js'
+import { confetti } from '../../lib/confetti.js'
+import Modal from '../../components/Modal.jsx'
+import { Card, SectionTitle } from '../../components/ui.jsx'
 
 const ACCENT = '#f43f5e'
 
