@@ -7,7 +7,7 @@ import {
   Gauge, AlarmClock, Timer, GraduationCap, Sparkles, TriangleAlert,
   Trophy, Skull, Banknote, Smartphone, Cloud, Mail, RefreshCw, Activity, CircleCheck,
   Briefcase, Lightbulb, Store, Globe, Code, Megaphone, Package, Coins, Camera,
-  Palette, Laptop, Gem, Building2, ShoppingCart, Feather, History,
+  Palette, Laptop, Gem, Building2, ShoppingCart, Feather, History, Blocks,
 } from 'lucide-react'
 
 // Icon names usable anywhere an "icon" is stored as data: quick wins, vices,
@@ -23,7 +23,26 @@ export const ICONS = {
   Gauge, AlarmClock, Timer, GraduationCap, Sparkles, TriangleAlert,
   Trophy, Skull, Banknote, Smartphone, Cloud, Mail, RefreshCw, Activity, CircleCheck,
   Briefcase, Lightbulb, Store, Globe, Code, Megaphone, Package, Coins, Camera,
-  Palette, Laptop, Gem, Building2, ShoppingCart, Feather, History,
+  Palette, Laptop, Gem, Building2, ShoppingCart, Feather, History, Blocks,
+}
+
+// Older saves stored literal emoji glyphs for quick wins / vices / projects.
+// Map the ones from past seed data (and other common picks) to their Lucide
+// icon equivalents so everything renders as a line icon, not a fallback emoji.
+const EMOJI_TO_ICON = {
+  '🧘': 'Flower2', '🚶': 'Footprints', '📚': 'BookOpen', '🔢': 'Calculator',
+  '🇪🇸': 'Languages', '🏊': 'Waves', '⛳': 'Flag', '🧹': 'Brush',
+  '🍺': 'Beer', '🍕': 'Pizza', '🎮': 'Gamepad2', '😴': 'BedDouble',
+  '🚀': 'Rocket', '💪': 'Dumbbell', '📖': 'BookOpen', '🏃': 'Activity',
+  '💰': 'Wallet', '💸': 'Banknote', '🎯': 'Target', '⭐': 'Star', '✨': 'Sparkles',
+  '☕': 'Coffee', '🎵': 'Music', '🧠': 'Brain', '❤️': 'Heart', '💧': 'Droplet',
+  '☀️': 'Sun', '🌙': 'Moon', '🎨': 'Palette', '💻': 'Laptop', '📷': 'Camera',
+  '🏢': 'Building2', '🛒': 'ShoppingCart', '📦': 'Package', '📣': 'Megaphone',
+  '💡': 'Lightbulb', '🏪': 'Store', '🌍': 'Globe', '💎': 'Gem',
+}
+export function fixIcon(value, fallback) {
+  if (value && ICONS[value]) return value
+  return EMOJI_TO_ICON[value] || fallback
 }
 
 export const VICE_ICONS = [

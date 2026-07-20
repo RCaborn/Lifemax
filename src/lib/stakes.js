@@ -3,15 +3,15 @@
 // when the period ends Lifemax checks whether you hit the linked target.
 
 import { parseKey, toKey, daysUntil } from './dates.js'
-import { allModules } from './registry.js'
+import { enabledModules } from './registry.js'
 
-// Targets a contract can be linked to — merged from every module's
+// Targets a contract can be linked to — merged from every ENABLED module's
 // `stakeTargets` contribution (src/modules/<id>/stakes.js). Each entry knows
 // how to measure actual performance over the contract window. A function (not
-// a const) so registry access stays lazy and module changes are picked up.
-export function linkTargets() {
+// a const) so registry access stays lazy and preference changes are picked up.
+export function linkTargets(state) {
   const out = { none: { label: 'Custom (I\'ll judge it myself)', unit: '', domain: null } }
-  for (const m of allModules()) Object.assign(out, m.stakeTargets || {})
+  for (const m of enabledModules(state)) Object.assign(out, m.stakeTargets || {})
   return out
 }
 
@@ -29,7 +29,7 @@ function dayKeysBetween(startKey, endKey) {
 // exists (its module was removed) degrades to self-judged rather than crashing.
 export function evaluate(contract, state, upToToday = true) {
   const target = Number(contract.targetValue) || 0
-  const targets = linkTargets()
+  const targets = linkTargets(state)
   const link = targets[contract.linkedTarget] || targets.none
   if (contract.linkedTarget === 'none' || !link.measure) {
     return { current: null, target, ratio: 0, met: null, detail: 'Self-judged' }

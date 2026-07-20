@@ -145,7 +145,7 @@ export function mergeStates(local, remote) {
   return {
     ...(newerWins ? local : remote),
     ...(newerWins ? remote : local),
-    version: 2,
+    version: 3,
     updatedAt: newerWins ? remote.updatedAt : local.updatedAt,
     profile: mergeSettings(local.profile, remote.profile, newerWins),
 
@@ -219,5 +219,11 @@ export function mergeStates(local, remote) {
       campaignDraft: pick(local.coach?.campaignDraft, remote.coach?.campaignDraft, newerWins, emptySetting),
     },
     targetHistory: mergeTargetHistory(local.targetHistory, remote.targetHistory, newerWins),
+    // Module composition preferences — order/disabled/weights are settings-like:
+    // real values beat missing ones, newer blob breaks true conflicts.
+    preferences: {
+      modules: mergeSettings(local.preferences?.modules, remote.preferences?.modules, newerWins),
+      widgets: mergeSettings(local.preferences?.widgets, remote.preferences?.widgets, newerWins),
+    },
   }
 }

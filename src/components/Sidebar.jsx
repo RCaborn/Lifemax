@@ -1,8 +1,10 @@
-import { BENTO_SECTIONS } from '../lib/domains.js'
+import { orderedSections } from '../lib/registry.js'
+import { useStore } from '../lib/store.jsx'
 import { ItemIcon } from '../lib/icons.jsx'
 
 export default function Sidebar({ current, onNavigate, open, onClose }) {
-  const items = [{ id: 'overview', name: 'HQ', icon: 'LayoutDashboard' }, ...BENTO_SECTIONS]
+  const { state } = useStore()
+  const items = [{ id: 'overview', name: 'HQ', icon: 'LayoutDashboard' }, ...orderedSections(state)]
 
   return (
     <>

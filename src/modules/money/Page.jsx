@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CreditCard, X } from 'lucide-react'
 import { useStore } from '../../lib/store.jsx'
-import { DOMAIN_MAP } from '../../lib/domains.js'
+import { meta } from './meta.js'
 import { moneyScore } from './score.js'
 import { thisMonth, monthLabel } from '../../lib/dates.js'
 import { money, pct } from '../../lib/format.js'
@@ -11,7 +11,7 @@ import Donut from '../../components/Donut.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
 import { ItemIcon } from '../../lib/icons.jsx'
 
-const C = DOMAIN_MAP.money
+const C = meta
 
 export default function Money() {
   const { state, actions } = useStore()

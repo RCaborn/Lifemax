@@ -4,6 +4,7 @@ import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import { toKey } from '../lib/dates.js'
 import { earnRate } from '../lib/xp.js'
+import { isEnabled } from '../lib/registry.js'
 import { Card, SectionTitle } from './ui.jsx'
 import { ItemIcon } from '../lib/icons.jsx'
 
@@ -11,6 +12,10 @@ export default function TodayPanel() {
   const { state, actions } = useStore()
   const toast = useToast()
   const [offset, setOffset] = useState(0)
+
+  const fitnessOn = isEnabled(state, 'fitness')
+  const studyOn = isEnabled(state, 'study')
+  if (!fitnessOn && !studyOn) return null
 
   const dateKey = (() => { const d = new Date(); d.setDate(d.getDate() + offset); return toKey(d) })()
   const f = state.fitness.days[dateKey] || { runs: 0, workouts: 0, stretch: false, steps: 0 }
@@ -45,7 +50,7 @@ export default function TodayPanel() {
       </SectionTitle>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Counter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => {
+        {fitnessOn && <><Counter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => {
           const prev = f.runs || 0
           setF({ runs: v })
           if (v > prev && offset === 0) toast({ icon: 'Activity', title: 'Run logged', sub: `+${earnRate(state, 'run')} XP`, color: '#f97316' })
@@ -69,9 +74,9 @@ export default function TodayPanel() {
         <TimeField icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => {
           setF({ wake: v })
           if (v && offset === 0) toast({ icon: 'AlarmClock', title: `Up at ${v}`, color: '#f97316' })
-        }} />
-        <Num icon="BookOpen" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
-        <Num icon="Timer" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" />
+        }} /></>}
+        {studyOn && <><Num icon="BookOpen" label="Pages read" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
+        <Num icon="Timer" label="Study hours" value={s.hours || 0} color="#a855f7" step="0.25" onChange={(v) => setS({ hours: v })} placeholder="0" /></>}
       </div>
       <p className="mt-3 text-[11px] text-slate-600">Logging here feeds your Pulse and earns XP automatically.</p>
     </Card>

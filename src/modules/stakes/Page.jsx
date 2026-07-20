@@ -108,7 +108,7 @@ function ContractCard({ c, state, onResolve, onDelete }) {
       {ev.met != null && (
         <div className="mt-3">
           <div className="mb-1 flex justify-between text-xs">
-            <span className="text-slate-400">{(linkTargets()[c.linkedTarget] || { label: c.linkedTarget, unit: '' }).label} · target {c.targetValue}{(linkTargets()[c.linkedTarget] || { unit: '' }).unit}</span>
+            <span className="text-slate-400">{(linkTargets(state)[c.linkedTarget] || { label: c.linkedTarget, unit: '' }).label} · target {c.targetValue}{(linkTargets(state)[c.linkedTarget] || { unit: '' }).unit}</span>
             <span className="text-slate-300">{ev.detail}</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -134,6 +134,7 @@ function ContractCard({ c, state, onResolve, onDelete }) {
 }
 
 function NewStakeModal({ onClose, onAdd }) {
+  const { state } = useStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [stake, setStake] = useState('')
@@ -166,11 +167,11 @@ function NewStakeModal({ onClose, onAdd }) {
 
         <label className="block"><span className="mb-1 block text-xs text-slate-400">Link to a target (auto-checked)</span>
           <select value={linkedTarget} onChange={(e) => setLinkedTarget(e.target.value)} className="field">
-            {Object.entries(linkTargets()).map(([k, v]) => <option key={k} value={k} className="bg-slate-900">{v.label}</option>)}
+            {Object.entries(linkTargets(state)).map(([k, v]) => <option key={k} value={k} className="bg-slate-900">{v.label}</option>)}
           </select>
         </label>
         {linked && (
-          <label className="block"><span className="mb-1 block text-xs text-slate-400">Target value ({(linkTargets()[linkedTarget]?.unit || '').trim() || 'amount'})</span>
+          <label className="block"><span className="mb-1 block text-xs text-slate-400">Target value ({(linkTargets(state)[linkedTarget]?.unit || '').trim() || 'amount'})</span>
             <input type="number" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="3" className="field" /></label>
         )}
 

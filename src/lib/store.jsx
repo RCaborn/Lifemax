@@ -2,35 +2,17 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { buildSeedState } from './seed.js'
 import { mergeStates } from './merge.js'
 import { todayKey, weekKeyOf } from './dates.js'
-import { ICONS } from './icons.jsx'
 import { snapshotBackup, listBackups, restoreBackup } from './backup.js'
-import { allModules } from './registry.js'
+import { allModules, orderedAllSections, widgetEntries } from './registry.js'
 import * as fs from './filesync.js'
 
 const nowIso = () => new Date().toISOString()
 
+// Key name predates v3 — kept so existing browsers keep their data; the blob's
+// own `version` field is what migrations key off.
 const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
 const rid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
-
-// Older saves stored literal emoji glyphs for quick wins / vices / projects.
-// Map the ones from past seed data (and other common picks) to their Lucide
-// icon equivalents so everything renders as a line icon, not a fallback emoji.
-const EMOJI_TO_ICON = {
-  '🧘': 'Flower2', '🚶': 'Footprints', '📚': 'BookOpen', '🔢': 'Calculator',
-  '🇪🇸': 'Languages', '🏊': 'Waves', '⛳': 'Flag', '🧹': 'Brush',
-  '🍺': 'Beer', '🍕': 'Pizza', '🎮': 'Gamepad2', '😴': 'BedDouble',
-  '🚀': 'Rocket', '💪': 'Dumbbell', '📖': 'BookOpen', '🏃': 'Activity',
-  '💰': 'Wallet', '💸': 'Banknote', '🎯': 'Target', '⭐': 'Star', '✨': 'Sparkles',
-  '☕': 'Coffee', '🎵': 'Music', '🧠': 'Brain', '❤️': 'Heart', '💧': 'Droplet',
-  '☀️': 'Sun', '🌙': 'Moon', '🎨': 'Palette', '💻': 'Laptop', '📷': 'Camera',
-  '🏢': 'Building2', '🛒': 'ShoppingCart', '📦': 'Package', '📣': 'Megaphone',
-  '💡': 'Lightbulb', '🏪': 'Store', '🌍': 'Globe', '💎': 'Gem',
-}
-function fixIcon(value, fallback) {
-  if (value && ICONS[value]) return value
-  return EMOJI_TO_ICON[value] || fallback
-}
 
 // One slot per module that declares targets (m.score.collectTargets), keyed by
 // the module's targetKey (defaults to its id — quickwins keeps the legacy
@@ -55,62 +37,38 @@ function snapshotTargets(d, preChange) {
   else d.targetHistory.push({ weekKey: wk, ...targets })
 }
 
-function migrate(state) {
-  const seed = buildSeedState()
-  if (!state.stakes) state.stakes = seed.stakes
-  if (!state.vices) state.vices = seed.vices
-  if (!state.fitness.todos) state.fitness.todos = []
-  if (!state.career.todos) state.career.todos = []
-  if (!state.business) state.business = seed.business
-  if (!state.business.todos) state.business.todos = []
-  if (!state.business.projects) state.business.projects = []
-  if (!state.business.days) state.business.days = {}
-  if (state.business.hoursWeekly == null) state.business.hoursWeekly = seed.business.hoursWeekly
-  if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
-  if (!state.quickWins) state.quickWins = seed.quickWins
-  if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
-  // Study: migrate daily/monthly → weekly targets.
-  const st = state.study.targets
-  if (st.pagesWeekly == null) st.pagesWeekly = st.pagesDaily != null ? st.pagesDaily * 7 : 140
-  if (st.hoursWeekly == null) st.hoursWeekly = st.hoursMonthly != null ? Math.round(st.hoursMonthly / 4.33) : 9
-  delete st.pagesDaily; delete st.hoursMonthly
-  // Money: backfill targets sub-object.
-  if (!state.money.targets) state.money.targets = { savingsRate: 0.2 }
-  if (state.money.targets.savingsRate == null) state.money.targets.savingsRate = 0.2
-  // Quick wins: backfill daily target.
-  if (state.quickWins && state.quickWins.dailyTarget == null) state.quickWins.dailyTarget = 3
-  // Target history — snapshot-based so changing targets doesn't rewrite the past.
+// Accepts any v2 or v3 blob and upgrades it in place to the current v3 shape.
+// v2 exports must import forever — this is the one compatibility gate.
+export function migrate(state) {
+  // Each module ensures its own slice exists and runs its own backfills.
+  for (const m of allModules()) {
+    if (!m.seed) continue
+    const key = m.stateKey || m.id
+    if (!state[key]) state[key] = m.seed()
+    m.migrate?.(state[key], state)
+  }
+  // Core slices.
   if (!state.targetHistory) state.targetHistory = []
-  // Weekly review + focus priorities
-  if (!state.reviews) state.reviews = seed.reviews
-  if (!state.focus) state.focus = seed.focus
+  if (!state.reviews) state.reviews = []
+  if (!state.campaigns) state.campaigns = []
+  if (!state.focus) state.focus = { weekKey: '', priorities: [], ticked: [] }
   if (!state.focus.ticked) state.focus.ticked = []
-  // Daily journal — "The Daily Loop"
-  if (!state.journal) state.journal = seed.journal
-  // AI coaching briefings cache + in-progress weekly-review / campaign transcripts.
-  if (!state.coach) state.coach = seed.coach
+  if (!state.coach) state.coach = { reports: {}, reviewDraft: null, campaignDraft: null }
   if (!state.coach.reports) state.coach.reports = {}
   if (state.coach.reviewDraft === undefined) state.coach.reviewDraft = null
   if (state.coach.campaignDraft === undefined) state.coach.campaignDraft = null
-  // Monthly campaign debriefs (reward-point re-weighting history).
-  if (!state.campaigns) state.campaigns = seed.campaigns
-  // Retire the old vice-debt mechanism: drop the penalty-rate setting and
-  // strip standalone penalty ledger rows (real vice spends keep a viceId).
-  if (state.vices) {
-    delete state.vices.debtPenaltyRate
-    if (Array.isArray(state.vices.ledger)) {
-      state.vices.ledger = state.vices.ledger
-        .filter((e) => e.type !== 'spend' || e.viceId)
-        .map((e) => { if (e.type === 'spend') delete e.penalty; return e })
-    }
-  }
-  // Swap any legacy emoji glyphs (pre-icon-system data) for Lucide icon names.
-  for (const item of state.quickWins.items || []) item.emoji = fixIcon(item.emoji, 'Zap')
-  for (const v of state.vices.vices || []) v.emoji = fixIcon(v.emoji, 'Gift')
-  for (const p of state.business.projects || []) p.emoji = fixIcon(p.emoji, 'Rocket')
-  for (const e of state.vices.ledger || []) if (e.icon) e.icon = fixIcon(e.icon, 'Gift')
+  // v3: module composition preferences.
+  if (!state.preferences) state.preferences = {}
+  if (!state.preferences.modules) state.preferences.modules = { order: null, disabled: [], weights: {} }
+  if (!state.preferences.modules.disabled) state.preferences.modules.disabled = []
+  if (!state.preferences.modules.weights) state.preferences.modules.weights = {}
+  if (!state.preferences.widgets) state.preferences.widgets = { order: null, hidden: [] }
+  if (!state.preferences.widgets.hidden) state.preferences.widgets.hidden = []
+  state.version = 3
   return state
 }
+
+const ACCEPTED_VERSIONS = [2, 3]
 
 function load() {
   let raw = null
@@ -118,7 +76,7 @@ function load() {
     raw = localStorage.getItem(KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed && parsed.version === 2) return migrate(parsed)
+      if (parsed && ACCEPTED_VERSIONS.includes(parsed.version)) return migrate(parsed)
     }
   } catch { /* corrupt — preserved below */ }
   // We had a saved blob but couldn't use it (unparseable / wrong version).
@@ -175,7 +133,7 @@ export function StoreProvider({ children }) {
         await fs.writeFile(handle, stateRef.current)
         return
       }
-      if (fileData.version !== 2 || !fileData.updatedAt) return // not a Lifemax blob — leave it alone
+      if (![2, 3].includes(fileData.version) || !fileData.updatedAt) return // not a Lifemax blob — leave it alone
       if (fileData.updatedAt === stateRef.current.updatedAt) return
       snapshotBackup(stateRef.current)
       const merged = mergeStates(stateRef.current, migrate(structuredClone(fileData)))
@@ -235,11 +193,65 @@ export function StoreProvider({ children }) {
       setState(() => { const d = buildSeedState(); d.updatedAt = nowIso(); return d })
     },
     importState: (obj) => {
-      if (obj && obj.version === 2) {
+      if (obj && ACCEPTED_VERSIONS.includes(obj.version)) {
         snapshotBackup(state) // recovery point before the import replaces everything
         setState(() => { const d = migrate(obj); d.updatedAt = nowIso(); return d })
-      } else alert('That file is not a Lifemax v2 backup.')
+      } else alert('That file is not a Lifemax backup.')
     },
+
+    // ---------- Module composition (preferences) ----------
+    setModuleEnabled: (id, on) => update((d) => {
+      const p = (d.preferences ||= {})
+      const mods = (p.modules ||= { order: null, disabled: [], weights: {} })
+      const disabled = new Set(mods.disabled || [])
+      if (on) disabled.delete(id); else disabled.add(id)
+      mods.disabled = [...disabled]
+    }),
+    moveModule: (id, delta) => update((d) => {
+      const ids = orderedAllSections(d).map((m) => m.id)
+      const i = ids.indexOf(id)
+      const j = i + delta
+      if (i < 0 || j < 0 || j >= ids.length) return
+      ;[ids[i], ids[j]] = [ids[j], ids[i]]
+      const mods = ((d.preferences ||= {}).modules ||= { order: null, disabled: [], weights: {} })
+      mods.order = ids
+    }),
+    setModuleWeight: (id, weight) => update((d) => {
+      const mods = ((d.preferences ||= {}).modules ||= { order: null, disabled: [], weights: {} })
+      const weights = (mods.weights ||= {})
+      const n = Math.min(2, Math.max(0.5, Number(weight) || 1))
+      if (n === 1) delete weights[id]; else weights[id] = n
+    }),
+    setWidgetHidden: (id, hidden) => update((d) => {
+      const w = ((d.preferences ||= {}).widgets ||= { order: null, hidden: [] })
+      const set = new Set(w.hidden || [])
+      if (hidden) set.add(id); else set.delete(id)
+      w.hidden = [...set]
+    }),
+    moveWidget: (id, delta) => update((d) => {
+      const ids = widgetEntries(d).map((e) => e.id)
+      const i = ids.indexOf(id)
+      const j = i + delta
+      if (i < 0 || j < 0 || j >= ids.length) return
+      ;[ids[i], ids[j]] = [ids[j], ids[i]]
+      const w = ((d.preferences ||= {}).widgets ||= { order: null, hidden: [] })
+      w.order = ids
+    }),
+
+    // ---------- Generic module todos (state[moduleId].todos) ----------
+    addModuleTodo: (moduleId, todo) => update((d) => {
+      const slice = d[moduleId]; if (!slice) return
+      ;(slice.todos ||= []).push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo })
+    }),
+    updateModuleTodo: (moduleId, id, patch) => update((d) => {
+      const t = d[moduleId]?.todos?.find((x) => x.id === id); if (t) Object.assign(t, patch)
+    }),
+    toggleModuleTodo: (moduleId, id) => update((d) => {
+      const t = d[moduleId]?.todos?.find((x) => x.id === id); if (t) t.done = !t.done
+    }),
+    deleteModuleTodo: (moduleId, id) => update((d) => {
+      const slice = d[moduleId]; if (slice?.todos) slice.todos = slice.todos.filter((x) => x.id !== id)
+    }),
 
     // ---------- Stakes ----------
     addContract: (c) => update((d) => { d.stakes.contracts.push({ id: rid(), status: 'active', createdAt: todayKey(), resolvedAt: null, ...c }) }),

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, Check, Flag } from 'lucide-react'
 import { useStore } from '../../lib/store.jsx'
-import { DOMAIN_MAP } from '../../lib/domains.js'
+import { meta } from './meta.js'
 import { businessScore } from './score.js'
 import { thisMonth, monthKey, monthShort, daysUntil, todayKey, thisWeekKeys } from '../../lib/dates.js'
 import { money, pct } from '../../lib/format.js'
@@ -12,7 +12,7 @@ import { useToast } from '../../components/Toast.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
 import { ItemIcon, IconPicker, PROJECT_ICONS } from '../../lib/icons.jsx'
 
-const C = DOMAIN_MAP.business
+const C = meta
 const STATUS = {
   idea:     { label: 'Idea',     color: '#64748b' },
   building: { label: 'Building', color: '#eab308' },

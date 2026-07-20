@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, X, Circle } from 'lucide-react'
 import { ItemIcon } from '../../lib/icons.jsx'
 import { useStore } from '../../lib/store.jsx'
-import { DOMAIN_MAP } from '../../lib/domains.js'
+import { meta } from './meta.js'
 import { fitnessScore } from './score.js'
 import { toKey, thisWeekKeys, thisMonth, monthDayKeys, daysElapsed, daysUntil, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from '../../lib/dates.js'
 import { pct, compact } from '../../lib/format.js'
@@ -12,7 +12,7 @@ import Heatmap from '../../components/Heatmap.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 
-const C = DOMAIN_MAP.fitness
+const C = meta
 const PRIO = { high: { label: 'High', color: '#f87171', rank: 0 }, med: { label: 'Med', color: '#fbbf24', rank: 1 }, low: { label: 'Low', color: '#38bdf8', rank: 2 } }
 
 export default function Fitness() {

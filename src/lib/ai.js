@@ -11,11 +11,10 @@
 // browser-origin (CORS) call; the key lives on the user's own device.
 
 import { lifeScore, weeklyScoreHistory, weekScoreScaled } from './score.js'
-import { DOMAIN_MAP } from './domains.js'
 import { pct, gradeFor } from './format.js'
 import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel, monthKey } from './dates.js'
 import { balance, totalEarned, ratesOf } from './xp.js'
-import { allModules } from './registry.js'
+import { allModules, enabledModules, moduleById } from './registry.js'
 import { rankFor } from './ranks.js'
 
 const KEY = 'lifemax.anthropic.key'
@@ -62,7 +61,7 @@ export function buildDigest(state, slot) {
   const grade = gradeFor(ls.score)
   const domains = ls.domains
     .filter((d) => d.active !== false)
-    .map((d) => ({ name: DOMAIN_MAP[d.id]?.name || d.id, score: pct(Math.min(1, d.score / 0.8)) }))
+    .map((d) => ({ name: moduleById(d.id)?.name || d.id, score: pct(Math.min(1, d.score / 0.8)) }))
     .sort((a, b) => b.score - a.score)
 
   const days = state.journal?.days || {}
@@ -247,7 +246,7 @@ export function buildReviewDigest(state, weekStart) {
   // so the review automatically reflects whatever modules exist.
   const activity = Object.assign(
     {},
-    ...allModules().map((m) => m.digest?.week?.(state, { keys, keySet }) || {})
+    ...enabledModules(state).map((m) => m.digest?.week?.(state, { keys, keySet }) || {})
   )
 
   return {
@@ -430,7 +429,7 @@ export function buildCampaignDigest(state, ym) {
   const rates = ratesOf(state)
 
   // Every module contributes its own re-weightable habits + month adherence.
-  const daily_habits = allModules().flatMap((m) => m.xp?.campaignHabits?.(state, ym, rates, mi.elapsed) || [])
+  const daily_habits = enabledModules(state).flatMap((m) => m.xp?.campaignHabits?.(state, ym, rates, mi.elapsed) || [])
 
   const qw = state.quickWins || { items: [], days: {} }
   const qwDays = Object.entries(qw.days || {}).filter(([k]) => k.startsWith(ym + '-'))

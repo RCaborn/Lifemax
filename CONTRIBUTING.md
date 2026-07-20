@@ -22,8 +22,8 @@ Node 18+. That's the whole setup — no env vars, no services.
 ## Making changes
 
 1. Fork, branch, and make your change.
-2. `npm run build` must pass.
-3. If you touched scoring/merge/migration logic, run the tests (`npm test`, once the suite lands) and sanity-check with **Data → Load demo data**.
+2. `npm run build` and `npm test` must pass (vitest covers migration, merge, scoring and the module registry — the things that must never silently break).
+3. If you touched scoring/merge/migration logic, sanity-check with **Data → Load demo data**.
 4. Open a PR with a clear description of what changed and why. Screenshots for UI changes are appreciated.
 
 ## Ideas & bugs

@@ -9,12 +9,24 @@
 // would create an import-cycle evaluation trap.
 
 import { monthKey, toKey, parseKey, thisWeekKeys, startOfWeek } from './dates.js'
-import { avg, sum } from './score-utils.js'
-import { allModules } from './registry.js'
+import { sum } from './score-utils.js'
+import { enabledModules, moduleWeight } from './registry.js'
 
-const scoredModules = () => allModules().filter((m) => m.score?.week)
-const bonusModules = () => allModules().filter((m) => m.score?.bonus)
+const scoredModules = (state) => enabledModules(state).filter((m) => m.score?.week)
+const bonusModules = (state) => enabledModules(state).filter((m) => m.score?.bonus)
 const targetSlot = (m) => m.targetKey || m.id
+
+// Weighted average of the active domains — each module's user-set weight
+// (0.5–2, default 1) scales how much it pulls the Pulse.
+function weightedAvg(state, rows) {
+  let total = 0, weightSum = 0
+  for (const r of rows) {
+    const w = moduleWeight(state, r.id)
+    total += r.score * w
+    weightSum += w
+  }
+  return weightSum ? total / weightSum : 0
+}
 
 // ---------------------------------------------------------------------------
 // Live Life Score — rolling 7-day window, scaled so FULL_AT = score of 1.0.
@@ -31,14 +43,13 @@ export function lifeScore(state) {
   const keys = thisWeekKeys()
   const ctx = { keys, keySet: new Set(keys), ym: monthKey(new Date()) }
 
-  const domains = scoredModules().map((m) => {
+  const domains = scoredModules(state).map((m) => {
     const w = m.score.week(state, ctx, null)
     return { id: m.id, score: w.score, parts: w.parts, active: m.score.isActive(state) }
   })
-  const activeDomains = domains.filter((d) => d.active)
-  const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
+  const domainAvg = weightedAvg(state, domains.filter((d) => d.active))
 
-  const bonus = sum(bonusModules().map((m) => m.score.bonus(state, ctx, null)))
+  const bonus = sum(bonusModules(state).map((m) => m.score.bonus(state, ctx, null)))
   const score = Math.min(1, (domainAvg + bonus) / FULL_AT)
   return { score, domains }
 }
@@ -52,7 +63,8 @@ export function scoreHistory(state, months = 6) {
   return Array.from({ length: months }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1)
     const ym = monthKey(d)
-    const raw = avg(scoredModules().map((m) => m.score.month(state, ym).score))
+    const rows = scoredModules(state).map((m) => ({ id: m.id, score: m.score.month(state, ym).score }))
+    const raw = weightedAvg(state, rows)
     return { month: ym, value: Math.round(Math.min(1, raw / FULL_AT) * 100) }
   })
 }
@@ -96,15 +108,14 @@ export function weekBreakdown(state, weekStartDate, throughDow = 6) {
 
   const ht = targetsForWeek(state, toKey(weekStartDate))
 
-  const domains = scoredModules().map((m) => {
+  const domains = scoredModules(state).map((m) => {
     const w = m.score.week(state, ctx, ht?.[targetSlot(m)])
     const active = m.score.isActiveForWeek ? m.score.isActiveForWeek(state, ctx) : m.score.isActive(state)
     return { id: m.id, score: w.score, active }
   })
-  const activeDomains = domains.filter((d) => d.active)
-  const domainAvg = activeDomains.length ? avg(activeDomains.map((d) => d.score)) : 0
+  const domainAvg = weightedAvg(state, domains.filter((d) => d.active))
 
-  const bonus = sum(bonusModules().map((m) => m.score.bonus(state, ctx, ht?.[targetSlot(m)])))
+  const bonus = sum(bonusModules(state).map((m) => m.score.bonus(state, ctx, ht?.[targetSlot(m)])))
   return { total: domainAvg + bonus, domains }
 }
 

@@ -1,6 +1,5 @@
 import { Target, Check, ArrowRight, Sparkles, CalendarPlus } from 'lucide-react'
-import { DOMAIN_MAP } from '../lib/domains.js'
-import { orderedSections, widgetModules } from '../lib/registry.js'
+import { orderedSections, widgetEntries, moduleById, isEnabled } from '../lib/registry.js'
 import { useStore } from '../lib/store.jsx'
 import { lifeScore, weeklyScoreHistory, weekScoreScaled, weeklyRecords } from '../lib/score.js'
 import DomainRadar from '../components/DomainRadar.jsx'
@@ -19,6 +18,14 @@ import CoachCard from '../components/CoachCard.jsx'
 
 const PRIO_RANK = { high: 0, med: 1, low: 2 }
 const PRIO_COLOR = { high: '#f87171', med: '#fbbf24', low: '#38bdf8' }
+
+// Core (non-module) HQ widgets, mapped from their registry ids.
+const CORE_WIDGET_COMPONENTS = {
+  consistency: ConsistencyGrid,
+  focus: FocusWidget,
+  today: TodayPanel,
+  todos: MasterTodoList,
+}
 
 export default function Overview({ expandedId, onExpand }) {
   const { state } = useStore()
@@ -66,9 +73,11 @@ export default function Overview({ expandedId, onExpand }) {
                   <div className="text-sm text-slate-500">{summary(ls)}</div>
                 </div>
               </div>
-              <div className="mt-4">
-                <RankBadge xp={totalEarned(state)} />
-              </div>
+              {isEnabled(state, 'vices') && (
+                <div className="mt-4">
+                  <RankBadge xp={totalEarned(state)} />
+                </div>
+              )}
               <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
                 80% of weekly targets = score 100 · resets Monday
               </p>
@@ -97,22 +106,17 @@ export default function Overview({ expandedId, onExpand }) {
         </div>
       </div>
 
-      <ConsistencyGrid />
-
-      <FocusWidget onExpand={onExpand} />
-
-      <TodayPanel />
-
-      {/* Module widgets — every enabled module that contributes an HQ widget */}
-      {widgetModules().map((m) => (
-        <m.Widget key={m.id} onExpand={onExpand} />
-      ))}
-
-      <MasterTodoList onExpand={onExpand} />
+      {/* The HQ widget stack — core widgets + module widgets, ordered and
+          toggleable from the Modules page */}
+      {widgetEntries(state).filter((e) => !e.hidden).map((e) => {
+        if (e.module) return <e.module.Widget key={e.id} onExpand={onExpand} />
+        const Cmp = CORE_WIDGET_COMPONENTS[e.id]
+        return Cmp ? <Cmp key={e.id} onExpand={onExpand} /> : null
+      })}
 
       {/* Bento grid — every section module, collapsed to a summary, tap to expand */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {orderedSections().map((meta) => {
+        {orderedSections(state).map((meta) => {
           const expanded = expandedId === meta.id
           return (
             <BentoCard key={meta.id} id={meta.id} meta={meta} expanded={expanded}
@@ -173,19 +177,19 @@ function WeeklyScoreChart({ data }) {
 function MasterTodoList({ onExpand }) {
   const { state, actions } = useStore()
 
-  const DOMAIN_CONFIG = {
-    study:    { name: 'Study',    color: '#a855f7', toggle: actions.toggleTodo,         del: actions.deleteTodo },
-    fitness:  { name: 'Fitness',  color: '#f97316', toggle: actions.toggleFitnessTodo,  del: actions.deleteFitnessTodo },
-    career:   { name: 'Career',   color: '#3b82f6', toggle: actions.toggleCareerTodo,   del: actions.deleteCareerTodo },
-    business: { name: 'Business', color: '#eab308', toggle: actions.toggleBusinessTodo, del: actions.deleteBusinessTodo },
-  }
+  // Every enabled module that declares todos contributes its list — a new
+  // module with `todos: true` shows up here with zero extra wiring.
+  const todoModules = orderedSections(state).filter((m) => m.todos)
+  const DOMAIN_CONFIG = Object.fromEntries(todoModules.map((m) => [m.id, {
+    name: m.name,
+    color: m.color,
+    toggle: (id) => actions.toggleModuleTodo(m.id, id),
+    del: (id) => actions.deleteModuleTodo(m.id, id),
+  }]))
 
-  const allTodos = [
-    ...(state.study?.todos || []).map((t) => ({ ...t, domain: 'study' })),
-    ...(state.fitness?.todos || []).map((t) => ({ ...t, domain: 'fitness' })),
-    ...(state.career?.todos || []).map((t) => ({ ...t, domain: 'career' })),
-    ...(state.business?.todos || []).map((t) => ({ ...t, domain: 'business' })),
-  ]
+  const allTodos = todoModules.flatMap((m) =>
+    (state[m.stateKey || m.id]?.todos || []).map((t) => ({ ...t, domain: m.id }))
+  )
 
   const openCount = allTodos.filter((t) => !t.done).length
 
@@ -338,8 +342,8 @@ function summary(ls) {
   const p = pct(ls.score)
   const weakest = [...ls.domains].sort((a, b) => a.score - b.score)[0]
   if (p >= 90) return 'On fire this week. Stay consistent.'
-  if (p >= 65) return `Strong week. Biggest lever: ${DOMAIN_MAP[weakest.id].name}.`
-  return `Pick one win today — ${DOMAIN_MAP[weakest.id].name} needs the most attention.`
+  if (p >= 65) return `Strong week. Biggest lever: ${moduleById(weakest.id)?.name || weakest.id}.`
+  return `Pick one win today — ${moduleById(weakest.id)?.name || weakest.id} needs the most attention.`
 }
 
 

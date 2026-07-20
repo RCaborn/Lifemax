@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { ItemIcon } from '../../lib/icons.jsx'
 import { useStore } from '../../lib/store.jsx'
-import { DOMAIN_MAP } from '../../lib/domains.js'
+import { meta } from './meta.js'
 import { studyScore } from './score.js'
 import { toKey, thisMonth, monthDayKeys, daysUntil, thisWeekKeys } from '../../lib/dates.js'
 import { pct } from '../../lib/format.js'
@@ -12,7 +12,7 @@ import Heatmap from '../../components/Heatmap.jsx'
 import Bars from '../../components/Bars.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
 
-const C = DOMAIN_MAP.study
+const C = meta
 const PRIO = { high: { label: 'High', color: '#f87171', rank: 0 }, med: { label: 'Med', color: '#fbbf24', rank: 1 }, low: { label: 'Low', color: '#38bdf8', rank: 2 } }
 
 export default function Study() {

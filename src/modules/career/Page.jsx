@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { useStore } from '../../lib/store.jsx'
-import { DOMAIN_MAP } from '../../lib/domains.js'
+import { meta } from './meta.js'
 import { careerScore } from './score.js'
 import { thisMonth, daysUntil } from '../../lib/dates.js'
 import { pct } from '../../lib/format.js'
@@ -10,7 +10,7 @@ import MonthNav from '../../components/MonthNav.jsx'
 import { Card, SectionTitle, StatTile, ScoreBars } from '../../components/ui.jsx'
 import { ItemIcon } from '../../lib/icons.jsx'
 
-const C = DOMAIN_MAP.career
+const C = meta
 const STATUS = {
   applied:   { label: 'Applied',   color: '#38bdf8' },
   interview: { label: 'Interview', color: '#fbbf24' },

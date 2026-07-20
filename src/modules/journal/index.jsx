@@ -1,15 +1,20 @@
-import { BENTO_MAP } from '../../lib/domains.js'
 import Page from './Page.jsx'
 import Summary from './Summary.jsx'
 import Widget from './Widget.jsx'
 import { score } from './score.js'
 import { xp } from './xp.js'
 import { followThroughRate } from './lib.js'
+import { seed } from './state.js'
 
 export default {
-  ...BENTO_MAP.journal,
+  id: 'journal',
+  name: 'Field Notes',
+  icon: 'Feather',
+  color: '#06b6d4',
+  tagline: 'One honest minute a day',
   removable: true,
   section: true,
+  seed,
   widgetSlot: 2,
   Page,
   Summary,

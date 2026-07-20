@@ -15,10 +15,11 @@ import stakes from './stakes/index.jsx'
 import vices from './vices/index.jsx'
 import targets from './targets/index.jsx'
 import quickwins from './quickwins/index.jsx'
+import settings from './settings/index.jsx'
 
 export const BUILTIN_MODULES = [
   thisweek, review, journal,
   money, fitness, study, career, business,
-  stakes, vices, targets,
+  stakes, vices, targets, settings,
   quickwins,
 ]
