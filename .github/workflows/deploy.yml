@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main
-      - claude/intelligent-franklin-MGcJp
   workflow_dispatch:
 
 # Permissions the deploy job needs.

@@ -134,6 +134,25 @@ export function totalEarned(state) {
   return earnedEvents(state).reduce((a, e) => a + e.points, 0)
 }
 
+// Personal records — the single best XP day and the average across every day
+// with at least one earn (XP/day is the app's per-day measure, same source as
+// the consistency grid). Returns null until something has been logged.
+export function dailyXpRecords(state) {
+  const byDate = {}
+  for (const e of earnedEvents(state)) byDate[e.date] = (byDate[e.date] || 0) + e.points
+  const entries = Object.entries(byDate)
+  if (!entries.length) return null
+  let best = { date: entries[0][0], points: entries[0][1] }
+  let total = 0
+  for (const [date, points] of entries) {
+    total += points
+    // Ties go to the most recent day — "you matched your record" should point
+    // at the day that just did it.
+    if (points > best.points || (points === best.points && date > best.date)) best = { date, points }
+  }
+  return { best, avg: Math.round(total / entries.length) }
+}
+
 // Explicit spends live in the ledger as type 'spend' (points stored positive).
 export function spends(state) {
   return (state.vices?.ledger || []).filter((e) => e.type === 'spend')

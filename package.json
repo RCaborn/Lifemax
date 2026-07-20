@@ -3,7 +3,12 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Lifemax — a personal life-maxing dashboard for money, fitness, study, career and business.",
+  "description": "Lifemax — a local-first, personal life-maxing dashboard for money, fitness, study, career and business.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RCaborn/Lifemax.git"
+  },
   "scripts": {
     "icons": "node scripts/gen-icons.mjs",
     "predev": "node scripts/gen-icons.mjs",

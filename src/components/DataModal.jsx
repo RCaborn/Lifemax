@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Download, Upload, History, HardDrive } from 'lucide-react'
+import { Download, Upload, History, HardDrive, Sparkles } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
+import { buildDemoState } from '../lib/demo.js'
 import { useToast } from './Toast.jsx'
 import Modal from './Modal.jsx'
 
@@ -9,8 +10,15 @@ const MONO = 'var(--font-mono)'
 // Your data, in one place: where it lives, how to get it out, and how to roll
 // back if something ever looks wrong.
 export default function DataModal({ onClose, onExport, onImportClick }) {
-  const { backups } = useStore()
+  const { actions, backups } = useStore()
   const toast = useToast()
+
+  const loadDemo = () => {
+    if (!confirm('Load six weeks of demo data? Your current data is snapshotted first (restorable below), then replaced.')) return
+    actions.importState(buildDemoState())
+    toast({ icon: 'Sparkles', title: 'Demo data loaded', sub: 'Your previous data is in Recent backups.', color: '#a78bfa' })
+    onClose()
+  }
 
   return (
     <Modal title="Your data" onClose={onClose}>
@@ -32,6 +40,10 @@ export default function DataModal({ onClose, onExport, onImportClick }) {
         </div>
 
         <BackupList backups={backups} toast={toast} onClose={onClose} />
+
+        <button onClick={loadDemo} className="flex w-full items-center justify-center gap-1.5 rounded border border-white/10 py-2 text-[13px] text-slate-500 transition hover:border-white/25 hover:text-slate-300">
+          <Sparkles size={13} /> Load demo data
+        </button>
       </div>
     </Modal>
   )

@@ -1,5 +1,5 @@
 import { clamp01 } from './format.js'
-import { monthKey, toKey, parseKey, thisWeekKeys, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
+import { monthKey, toKey, parseKey, thisWeekKeys, startOfWeek, daysElapsed, weeksElapsed, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from './dates.js'
 
 const sum = (a) => a.reduce((x, y) => x + y, 0)
 const avg = (a) => (a.length ? sum(a) / a.length : 0)
@@ -423,6 +423,46 @@ export function weekScoreScaled(state, weekStart, throughDow = 6) {
 // 0–100 display scale for a single domain's raw weekly sub-score (radar + chips).
 export function domainScoreScaled(raw) {
   return Math.min(100, Math.round((raw / 0.8) * 100))
+}
+
+// Earliest date key with any logged activity — the honest start of "your
+// history" for records/averages. Null when nothing has ever been logged.
+function firstActivityKey(state) {
+  let first = null
+  const consider = (k) => { if (k && (!first || k < first)) first = k }
+  for (const k of Object.keys(state.fitness?.days || {})) consider(k)
+  for (const k of Object.keys(state.study?.days || {})) consider(k)
+  for (const k of Object.keys(state.business?.days || {})) consider(k)
+  for (const k of Object.keys(state.quickWins?.days || {})) consider(k)
+  for (const k of Object.keys(state.journal?.days || {})) consider(k)
+  for (const t of state.money?.tx || []) consider(t.date)
+  for (const j of state.career?.jobs || []) consider(j.date)
+  for (const sk of state.career?.skills || []) for (const se of sk.sessions || []) consider(se.date)
+  return first
+}
+
+// Personal records — best and average weekly Pulse across every COMPLETED week
+// since the first logged activity. Anchoring on real activity (not on score)
+// keeps the pre-history of empty weeks out of the average. The in-progress
+// week is excluded: scored against a full-week denominator it always reads
+// low. Returns null until at least one completed week exists.
+export function weeklyRecords(state) {
+  const first = firstActivityKey(state)
+  if (!first) return null
+  const cursor = startOfWeek(parseKey(first))
+  const thisWeekKey = toKey(startOfWeek())
+  const scored = []
+  while (toKey(cursor) < thisWeekKey) {
+    scored.push({
+      label: cursor.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      value: weekScoreScaled(state, new Date(cursor)),
+    })
+    cursor.setDate(cursor.getDate() + 7)
+  }
+  if (!scored.length) return null
+  // Ties keep the earliest week — that's when the record was set.
+  const best = scored.reduce((a, w) => (w.value > a.value ? w : a), scored[0])
+  return { best, avg: Math.round(scored.reduce((a, w) => a + w.value, 0) / scored.length) }
 }
 
 // 26 weeks of weekly life scores for the trend chart — applies FULL_AT so values align with display.

@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { Target, Beer, Check, Pencil, X, ArrowRight, Sparkles, CalendarPlus } from 'lucide-react'
 import { DOMAIN_MAP, BENTO_SECTIONS } from '../lib/domains.js'
 import { useStore } from '../lib/store.jsx'
-import { lifeScore, weeklyScoreHistory, weekScoreScaled } from '../lib/score.js'
+import { lifeScore, weeklyScoreHistory, weekScoreScaled, weeklyRecords } from '../lib/score.js'
 import DomainRadar from '../components/DomainRadar.jsx'
 import ConsistencyGrid from '../components/ConsistencyGrid.jsx'
 import RankBadge from '../components/RankBadge.jsx'
 import { thisMonth, daysUntil, weekKeyOf, lastNDays, todayKey, monthStartOffset, monthDayKeys, addMonth, toKey, parseKey, startOfWeek } from '../lib/dates.js'
 import { focusBlockUrl } from '../lib/calendar.js'
 import { pct, gradeFor } from '../lib/format.js'
-import { balance, earnedInMonth, earnRate, totalEarned } from '../lib/vices.js'
+import { balance, earnedInMonth, earnRate, totalEarned, dailyXpRecords } from '../lib/vices.js'
 import { MOOD_COLORS } from './Journal.jsx'
 import ProgressRing from '../components/ProgressRing.jsx'
 import TodayPanel from '../components/TodayPanel.jsx'
@@ -60,6 +60,11 @@ export default function Overview({ expandedId, onExpand }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
+  // Personal records + running averages — one small reference line under the hero.
+  const wr = weeklyRecords(state)
+  const dr = dailyXpRecords(state)
+  const fmtDay = (key) => parseKey(key).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+
   return (
     <div className="space-y-6">
       {/* AI coaching read — pinned to the top of HQ */}
@@ -89,6 +94,13 @@ export default function Overview({ expandedId, onExpand }) {
               <p className="mt-3 text-[11px] text-slate-600" style={{ fontFamily: 'var(--font-mono)' }}>
                 80% of weekly targets = score 100 · resets Monday
               </p>
+              {(wr || dr) && (
+                <p className="mt-1 text-[11px] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
+                  {wr && <>Best week <span className="text-slate-300">{wr.best.value}</span> (w/c {wr.best.label}) · avg {wr.avg}</>}
+                  {wr && dr && <span className="text-slate-700"> · </span>}
+                  {dr && <>Best day <span className="text-slate-300">{dr.best.points} XP</span> ({fmtDay(dr.best.date)}) · avg {dr.avg} XP</>}
+                </p>
+              )}
             </div>
             <div className="shrink-0 self-center lg:self-start">
               <ProgressRing value={ls.score} size={140} stroke={12} color={grade.color} label="Pulse" />
