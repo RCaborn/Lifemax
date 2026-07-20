@@ -4,8 +4,8 @@ import { useStore } from '../../lib/store.jsx'
 import { useToast } from '../../components/Toast.jsx'
 import {
   balance, totalSpent, totalEarned, earnedInMonth, fullLedger, cooldownRemaining,
-  DEFAULT_EARN_RATES, EARN_LABELS, VICE_CATEGORIES,
-} from '../../lib/vices.js'
+  defaultRates, earnLabels, earnRate, VICE_CATEGORIES,
+} from '../../lib/xp.js'
 import RankBadge from '../../components/RankBadge.jsx'
 import { thisMonth } from '../../lib/dates.js'
 import { pct } from '../../lib/format.js'
@@ -90,10 +90,10 @@ export default function Vices() {
         <SectionTitle>How you earn points</SectionTitle>
         <p className="mb-3 text-sm text-slate-500">Points are earned automatically as you log activity across Lifemax — one award per day per activity. Treats unlock once you've earned them: that's what makes them feel deserved.</p>
         <div className="flex flex-wrap gap-2">
-          {Object.entries(EARN_LABELS).filter(([k]) => k !== 'stake').map(([k, v]) => (
+          {Object.entries(earnLabels()).filter(([k]) => k !== 'stake').map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5 border border-white/10 px-3 py-1.5 text-sm text-slate-400">
               <ItemIcon icon={v.icon} size={14} />{v.label}
-              <span className="font-semibold text-white" style={{ fontFamily: MONO }}>+{rate(state, k)}</span>
+              <span className="font-semibold text-white" style={{ fontFamily: MONO }}>+{earnRate(state, k)}</span>
             </span>
           ))}
         </div>
@@ -163,10 +163,6 @@ export default function Vices() {
       {showRates && <RatesModal state={state} onClose={() => setShowRates(false)} onSave={(r) => { actions.setEarnRates(r); setShowRates(false) }} />}
     </div>
   )
-}
-
-function rate(state, key) {
-  return (state.vices.earnRates || DEFAULT_EARN_RATES)[key] ?? DEFAULT_EARN_RATES[key]
 }
 
 function LedgerView({ state }) {
@@ -292,21 +288,23 @@ function RedeemModal({ vice, bal, onClose, onConfirm }) {
 }
 
 function RatesModal({ state, onClose, onSave }) {
-  const [rates, setRates] = useState({ ...DEFAULT_EARN_RATES, ...(state.vices.earnRates || {}) })
+  const defaults = defaultRates()
+  const labels = earnLabels()
+  const [rates, setRates] = useState({ ...defaults, ...(state.vices.earnRates || {}) })
   return (
     <Modal title="Earn rates" onClose={onClose}>
       <p className="mb-3 text-[11px] text-slate-600">How many XP each logged activity is worth.</p>
       <div className="space-y-2">
-        {Object.keys(DEFAULT_EARN_RATES).map((k) => (
+        {Object.keys(defaults).map((k) => (
           <div key={k} className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={EARN_LABELS[k]?.icon} size={14} /> {EARN_LABELS[k]?.label}</span>
+            <span className="flex items-center gap-2 text-sm text-slate-400"><ItemIcon icon={labels[k]?.icon} size={14} /> {labels[k]?.label}</span>
             <input type="number" value={rates[k]} onChange={(e) => setRates((r) => ({ ...r, [k]: Number(e.target.value) || 0 }))}
               className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-right text-white outline-none focus:border-white/30" />
           </div>
         ))}
       </div>
       <div className="mt-4 flex gap-2">
-        <button onClick={() => setRates({ ...DEFAULT_EARN_RATES })} className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white">Reset defaults</button>
+        <button onClick={() => setRates({ ...defaults })} className="flex-1 rounded bg-white/10 py-2 text-sm font-medium text-white">Reset defaults</button>
         <button onClick={() => onSave(rates)} className="flex-1 rounded border border-white py-2 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-white hover:text-black" style={{ fontFamily: MONO }}>Save</button>
       </div>
     </Modal>

@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { useStore } from '../../lib/store.jsx'
 import { useToast } from '../../components/Toast.jsx'
-import { earnRate } from '../../lib/vices.js'
+import { earnRate } from '../../lib/xp.js'
 import { todayKey } from '../../lib/dates.js'
 import { ItemIcon } from '../../lib/icons.jsx'
 import { MOOD_COLORS } from './lib.js'

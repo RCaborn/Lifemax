@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../../lib/store.jsx'
 import { useToast } from '../../components/Toast.jsx'
-import { earnRate } from '../../lib/vices.js'
+import { earnRate } from '../../lib/xp.js'
 import { toKey, todayKey, parseKey, lastNDays } from '../../lib/dates.js'
 import { pct } from '../../lib/format.js'
 import { Card, SectionTitle, StatTile } from '../../components/ui.jsx'

@@ -4,6 +4,7 @@ import { mergeStates } from './merge.js'
 import { todayKey, weekKeyOf } from './dates.js'
 import { ICONS } from './icons.jsx'
 import { snapshotBackup, listBackups, restoreBackup } from './backup.js'
+import { allModules } from './registry.js'
 import * as fs from './filesync.js'
 
 const nowIso = () => new Date().toISOString()
@@ -31,15 +32,15 @@ function fixIcon(value, fallback) {
   return EMOJI_TO_ICON[value] || fallback
 }
 
+// One slot per module that declares targets (m.score.collectTargets), keyed by
+// the module's targetKey (defaults to its id — quickwins keeps the legacy
+// 'quickWins' key so old snapshots stay meaningful).
 function collectTargets(d) {
-  return {
-    fitness: { ...d.fitness.targets },
-    study: { ...d.study.targets },
-    career: { monthlyApplyTarget: d.career.monthlyApplyTarget, monthlySkillTarget: d.career.monthlySkillTarget },
-    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget, hoursWeekly: d.business.hoursWeekly },
-    money: { savingsRate: d.money?.targets?.savingsRate ?? 0.2 },
-    quickWins: { dailyTarget: d.quickWins?.dailyTarget ?? 3 },
+  const out = {}
+  for (const m of allModules()) {
+    if (m.score?.collectTargets) out[m.targetKey || m.id] = m.score.collectTargets(d)
   }
+  return out
 }
 
 function snapshotTargets(d, preChange) {

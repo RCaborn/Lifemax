@@ -13,8 +13,9 @@
 import { lifeScore, weeklyScoreHistory, weekScoreScaled } from './score.js'
 import { DOMAIN_MAP } from './domains.js'
 import { pct, gradeFor } from './format.js'
-import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel, monthKey, DEFAULT_WAKE_TARGET } from './dates.js'
-import { balance, totalEarned, DEFAULT_EARN_RATES } from './vices.js'
+import { lastNDays, todayKey, parseKey, toKey, startOfWeek, weekRangeLabel, monthKey } from './dates.js'
+import { balance, totalEarned, ratesOf } from './xp.js'
+import { allModules } from './registry.js'
 import { rankFor } from './ranks.js'
 
 const KEY = 'lifemax.anthropic.key'
@@ -224,16 +225,7 @@ export function buildReviewDigest(state, weekStart) {
     const x = new Date(weekStart); x.setDate(weekStart.getDate() + i); return toKey(x)
   })
   const keySet = new Set(keys)
-  const f = state.fitness?.days || {}
-  const s = state.study?.days || {}
-  const qw = state.quickWins?.days || {}
   const j = state.journal?.days || {}
-
-  const fit = keys.map((k) => f[k] || {})
-  const std = keys.map((k) => s[k] || {})
-  const moods = keys.map((k) => j[k]?.mood).filter((m) => m != null)
-  const ftEntries = keys.map((k) => j[k]).filter((d) => d?.followThrough)
-  const ftScore = ftEntries.reduce((a, d) => a + (d.followThrough === 'yes' ? 1 : d.followThrough === 'partial' ? 0.5 : 0), 0)
 
   const fieldNotes = keys.map((k) => {
     const e = j[k]
@@ -251,24 +243,19 @@ export function buildReviewDigest(state, weekStart) {
   const focus = state.focus || {}
   const objectives = (focus.priorities || []).map((p, i) => ({ priority: p, done: (focus.ticked || []).includes(i) }))
 
+  // The week's raw activity: merged from every module's digest contribution,
+  // so the review automatically reflects whatever modules exist.
+  const activity = Object.assign(
+    {},
+    ...allModules().map((m) => m.digest?.week?.(state, { keys, keySet }) || {})
+  )
+
   return {
     name: state.profile?.name || 'there',
     week: weekRangeLabel(weekStart),
     week_score: weekScoreScaled(state, weekStart),
     score_trend_last8: weeklyScoreHistory(state, 8).map((w) => w.value),
-    activity: {
-      runs: sumArr(fit.map((d) => d.runs || 0)),
-      workouts: sumArr(fit.map((d) => d.workouts || 0)),
-      stretch_days: fit.filter((d) => d.stretch).length,
-      study_pages: sumArr(std.map((d) => d.pages || 0)),
-      study_hours: sumArr(std.map((d) => d.hours || 0)),
-      job_applications: (state.career?.jobs || []).filter((x) => keySet.has(x.date)).length,
-      skill_hours: sumArr((state.career?.skills || []).flatMap((sk) => (sk.sessions || []).filter((se) => keySet.has(se.date)).map((se) => se.hours || 0))),
-      quick_win_days: keys.filter((k) => (qw[k]?.length || 0) > 0).length,
-      quick_wins_total: keys.reduce((a, k) => a + (qw[k]?.length || 0), 0),
-      avg_mood: moods.length ? +(sumArr(moods) / moods.length).toFixed(1) : null,
-      follow_through_pct: ftEntries.length ? Math.round((ftScore / ftEntries.length) * 100) : null,
-    },
+    activity,
     objectives_this_week: objectives,
     field_notes: fieldNotes,
     recent_ai_briefings: briefings,
@@ -400,12 +387,15 @@ export function weeklyReviewTurn(messages, { force = false } = {}) {
 // Only the daily levers — never career/business, never the Life Score / Pulse.
 // ===========================================================================
 
-// Daily earn-rate keys the campaign is allowed to re-weight (career_hour and
-// milestone are deliberately excluded).
-const CAMPAIGN_RATE_KEYS = ['run', 'workout', 'stretch', 'steps_10k', 'wake_target', 'pages_20', 'study_hour', 'journal']
-const RATE_LABELS = {
-  run: 'Run', workout: 'Workout', stretch: 'Stretch (per day)', steps_10k: 'Step goal (per day)',
-  wake_target: 'Wake on time (per day)', pages_20: 'Reading goal (per day)', study_hour: 'Study (per hour)', journal: 'Journal (per day)',
+// Daily earn-rate keys the campaign is allowed to re-weight — each module
+// declares its own via xp.campaignKeys (career/business deliberately never do).
+function campaignRateKeys() {
+  return allModules().flatMap((m) => m.xp?.campaignKeys || [])
+}
+function campaignLabels() {
+  const out = {}
+  for (const m of allModules()) Object.assign(out, m.xp?.campaignLabels || {})
+  return out
 }
 
 function monthInfo(ym) {
@@ -437,30 +427,10 @@ export function campaignWindowOpen(date = new Date()) {
 // (so the model proposes deltas), plus the month's weekly-review summaries.
 export function buildCampaignDigest(state, ym) {
   const mi = monthInfo(ym)
-  const inMonth = (days) => Object.entries(days || {}).filter(([k]) => k.startsWith(ym + '-')).map(([, v]) => v)
-  const sum = (a) => a.reduce((x, y) => x + y, 0)
-  const rates = { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
+  const rates = ratesOf(state)
 
-  const f = state.fitness || { days: {}, targets: {} }
-  const fd = inMonth(f.days)
-  const stepTarget = f.targets?.stepsDaily || 10000
-  const wakeT = f.targets?.wakeTarget || DEFAULT_WAKE_TARGET
-  const s = state.study || { days: {}, targets: {} }
-  const sd = inMonth(s.days)
-  const pageTarget = (s.targets?.pagesWeekly || 140) / 7
-  const jd = inMonth(state.journal?.days)
-
-  const activity = {
-    run: `${sum(fd.map((d) => d.runs || 0))} runs`,
-    workout: `${sum(fd.map((d) => d.workouts || 0))} workouts`,
-    stretch: `${fd.filter((d) => d.stretch).length}/${mi.elapsed} days`,
-    steps_10k: `${fd.filter((d) => (d.steps || 0) >= stepTarget).length}/${mi.elapsed} days`,
-    wake_target: `${fd.filter((d) => d.wake).length}/${mi.elapsed} days logged`,
-    pages_20: `${sd.filter((d) => (d.pages || 0) >= pageTarget).length}/${mi.elapsed} days`,
-    study_hour: `${sum(sd.map((d) => d.hours || 0)).toFixed(0)}h total`,
-    journal: `${jd.filter((d) => d.mood != null).length}/${mi.elapsed} days`,
-  }
-  const daily_habits = CAMPAIGN_RATE_KEYS.map((k) => ({ key: k, label: RATE_LABELS[k], current_points: rates[k], this_month: activity[k] }))
+  // Every module contributes its own re-weightable habits + month adherence.
+  const daily_habits = allModules().flatMap((m) => m.xp?.campaignHabits?.(state, ym, rates, mi.elapsed) || [])
 
   const qw = state.quickWins || { items: [], days: {} }
   const qwDays = Object.entries(qw.days || {}).filter(([k]) => k.startsWith(ym + '-'))
@@ -506,41 +476,45 @@ When you have enough, call finish_campaign with: a warm summary of the month, an
 
 Use British English. Be concise. No markdown, no emoji.`
 
-const FINISH_CAMPAIGN_TOOL = {
-  name: 'finish_campaign',
-  description: 'Conclude the monthly debrief with re-weighted daily reward points.',
-  input_schema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      summary: { type: 'string', description: 'A warm 2–3 sentence read of the month.' },
-      theme: { type: 'string', description: 'Optional one-line theme for the coming month.' },
-      earn_rates: {
-        type: 'object',
-        additionalProperties: false,
-        description: 'New point values for the daily built-in habits you are changing.',
-        properties: Object.fromEntries(CAMPAIGN_RATE_KEYS.map((k) => [k, { type: 'number' }])),
+// Built per call — the earn_rates schema enumerates whatever campaign keys the
+// registered modules currently declare.
+function buildFinishCampaignTool() {
+  return {
+    name: 'finish_campaign',
+    description: 'Conclude the monthly debrief with re-weighted daily reward points.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        summary: { type: 'string', description: 'A warm 2–3 sentence read of the month.' },
+        theme: { type: 'string', description: 'Optional one-line theme for the coming month.' },
+        earn_rates: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'New point values for the daily built-in habits you are changing.',
+          properties: Object.fromEntries(campaignRateKeys().map((k) => [k, { type: 'number' }])),
+        },
+        quick_wins: {
+          type: 'array',
+          description: 'New point values for any quick wins you are changing.',
+          items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, points: { type: 'number' } }, required: ['id', 'points'] },
+        },
+        changes: {
+          type: 'array',
+          description: 'One entry per habit you moved.',
+          items: { type: 'object', additionalProperties: false, properties: { label: { type: 'string' }, from: { type: 'number' }, to: { type: 'number' }, why: { type: 'string' } }, required: ['label', 'to'] },
+        },
       },
-      quick_wins: {
-        type: 'array',
-        description: 'New point values for any quick wins you are changing.',
-        items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, points: { type: 'number' } }, required: ['id', 'points'] },
-      },
-      changes: {
-        type: 'array',
-        description: 'One entry per habit you moved.',
-        items: { type: 'object', additionalProperties: false, properties: { label: { type: 'string' }, from: { type: 'number' }, to: { type: 'number' }, why: { type: 'string' } }, required: ['label', 'to'] },
-      },
+      required: ['summary', 'earn_rates', 'quick_wins'],
     },
-    required: ['summary', 'earn_rates', 'quick_wins'],
-  },
+  }
 }
 
 const clampPts = (n) => Math.max(1, Math.min(15, Math.round(Number(n) || 1)))
 
 function normalizeCampaign(o = {}) {
   const earnRates = {}
-  for (const k of CAMPAIGN_RATE_KEYS) if (o.earn_rates && o.earn_rates[k] != null) earnRates[k] = clampPts(o.earn_rates[k])
+  for (const k of campaignRateKeys()) if (o.earn_rates && o.earn_rates[k] != null) earnRates[k] = clampPts(o.earn_rates[k])
   const quickWins = Array.isArray(o.quick_wins)
     ? o.quick_wins.filter((q) => q && q.id != null).map((q) => ({ id: q.id, points: clampPts(q.points) }))
     : []
@@ -554,12 +528,13 @@ function normalizeCampaign(o = {}) {
 // card. Each row: { kind:'rate'|'qw', key?|id?, label, from, to, why }.
 export function campaignChangeRows(state, outcome) {
   if (!outcome) return []
-  const rates = { ...DEFAULT_EARN_RATES, ...(state.vices?.earnRates || {}) }
+  const rates = ratesOf(state)
+  const labels = campaignLabels()
   const qwMap = Object.fromEntries((state.quickWins?.items || []).map((i) => [i.id, i]))
   const whyOf = (label) => (outcome.changes || []).find((c) => c.label === label)?.why || ''
   const rows = []
   for (const [key, to] of Object.entries(outcome.earnRates || {})) {
-    const label = RATE_LABELS[key] || key
+    const label = labels[key] || key
     rows.push({ kind: 'rate', key, label, from: rates[key], to, why: whyOf(label) })
   }
   for (const q of outcome.quickWins || []) {
@@ -585,5 +560,5 @@ export function draftCampaignOutcome(messages = []) {
 
 // One turn of the monthly campaign debrief.
 export function campaignTurn(messages, { force = false } = {}) {
-  return runChatTurn(messages, { system: CAMPAIGN_SYSTEM, finishTool: FINISH_CAMPAIGN_TOOL, normalize: normalizeCampaign, force })
+  return runChatTurn(messages, { system: CAMPAIGN_SYSTEM, finishTool: buildFinishCampaignTool(), normalize: normalizeCampaign, force })
 }

@@ -1,4 +1,4 @@
-import { balance, earnedInMonth } from '../../lib/vices.js'
+import { balance, earnedInMonth } from '../../lib/xp.js'
 import { thisMonth } from '../../lib/dates.js'
 
 export default function VicesSummary({ state }) {

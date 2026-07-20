@@ -1,6 +1,6 @@
 import { Beer, ArrowRight } from 'lucide-react'
 import { useStore } from '../../lib/store.jsx'
-import { balance, earnedInMonth } from '../../lib/vices.js'
+import { balance, earnedInMonth } from '../../lib/xp.js'
 import { thisMonth, addMonth } from '../../lib/dates.js'
 import { ItemIcon } from '../../lib/icons.jsx'
 

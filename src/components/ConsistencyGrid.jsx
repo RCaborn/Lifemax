@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../lib/store.jsx'
-import { earnedEvents } from '../lib/vices.js'
+import { earnedEvents } from '../lib/xp.js'
 import { toKey, todayKey, startOfWeek, parseKey } from '../lib/dates.js'
 import { Card, SectionTitle } from './ui.jsx'
 

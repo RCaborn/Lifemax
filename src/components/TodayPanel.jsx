@@ -3,7 +3,7 @@ import { Check as CheckIcon, Circle } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { useToast } from './Toast.jsx'
 import { toKey } from '../lib/dates.js'
-import { earnRate } from '../lib/vices.js'
+import { earnRate } from '../lib/xp.js'
 import { Card, SectionTitle } from './ui.jsx'
 import { ItemIcon } from '../lib/icons.jsx'
 
