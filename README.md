@@ -19,6 +19,7 @@
 - **🎯 Contracts** — commitment stakes: put something on the line, link it to a target, and Lifemax auto-judges the outcome.
 - **📓 Field notes** — one honest minute a day: mood, today's win, tomorrow's plan.
 - **🤖 AI coach** *(optional)* — plug in your own Anthropic API key and Claude reads your week, gives a morning/evening briefing, runs your weekly review and monthly debrief interactively.
+- **💎 Insights** — Lifemax reads your whole record and tells you what it noticed: streaks, records, weekday effects, mood-vs-movement links, follow-through rate — each graded **Common → Mythic** and collected over time. Computed locally from your own data; the Mythic one only surfaces once your record runs deep enough.
 - **🧩 Modular by design** — every feature above is a module. Switch modules on/off (data kept), reorder them, tune how much each weighs in your Pulse, and arrange the HQ widgets — all from the **Modules** page.
 - **🛠️ Build your own trackers** — create custom modules in-app, no code: name it, add metrics (counters, numbers, checkboxes), set weekly targets and XP. They score, earn and chart exactly like built-ins. Developers can go further with code modules — see [docs/MODULES.md](docs/MODULES.md).
 - **Installable PWA** — pin it to your dock/taskbar; works fully offline.

@@ -5,6 +5,7 @@
 
 import thisweek from './thisweek/index.jsx'
 import review from './review/index.jsx'
+import insights from './insights/index.jsx'
 import journal from './journal/index.jsx'
 import money from './money/index.jsx'
 import fitness from './fitness/index.jsx'
@@ -18,7 +19,7 @@ import quickwins from './quickwins/index.jsx'
 import settings from './settings/index.jsx'
 
 export const BUILTIN_MODULES = [
-  thisweek, review, journal,
+  thisweek, review, insights, journal,
   money, fitness, study, career, business,
   stakes, vices, targets, settings,
   quickwins,

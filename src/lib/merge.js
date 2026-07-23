@@ -227,6 +227,10 @@ export function mergeStates(local, remote) {
       ...(nw ? b : a),
       days: mergeDayMap(a.days, b.days, (x, y) => mergeDayObj(x, y, nw)),
     })),
+    // Insight collection: union of everything either copy has found.
+    insights: {
+      seen: mergeSettings(local.insights?.seen, remote.insights?.seen, newerWins),
+    },
     // Module composition preferences — order/disabled/weights are settings-like:
     // real values beat missing ones, newer blob breaks true conflicts.
     preferences: {

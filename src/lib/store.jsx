@@ -239,6 +239,14 @@ export function StoreProvider({ children }) {
       w.order = ids
     }),
 
+    // ---------- Insights collection ----------
+    // Stamp newly surfaced insights into the permanent collection (rarity is
+    // stored so the count survives an insight later becoming untrue).
+    markInsightsSeen: (items) => update((d) => {
+      const seen = ((d.insights ||= { seen: {} }).seen ||= {})
+      for (const { id, rarity } of items) if (!seen[id]) seen[id] = { rarity, at: todayKey() }
+    }),
+
     // ---------- Custom trackers (data-defined modules) ----------
     addCustomModule: (def) => update((d) => {
       ;(d.customModules ||= []).push({

@@ -20,10 +20,10 @@ export default function ProgressRing({ value = 0, size = 120, stroke = 10, color
         />
       </svg>
       <div className="absolute text-center leading-tight">
-        <div className="font-bold" style={{ fontSize: size * 0.24, color }}>
-          {Math.round(clamped * 100)}%
+        <div style={{ fontSize: size * 0.27, color, fontFamily: 'var(--font-display)' }}>
+          {Math.round(clamped * 100)}<span style={{ fontSize: size * 0.14 }}>%</span>
         </div>
-        {label && <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>}
+        {label && <div className="text-[10px] uppercase tracking-wide text-slate-400" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.16em' }}>{label}</div>}
         {sublabel && <div className="text-[10px] text-slate-500">{sublabel}</div>}
       </div>
     </div>

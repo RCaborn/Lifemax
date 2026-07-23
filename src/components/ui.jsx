@@ -5,10 +5,14 @@ export function Card({ children, className = '', glow }) {
   return <div className={`glass rounded-2xl p-5 ${glow ? 'glass-hover' : ''} ${className}`} style={style}>{children}</div>
 }
 
-export function SectionTitle({ children, right }) {
+// Editorial section marker. Pass `index` ("01") for the numbered variant.
+export function SectionTitle({ children, right, index }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400" style={{ fontFamily: 'var(--font-mono)' }}>{children}</h2>
+      <h2 className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>
+        {index && <span className="eyebrow-index">·{index}</span>}
+        {children}
+      </h2>
       {right}
     </div>
   )
@@ -18,7 +22,7 @@ export function StatTile({ label, value, sub, color = '#e2e8f0' }) {
   return (
     <div className="glass glass-hover rounded-2xl p-4" style={{ '--glow': color }}>
       <div className="op-label">{label}</div>
-      <div className="mt-1.5 text-2xl font-bold" style={{ color, fontFamily: 'var(--font-mono)' }}>{value}</div>
+      <div className="mt-1 text-3xl display" style={{ color }}>{value}</div>
       {sub && <div className="mt-0.5 text-xs text-slate-600">{sub}</div>}
     </div>
   )

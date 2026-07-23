@@ -5,7 +5,7 @@ import { buildSeedState } from '../src/lib/seed.js'
 describe('registry', () => {
   it('default section order matches the registry', () => {
     const ids = orderedSections(buildSeedState()).map((m) => m.id)
-    expect(ids).toEqual(['thisweek', 'review', 'journal', 'money', 'fitness', 'study', 'career', 'business', 'stakes', 'vices', 'targets', 'modules'])
+    expect(ids).toEqual(['thisweek', 'review', 'insights', 'journal', 'money', 'fitness', 'study', 'career', 'business', 'stakes', 'vices', 'targets', 'modules'])
   })
 
   it('applies a custom order and appends unknown ids in registry order', () => {
