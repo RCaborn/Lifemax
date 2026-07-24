@@ -2,43 +2,27 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { buildSeedState } from './seed.js'
 import { mergeStates } from './merge.js'
 import { todayKey, weekKeyOf } from './dates.js'
-import { ICONS } from './icons.jsx'
-import * as sync from './sync.js'
+import { snapshotBackup, listBackups, restoreBackup } from './backup.js'
+import { allModules, orderedAllSections, widgetEntries } from './registry.js'
+import * as fs from './filesync.js'
 
 const nowIso = () => new Date().toISOString()
 
+// Key name predates v3 — kept so existing browsers keep their data; the blob's
+// own `version` field is what migrations key off.
 const KEY = 'lifemax.state.v2'
 const StoreCtx = createContext(null)
 const rid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
 
-// Older saves stored literal emoji glyphs for quick wins / vices / projects.
-// Map the ones from past seed data (and other common picks) to their Lucide
-// icon equivalents so everything renders as a line icon, not a fallback emoji.
-const EMOJI_TO_ICON = {
-  '🧘': 'Flower2', '🚶': 'Footprints', '📚': 'BookOpen', '🔢': 'Calculator',
-  '🇪🇸': 'Languages', '🏊': 'Waves', '⛳': 'Flag', '🧹': 'Brush',
-  '🍺': 'Beer', '🍕': 'Pizza', '🎮': 'Gamepad2', '😴': 'BedDouble',
-  '🚀': 'Rocket', '💪': 'Dumbbell', '📖': 'BookOpen', '🏃': 'Activity',
-  '💰': 'Wallet', '💸': 'Banknote', '🎯': 'Target', '⭐': 'Star', '✨': 'Sparkles',
-  '☕': 'Coffee', '🎵': 'Music', '🧠': 'Brain', '❤️': 'Heart', '💧': 'Droplet',
-  '☀️': 'Sun', '🌙': 'Moon', '🎨': 'Palette', '💻': 'Laptop', '📷': 'Camera',
-  '🏢': 'Building2', '🛒': 'ShoppingCart', '📦': 'Package', '📣': 'Megaphone',
-  '💡': 'Lightbulb', '🏪': 'Store', '🌍': 'Globe', '💎': 'Gem',
-}
-function fixIcon(value, fallback) {
-  if (value && ICONS[value]) return value
-  return EMOJI_TO_ICON[value] || fallback
-}
-
+// One slot per module that declares targets (m.score.collectTargets), keyed by
+// the module's targetKey (defaults to its id — quickwins keeps the legacy
+// 'quickWins' key so old snapshots stay meaningful).
 function collectTargets(d) {
-  return {
-    fitness: { ...d.fitness.targets },
-    study: { ...d.study.targets },
-    career: { monthlyApplyTarget: d.career.monthlyApplyTarget, monthlySkillTarget: d.career.monthlySkillTarget },
-    business: { monthlyIncomeTarget: d.business.monthlyIncomeTarget, hoursWeekly: d.business.hoursWeekly },
-    money: { savingsRate: d.money?.targets?.savingsRate ?? 0.2 },
-    quickWins: { dailyTarget: d.quickWins?.dailyTarget ?? 3 },
+  const out = {}
+  for (const m of allModules()) {
+    if (m.score?.collectTargets) out[m.targetKey || m.id] = m.score.collectTargets(d)
   }
+  return out
 }
 
 function snapshotTargets(d, preChange) {
@@ -53,62 +37,39 @@ function snapshotTargets(d, preChange) {
   else d.targetHistory.push({ weekKey: wk, ...targets })
 }
 
-function migrate(state) {
-  const seed = buildSeedState()
-  if (!state.stakes) state.stakes = seed.stakes
-  if (!state.vices) state.vices = seed.vices
-  if (!state.fitness.todos) state.fitness.todos = []
-  if (!state.career.todos) state.career.todos = []
-  if (!state.business) state.business = seed.business
-  if (!state.business.todos) state.business.todos = []
-  if (!state.business.projects) state.business.projects = []
-  if (!state.business.days) state.business.days = {}
-  if (state.business.hoursWeekly == null) state.business.hoursWeekly = seed.business.hoursWeekly
-  if (state.business.monthlyIncomeTarget == null) state.business.monthlyIncomeTarget = seed.business.monthlyIncomeTarget
-  if (!state.quickWins) state.quickWins = seed.quickWins
-  if (state.fitness.targets.wakeTarget == null) state.fitness.targets.wakeTarget = seed.fitness.targets.wakeTarget
-  // Study: migrate daily/monthly → weekly targets.
-  const st = state.study.targets
-  if (st.pagesWeekly == null) st.pagesWeekly = st.pagesDaily != null ? st.pagesDaily * 7 : 140
-  if (st.hoursWeekly == null) st.hoursWeekly = st.hoursMonthly != null ? Math.round(st.hoursMonthly / 4.33) : 9
-  delete st.pagesDaily; delete st.hoursMonthly
-  // Money: backfill targets sub-object.
-  if (!state.money.targets) state.money.targets = { savingsRate: 0.2 }
-  if (state.money.targets.savingsRate == null) state.money.targets.savingsRate = 0.2
-  // Quick wins: backfill daily target.
-  if (state.quickWins && state.quickWins.dailyTarget == null) state.quickWins.dailyTarget = 3
-  // Target history — snapshot-based so changing targets doesn't rewrite the past.
+// Accepts any v2 or v3 blob and upgrades it in place to the current v3 shape.
+// v2 exports must import forever — this is the one compatibility gate.
+export function migrate(state) {
+  // Each module ensures its own slice exists and runs its own backfills.
+  for (const m of allModules()) {
+    if (!m.seed) continue
+    const key = m.stateKey || m.id
+    if (!state[key]) state[key] = m.seed()
+    m.migrate?.(state[key], state)
+  }
+  // Core slices.
   if (!state.targetHistory) state.targetHistory = []
-  // Weekly review + focus priorities
-  if (!state.reviews) state.reviews = seed.reviews
-  if (!state.focus) state.focus = seed.focus
+  if (!state.reviews) state.reviews = []
+  if (!state.campaigns) state.campaigns = []
+  if (!state.focus) state.focus = { weekKey: '', priorities: [], ticked: [] }
   if (!state.focus.ticked) state.focus.ticked = []
-  // Daily journal — "The Daily Loop"
-  if (!state.journal) state.journal = seed.journal
-  // AI coaching briefings cache + in-progress weekly-review / campaign transcripts.
-  if (!state.coach) state.coach = seed.coach
+  if (!state.coach) state.coach = { reports: {}, reviewDraft: null, campaignDraft: null }
   if (!state.coach.reports) state.coach.reports = {}
   if (state.coach.reviewDraft === undefined) state.coach.reviewDraft = null
   if (state.coach.campaignDraft === undefined) state.coach.campaignDraft = null
-  // Monthly campaign debriefs (reward-point re-weighting history).
-  if (!state.campaigns) state.campaigns = seed.campaigns
-  // Retire the old vice-debt mechanism: drop the penalty-rate setting and
-  // strip standalone penalty ledger rows (real vice spends keep a viceId).
-  if (state.vices) {
-    delete state.vices.debtPenaltyRate
-    if (Array.isArray(state.vices.ledger)) {
-      state.vices.ledger = state.vices.ledger
-        .filter((e) => e.type !== 'spend' || e.viceId)
-        .map((e) => { if (e.type === 'spend') delete e.penalty; return e })
-    }
-  }
-  // Swap any legacy emoji glyphs (pre-icon-system data) for Lucide icon names.
-  for (const item of state.quickWins.items || []) item.emoji = fixIcon(item.emoji, 'Zap')
-  for (const v of state.vices.vices || []) v.emoji = fixIcon(v.emoji, 'Gift')
-  for (const p of state.business.projects || []) p.emoji = fixIcon(p.emoji, 'Rocket')
-  for (const e of state.vices.ledger || []) if (e.icon) e.icon = fixIcon(e.icon, 'Gift')
+  // v3: custom trackers + module composition preferences.
+  if (!state.customModules) state.customModules = []
+  if (!state.preferences) state.preferences = {}
+  if (!state.preferences.modules) state.preferences.modules = { order: null, disabled: [], weights: {} }
+  if (!state.preferences.modules.disabled) state.preferences.modules.disabled = []
+  if (!state.preferences.modules.weights) state.preferences.modules.weights = {}
+  if (!state.preferences.widgets) state.preferences.widgets = { order: null, hidden: [] }
+  if (!state.preferences.widgets.hidden) state.preferences.widgets.hidden = []
+  state.version = 3
   return state
 }
+
+const ACCEPTED_VERSIONS = [2, 3]
 
 function load() {
   let raw = null
@@ -116,7 +77,7 @@ function load() {
     raw = localStorage.getItem(KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed && parsed.version === 2) return migrate(parsed)
+      if (parsed && ACCEPTED_VERSIONS.includes(parsed.version)) return migrate(parsed)
     }
   } catch { /* corrupt — preserved below */ }
   // We had a saved blob but couldn't use it (unparseable / wrong version).
@@ -130,17 +91,11 @@ function load() {
 export function StoreProvider({ children }) {
   const [state, setState] = useState(load)
   const timer = useRef(null)
-
-  // --- Cloud sync (optional) ---
-  const [session, setSession] = useState(null)
-  const [syncStatus, setSyncStatus] = useState(sync.isSyncConfigured() ? 'idle' : 'off') // off|idle|syncing|error
   const stateRef = useRef(state)
-  const applyingRemote = useRef(false) // suppresses the echo push when we adopt a remote blob
-  const dirty = useRef(false) // true once this device has un-pushed local edits
-  const pushTimer = useRef(null)
   useEffect(() => { stateRef.current = state }, [state])
 
-  // Local cache — always on, keeps the app instant + offline-capable.
+  // Local persistence — the single source of truth. Debounced so rapid edits
+  // (steppers, typing) collapse into one write.
   useEffect(() => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -149,102 +104,199 @@ export function StoreProvider({ children }) {
     return () => clearTimeout(timer.current)
   }, [state])
 
-  // Once-a-day local safety snapshot (the restore list lives in SyncModal).
-  useEffect(() => { sync.snapshotBackup(stateRef.current, { dailyOnly: true }) }, [])
+  // Once-a-day local safety snapshot (the restore list lives in DataModal).
+  useEffect(() => { snapshotBackup(state, { dailyOnly: true }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pull the remote blob and MERGE it with local if it's newer than what we last
-  // saw. Merging (vs. replacing) means neither device's logs are ever dropped.
-  const pullAndMaybeAdopt = useCallback(async () => {
-    if (!sync.isSyncConfigured()) return
+  // One-time cleanup of keys left behind by the retired cloud-sync layer.
+  useEffect(() => {
     try {
-      setSyncStatus('syncing')
-      const remote = await sync.pullState()
-      if (remote) {
-        if (remote.updatedAt !== sync.getLastRemoteAt() && remote.data?.version === 2) {
-          sync.snapshotBackup(stateRef.current) // safety net before we change local state
-          const merged = mergeStates(stateRef.current, migrate(structuredClone(remote.data)))
-          // Pure adopt (no un-synced local edits) → suppress the echo push. If we
-          // DO have local edits, leave dirty set so the push effect propagates the
-          // merged superset back up (guarded, with conflict retry).
-          if (!dirty.current) applyingRemote.current = true
-          setState(merged)
-          stateRef.current = merged
-          sync.setLastRemoteAt(remote.updatedAt)
-        }
-      } else {
-        // First device for this account — seed the remote with what we have.
-        const res = await sync.pushState(stateRef.current)
-        if (res?.updatedAt) sync.setLastRemoteAt(res.updatedAt)
+      for (const k of ['lifemax.supabase.cfg', 'lifemax.supabase.auth', 'lifemax.sync.lastRemoteAt']) {
+        localStorage.removeItem(k)
       }
-      setSyncStatus('idle')
-    } catch { setSyncStatus('error') }
+    } catch { /* ignore */ }
   }, [])
 
-  // Push local edits up with optimistic concurrency. On a conflict (the remote
-  // advanced since we last synced) pull, merge, and retry — so a push can never
-  // clobber the other device's edits.
-  const pushNow = useCallback(async () => {
-    if (!session || !sync.isSyncConfigured()) return
+  // --- Save-to-file (optional mirror; localStorage stays primary) -----------
+  // The handle lives in a ref + IndexedDB only — never in state (state is
+  // structuredClone'd and JSON'd; a live handle would break both).
+  const handleRef = useRef(null)
+  const [fileStatus, setFileStatus] = useState('off') // off|linked|needs-permission|error
+  const fileTimer = useRef(null)
+  const skipNextWrite = useRef(false) // adoption already wrote the file — skip the echo
+
+  // Merge the file's blob into local state if it differs. Snapshot first, then
+  // write the merged superset back so both sides converge on one updatedAt —
+  // identical stamps make the next adopt a no-op (no write→read loop).
+  const adoptFromFile = useCallback(async (handle) => {
     try {
-      setSyncStatus('syncing')
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const res = await sync.pushState(stateRef.current, sync.getLastRemoteAt())
-        if (!res) break
-        if (res.updatedAt) { sync.setLastRemoteAt(res.updatedAt); dirty.current = false; break }
-        if (res.conflict) {
-          const remote = await sync.pullState()
-          if (!remote || remote.data?.version !== 2) break
-          sync.snapshotBackup(stateRef.current)
-          applyingRemote.current = true
-          const merged = mergeStates(stateRef.current, migrate(structuredClone(remote.data)))
-          setState(merged)
-          stateRef.current = merged
-          sync.setLastRemoteAt(remote.updatedAt)
-          // loop: re-push the merged superset
-        }
+      const fileData = await fs.readFile(handle)
+      if (!fileData) { // empty/new file — seed it with what we have
+        await fs.writeFile(handle, stateRef.current)
+        return
       }
-      setSyncStatus('idle')
-    } catch { setSyncStatus('error') }
-  }, [session])
+      if (![2, 3].includes(fileData.version) || !fileData.updatedAt) return // not a Lifemax blob — leave it alone
+      if (fileData.updatedAt === stateRef.current.updatedAt) return
+      snapshotBackup(stateRef.current)
+      const merged = mergeStates(stateRef.current, migrate(structuredClone(fileData)))
+      skipNextWrite.current = true
+      setState(merged)
+      stateRef.current = merged
+      await fs.writeFile(handle, merged)
+    } catch { setFileStatus('error') }
+  }, [])
 
-  // Establish session, listen for auth changes, and re-pull on focus / reconnect.
+  // On launch: recover the saved handle. Silent re-adopt when permission
+  // survived; otherwise surface a "reconnect" state (browsers drop write
+  // permission between sessions and re-asking needs a user gesture).
   useEffect(() => {
-    if (!sync.isSyncConfigured()) return
+    if (!fs.isSupported()) return
     let cancelled = false
-    let unsub = () => {}
-    sync.getSession().then((s) => { if (!cancelled) { setSession(s); if (s) pullAndMaybeAdopt() } })
-    sync.onAuthChange((s) => { setSession(s); if (s) pullAndMaybeAdopt() })
-      .then((fn) => { if (cancelled) fn(); else unsub = fn })
-    const onWake = () => { if (sync.isSyncConfigured()) pullAndMaybeAdopt() }
-    window.addEventListener('focus', onWake)
-    window.addEventListener('online', onWake)
-    return () => { cancelled = true; unsub(); window.removeEventListener('focus', onWake); window.removeEventListener('online', onWake) }
-  }, [pullAndMaybeAdopt])
+    fs.getHandle().then(async (handle) => {
+      if (cancelled || !handle) return
+      handleRef.current = handle
+      const perm = await fs.permissionState(handle)
+      if (perm === 'granted') { setFileStatus('linked'); adoptFromFile(handle) }
+      else setFileStatus('needs-permission')
+    })
+    return () => { cancelled = true }
+  }, [adoptFromFile])
 
-  // Push local edits up (debounced). Skips the render that came from adopting a
-  // remote blob, and only fires when there are genuine local edits to send.
+  // Re-adopt when the tab wakes up — that's when another device may have
+  // advanced the shared file.
   useEffect(() => {
-    if (applyingRemote.current) { applyingRemote.current = false; return }
-    if (!session || !sync.isSyncConfigured()) return
-    if (!dirty.current) return
-    clearTimeout(pushTimer.current)
-    pushTimer.current = setTimeout(() => { pushNow() }, 1200)
-    return () => clearTimeout(pushTimer.current)
-  }, [state, session, pushNow])
+    if (!fs.isSupported()) return
+    const onWake = () => { if (handleRef.current && fileStatus === 'linked') adoptFromFile(handleRef.current) }
+    window.addEventListener('focus', onWake)
+    return () => window.removeEventListener('focus', onWake)
+  }, [fileStatus, adoptFromFile])
+
+  // Write-through: mirror every state change to the file, debounced. Failures
+  // degrade silently to an error dot — localStorage still has everything.
+  useEffect(() => {
+    if (fileStatus !== 'linked' || !handleRef.current) return
+    if (skipNextWrite.current) { skipNextWrite.current = false; return }
+    clearTimeout(fileTimer.current)
+    fileTimer.current = setTimeout(() => {
+      fs.writeFile(handleRef.current, stateRef.current).catch(() => setFileStatus('error'))
+    }, 2000)
+    return () => clearTimeout(fileTimer.current)
+  }, [state, fileStatus])
 
   const update = useCallback((fn) => {
-    dirty.current = true
     setState((s) => { const d = structuredClone(s); fn(d); d.updatedAt = nowIso(); return d })
   }, [])
 
   const actions = {
     update,
     setProfileName: (name) => update((d) => { d.profile.name = name }),
-    resetAll: () => { dirty.current = true; setState(() => { const d = buildSeedState(); d.updatedAt = nowIso(); return d }) },
-    importState: (obj) => {
-      if (obj && obj.version === 2) { dirty.current = true; setState(() => { const d = migrate(obj); d.updatedAt = nowIso(); return d }) }
-      else alert('That file is not a Lifemax v2 backup.')
+    resetAll: () => {
+      snapshotBackup(state) // last-chance recovery point before wiping
+      setState(() => { const d = buildSeedState(); d.updatedAt = nowIso(); return d })
     },
+    importState: (obj) => {
+      if (obj && ACCEPTED_VERSIONS.includes(obj.version)) {
+        snapshotBackup(state) // recovery point before the import replaces everything
+        setState(() => { const d = migrate(obj); d.updatedAt = nowIso(); return d })
+      } else alert('That file is not a Lifemax backup.')
+    },
+
+    // ---------- Module composition (preferences) ----------
+    setModuleEnabled: (id, on) => update((d) => {
+      const p = (d.preferences ||= {})
+      const mods = (p.modules ||= { order: null, disabled: [], weights: {} })
+      const disabled = new Set(mods.disabled || [])
+      if (on) disabled.delete(id); else disabled.add(id)
+      mods.disabled = [...disabled]
+    }),
+    moveModule: (id, delta) => update((d) => {
+      const ids = orderedAllSections(d).map((m) => m.id)
+      const i = ids.indexOf(id)
+      const j = i + delta
+      if (i < 0 || j < 0 || j >= ids.length) return
+      ;[ids[i], ids[j]] = [ids[j], ids[i]]
+      const mods = ((d.preferences ||= {}).modules ||= { order: null, disabled: [], weights: {} })
+      mods.order = ids
+    }),
+    setModuleWeight: (id, weight) => update((d) => {
+      const mods = ((d.preferences ||= {}).modules ||= { order: null, disabled: [], weights: {} })
+      const weights = (mods.weights ||= {})
+      const n = Math.min(2, Math.max(0.5, Number(weight) || 1))
+      if (n === 1) delete weights[id]; else weights[id] = n
+    }),
+    setWidgetHidden: (id, hidden) => update((d) => {
+      const w = ((d.preferences ||= {}).widgets ||= { order: null, hidden: [] })
+      const set = new Set(w.hidden || [])
+      if (hidden) set.add(id); else set.delete(id)
+      w.hidden = [...set]
+    }),
+    moveWidget: (id, delta) => update((d) => {
+      const ids = widgetEntries(d).map((e) => e.id)
+      const i = ids.indexOf(id)
+      const j = i + delta
+      if (i < 0 || j < 0 || j >= ids.length) return
+      ;[ids[i], ids[j]] = [ids[j], ids[i]]
+      const w = ((d.preferences ||= {}).widgets ||= { order: null, hidden: [] })
+      w.order = ids
+    }),
+
+    // ---------- Insights collection ----------
+    // Stamp newly surfaced insights into the permanent collection (rarity is
+    // stored so the count survives an insight later becoming untrue).
+    markInsightsSeen: (items) => update((d) => {
+      const seen = ((d.insights ||= { seen: {} }).seen ||= {})
+      for (const { id, rarity } of items) if (!seen[id]) seen[id] = { rarity, at: todayKey() }
+    }),
+
+    // ---------- Custom trackers (data-defined modules) ----------
+    addCustomModule: (def) => update((d) => {
+      ;(d.customModules ||= []).push({
+        id: 'custom_' + rid().slice(0, 8),
+        name: 'New tracker', icon: 'Zap', color: '#38bdf8', tagline: '',
+        scored: true, createdAt: todayKey(), metrics: [], days: {},
+        ...def,
+      })
+    }),
+    // Metric keys stay stable across edits — day logs are keyed by them.
+    updateCustomModule: (id, patch) => update((d) => {
+      const t = (d.customModules || []).find((x) => x.id === id)
+      if (t) Object.assign(t, patch)
+    }),
+    deleteCustomModule: (id) => update((d) => {
+      d.customModules = (d.customModules || []).filter((x) => x.id !== id)
+      // Drop it from preferences too so nothing dangles.
+      const mods = d.preferences?.modules
+      if (mods) {
+        mods.disabled = (mods.disabled || []).filter((x) => x !== id)
+        if (mods.order) mods.order = mods.order.filter((x) => x !== id)
+        if (mods.weights) delete mods.weights[id]
+      }
+    }),
+    // Prune a day back to nothing when every metric resolves empty — a zeroed
+    // entry must never activate the tracker or drag the Pulse.
+    setCustomDay: (moduleId, dateKey, patch) => update((d) => {
+      const t = (d.customModules || []).find((x) => x.id === moduleId)
+      if (!t) return
+      const days = (t.days ||= {})
+      const next = { ...(days[dateKey] || {}), ...patch }
+      const hasAnything = Object.values(next).some((v) => v === true || (Number(v) || 0) > 0)
+      if (hasAnything) days[dateKey] = next
+      else delete days[dateKey]
+    }),
+
+    // ---------- Generic module todos (state[moduleId].todos) ----------
+    addModuleTodo: (moduleId, todo) => update((d) => {
+      const slice = d[moduleId]; if (!slice) return
+      ;(slice.todos ||= []).push({ id: rid(), priority: 'med', deadline: null, done: false, createdAt: todayKey(), ...todo })
+    }),
+    updateModuleTodo: (moduleId, id, patch) => update((d) => {
+      const t = d[moduleId]?.todos?.find((x) => x.id === id); if (t) Object.assign(t, patch)
+    }),
+    toggleModuleTodo: (moduleId, id) => update((d) => {
+      const t = d[moduleId]?.todos?.find((x) => x.id === id); if (t) t.done = !t.done
+    }),
+    deleteModuleTodo: (moduleId, id) => update((d) => {
+      const slice = d[moduleId]; if (slice?.todos) slice.todos = slice.todos.filter((x) => x.id !== id)
+    }),
 
     // ---------- Stakes ----------
     addContract: (c) => update((d) => { d.stakes.contracts.push({ id: rid(), status: 'active', createdAt: todayKey(), resolvedAt: null, ...c }) }),
@@ -471,24 +523,43 @@ export function StoreProvider({ children }) {
     deleteBusinessTodo: (id) => update((d) => { d.business.todos = d.business.todos.filter((x) => x.id !== id) }),
   }
 
-  const syncApi = {
-    configured: sync.isSyncConfigured(),
-    configSource: sync.getSyncConfig()?.source || null,
-    session,
-    email: session?.user?.email || null,
-    status: session ? syncStatus : (sync.isSyncConfigured() ? 'idle' : 'off'),
-    saveConfig: (url, key) => { sync.setSyncConfig(url, key); setSyncStatus('idle') },
-    clearConfig: () => { sync.clearSyncConfig(); setSession(null); setSyncStatus('off') },
-    sendCode: (email) => sync.sendCode(email),
-    verifyCode: async (email, code) => { const s = await sync.verifyCode(email, code); setSession(s); await pullAndMaybeAdopt(); return s },
-    signOut: async () => { await sync.signOut(); setSession(null); setSyncStatus(sync.isSyncConfigured() ? 'idle' : 'off') },
-    syncNow: () => pullAndMaybeAdopt(),
-    // Local rolling backups (recovery UI in SyncModal).
-    listBackups: () => sync.listBackups(),
-    restoreBackup: (key) => { const data = sync.restoreBackup(key); if (data) actions.importState(data); return !!data },
+  // Local rolling backups (recovery UI in DataModal). Restore routes through
+  // importState, which snapshots the current state first — so even a restore
+  // is itself undoable.
+  const backups = {
+    list: () => listBackups(),
+    restore: (key) => { const data = restoreBackup(key); if (data) actions.importState(data); return !!data },
   }
 
-  return <StoreCtx.Provider value={{ state, actions, sync: syncApi }}>{children}</StoreCtx.Provider>
+  // Save-to-file controls (DataModal). link/reconnect run inside a click —
+  // the pickers and permission prompt require a user gesture.
+  const file = {
+    supported: fs.isSupported(),
+    status: fileStatus,
+    linkNew: async () => {
+      const handle = await fs.linkNewFile()
+      handleRef.current = handle
+      await fs.writeFile(handle, stateRef.current)
+      setFileStatus('linked')
+    },
+    linkExisting: async () => {
+      const handle = await fs.linkExistingFile()
+      if (!(await fs.requestPermission(handle))) throw new Error('Write access was declined.')
+      handleRef.current = handle
+      setFileStatus('linked')
+      await adoptFromFile(handle)
+    },
+    reconnect: async () => {
+      const handle = handleRef.current || (await fs.getHandle())
+      if (!handle) { setFileStatus('off'); return }
+      handleRef.current = handle
+      if (await fs.requestPermission(handle)) { setFileStatus('linked'); await adoptFromFile(handle) }
+    },
+    unlink: async () => { await fs.unlink(); handleRef.current = null; setFileStatus('off') },
+    syncNow: () => { if (handleRef.current && fileStatus === 'linked') return adoptFromFile(handleRef.current) },
+  }
+
+  return <StoreCtx.Provider value={{ state, actions, backups, file }}>{children}</StoreCtx.Provider>
 }
 
 export function useStore() {

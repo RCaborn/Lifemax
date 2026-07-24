@@ -4,6 +4,7 @@ import { useStore } from '../lib/store.jsx'
 import { toKey, thisWeekKeys, startOfWeek, wakeScore, timeToMin, minToTime, DEFAULT_WAKE_TARGET } from '../lib/dates.js'
 import { compact } from '../lib/format.js'
 import { SectionTitle } from '../components/ui.jsx'
+import { isEnabled } from '../lib/registry.js'
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -31,6 +32,10 @@ export default function ThisWeek() {
   const weekBizHours = weekKeys.reduce((a, k) => a + (state.business?.days?.[k]?.hours || 0), 0)
   const bizTarget = state.business?.hoursWeekly || 5
 
+  const fitnessOn = isEnabled(state, 'fitness')
+  const studyOn = isEnabled(state, 'study')
+  const businessOn = isEnabled(state, 'business')
+
   const weekStart = startOfWeek()
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
   const weekLabel = `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -43,20 +48,24 @@ export default function ThisWeek() {
         <p className="mt-1 text-sm text-slate-500" style={{ fontFamily: 'var(--font-mono)' }}>{weekLabel}</p>
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          <WeekStat label="Runs" value={`${weekRuns}/${t.runsPerWeek || 3}`} hit={weekRuns >= (t.runsPerWeek || 3)} />
-          <WeekStat label="Workouts" value={`${weekWorkouts}/${t.workoutsPerWeek || 3}`} hit={weekWorkouts >= (t.workoutsPerWeek || 3)} />
-          <WeekStat label="Stretch" value={`${weekStretch}/7`} hit={weekStretch >= 5} />
-          <WeekStat label="Avg steps" value={compact(weekAvgSteps)} hit={weekAvgSteps >= (t.stepsDaily || 10000)} />
-          <WeekStat label="Avg wake" value={weekAvgWake || '—'} hit={weekWakeScore >= 0.8} />
-          <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesWeekly || 140)} />
-          <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursWeekly || 9)} />
-          <WeekStat label="Biz hrs" value={`${weekBizHours.toFixed(1)}h`} hit={weekBizHours >= bizTarget} />
+          {fitnessOn && <>
+            <WeekStat label="Runs" value={`${weekRuns}/${t.runsPerWeek || 3}`} hit={weekRuns >= (t.runsPerWeek || 3)} />
+            <WeekStat label="Workouts" value={`${weekWorkouts}/${t.workoutsPerWeek || 3}`} hit={weekWorkouts >= (t.workoutsPerWeek || 3)} />
+            <WeekStat label="Stretch" value={`${weekStretch}/7`} hit={weekStretch >= 5} />
+            <WeekStat label="Avg steps" value={compact(weekAvgSteps)} hit={weekAvgSteps >= (t.stepsDaily || 10000)} />
+            <WeekStat label="Avg wake" value={weekAvgWake || '—'} hit={weekWakeScore >= 0.8} />
+          </>}
+          {studyOn && <>
+            <WeekStat label="Pages" value={weekPages} hit={weekPages >= (s.targets.pagesWeekly || 140)} />
+            <WeekStat label="Study hrs" value={`${weekHours.toFixed(1)}h`} hit={weekHours >= (s.targets.hoursWeekly || 9)} />
+          </>}
+          {businessOn && <WeekStat label="Biz hrs" value={`${weekBizHours.toFixed(1)}h`} hit={weekBizHours >= bizTarget} />}
         </div>
       </div>
 
       <div className="space-y-3">
         {weekKeys.map((key, i) => (
-          <DayCard key={key} dateKey={key} dayName={DAY_NAMES[i]} isToday={key === today} state={state} actions={actions} />
+          <DayCard key={key} dateKey={key} dayName={DAY_NAMES[i]} isToday={key === today} state={state} actions={actions} fitnessOn={fitnessOn} studyOn={studyOn} businessOn={businessOn} />
         ))}
       </div>
     </div>
@@ -72,7 +81,7 @@ function WeekStat({ label, value, hit }) {
   )
 }
 
-function DayCard({ dateKey, dayName, isToday, state, actions }) {
+function DayCard({ dateKey, dayName, isToday, state, actions, fitnessOn, studyOn, businessOn }) {
   const f = state.fitness.days[dateKey] || {}
   const s = state.study.days[dateKey] || {}
   const bz = state.business?.days?.[dateKey] || {}
@@ -102,14 +111,18 @@ function DayCard({ dateKey, dayName, isToday, state, actions }) {
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <DayCounter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
-        <DayCounter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
-        <DayToggle icon="Flower2" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => setF({ stretch: !f.stretch })} />
-        <DayNum icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
-        <DayTime icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
-        <DayNum icon="BookOpen" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
-        <DayNum icon="Timer" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
-        <DayNum icon="TrendingUp" label="Biz hrs" value={bz.hours || 0} color="#eab308" onChange={(v) => setBz({ hours: v })} placeholder="0" step="0.25" />
+        {fitnessOn && <>
+          <DayCounter icon="Activity" label="Runs" value={f.runs || 0} color="#f97316" onChange={(v) => setF({ runs: v })} />
+          <DayCounter icon="Dumbbell" label="Workouts" value={f.workouts || 0} color="#f97316" onChange={(v) => setF({ workouts: v })} />
+          <DayToggle icon="Flower2" label="Stretch" on={!!f.stretch} color="#f97316" onToggle={() => setF({ stretch: !f.stretch })} />
+          <DayNum icon="Footprints" label="Steps" value={f.steps || 0} color="#f97316" onChange={(v) => setF({ steps: v })} placeholder="10000" />
+          <DayTime icon="AlarmClock" label="Wake-up" value={f.wake || ''} color="#f97316" onChange={(v) => setF({ wake: v })} />
+        </>}
+        {studyOn && <>
+          <DayNum icon="BookOpen" label="Pages" value={s.pages || 0} color="#a855f7" onChange={(v) => setS({ pages: v })} placeholder="20" />
+          <DayNum icon="Timer" label="Study hrs" value={s.hours || 0} color="#a855f7" onChange={(v) => setS({ hours: v })} placeholder="0" step="0.25" />
+        </>}
+        {businessOn && <DayNum icon="TrendingUp" label="Biz hrs" value={bz.hours || 0} color="#eab308" onChange={(v) => setBz({ hours: v })} placeholder="0" step="0.25" />}
       </div>
     </div>
   )

@@ -7,12 +7,16 @@
   color-scheme: dark;
   --font-mono: 'JetBrains Mono', 'Courier New', Consolas, monospace;
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: var(--font-mono);
+  /* Editorial high-contrast serif for headlines and hero numbers. System
+     stack, deliberately: zero bytes, works offline, and Didot/Bodoni carry
+     the same fashion-magazine contrast the design leans on. */
+  --font-display: 'Didot', 'Bodoni MT', 'Bodoni 72', 'GFS Didot', Georgia, 'Times New Roman', serif;
 }
 
 h1, h3 {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  letter-spacing: 0.005em;
 }
 
 html, body, #root {
@@ -21,20 +25,61 @@ html, body, #root {
 
 body {
   margin: 0;
-  background: #050505;
-  color: #d0d0d0;
+  background: #05060a;
+  color: #cbd2dc;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
+  /* Night-sky wash: a cool glow rising from the top, a faint teal floor,
+     and a whisper of starfield — no hard grid, lots of quiet. */
   background-image:
-    radial-gradient(ellipse 900px 520px at 8% -8%, rgba(56,189,248,0.06), transparent 60%),
-    radial-gradient(ellipse 900px 600px at 96% 12%, rgba(168,85,247,0.05), transparent 60%),
-    radial-gradient(ellipse 900px 700px at 45% 105%, rgba(34,197,94,0.045), transparent 60%),
-    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+    radial-gradient(ellipse 1200px 640px at 50% -12%, rgba(96,145,255,0.09), transparent 62%),
+    radial-gradient(ellipse 900px 560px at 88% 8%, rgba(56,189,248,0.05), transparent 60%),
+    radial-gradient(ellipse 1100px 760px at 40% 108%, rgba(45,212,168,0.05), transparent 62%),
+    radial-gradient(1px 1px at 22% 31%, rgba(255,255,255,0.20), transparent 100%),
+    radial-gradient(1px 1px at 67% 12%, rgba(255,255,255,0.14), transparent 100%),
+    radial-gradient(1px 1px at 84% 47%, rgba(255,255,255,0.12), transparent 100%),
+    radial-gradient(1px 1px at 9% 74%, rgba(255,255,255,0.10), transparent 100%),
+    radial-gradient(1px 1px at 45% 58%, rgba(255,255,255,0.12), transparent 100%),
+    radial-gradient(1px 1px at 73% 86%, rgba(255,255,255,0.10), transparent 100%);
   background-attachment: fixed;
 }
+
+/* Display serif helpers ---------------------------------------------------- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+.display-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+}
+/* An emphasized word inside a serif sentence — italic, tinted by --em-color. */
+.em-word {
+  font-style: italic;
+  color: var(--em-color, #8fb8ff);
+}
+
+/* Pill chip — the reference's atom for stats, statuses and filters. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  padding: 0.28rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7a8494;
+  white-space: nowrap;
+}
+.pill b, .pill strong { color: #e6ebf2; font-weight: 700; }
 
 /* scrollbar */
 * { scrollbar-width: thin; scrollbar-color: #1c1c1c transparent; }
@@ -50,9 +95,9 @@ body {
 /* Aurora glass card */
 .glass {
   position: relative;
-  background: linear-gradient(160deg, #141414 0%, #0a0a0a 100%);
-  border: 1px solid rgba(255,255,255,0.09);
-  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.04);
+  background: linear-gradient(165deg, rgba(148,178,255,0.055) 0%, rgba(148,178,255,0.015) 38%, rgba(10,12,18,0.6) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.05);
 }
 
 /* Lift + glow on hover. Set --glow (a color) inline per-instance to tint the glow. */
@@ -78,9 +123,16 @@ body {
 .op-label {
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #444;
+  color: #59627a;
+}
+
+/* Numbered editorial section marker: ·01 THE COLLECTION */
+.eyebrow-index {
+  color: #8fb8ff;
+  margin-right: 0.5em;
+  font-style: normal;
 }
 
 /* Shared interactive elements -------------------------------------------- */
@@ -88,7 +140,7 @@ body {
 .btn-primary {
   width: 100%;
   display: block;
-  border-radius: 10px;
+  border-radius: 9999px;
   border: 1px solid #fff;
   background: transparent;
   padding: .6rem;
@@ -104,7 +156,7 @@ body {
 .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
 .btn-ghost {
-  border-radius: 8px;
+  border-radius: 9999px;
   border: 1px solid rgba(255,255,255,.1);
   background: transparent;
   padding: .4rem .7rem;

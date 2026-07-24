@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Menu, Cloud, Download, Upload, RotateCcw, Sparkles, ArrowRight, Flag } from 'lucide-react'
+import { Menu, HardDrive, Download, Upload, RotateCcw, Sparkles, ArrowRight, Flag } from 'lucide-react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
-import SyncModal from './components/SyncModal.jsx'
+import DataModal from './components/DataModal.jsx'
 import Modal from './components/Modal.jsx'
-import { BENTO_MAP } from './lib/domains.js'
+import { sectionById } from './lib/registry.js'
 import { useStore } from './lib/store.jsx'
 import { dueResolutions } from './lib/stakes.js'
 import { reviewWindowOpen, reviewTargetWeek, campaignWindowOpen, campaignTargetMonth } from './lib/ai.js'
@@ -13,14 +13,16 @@ const REVIEW_DISMISS_KEY = 'lifemax.reviewPromptDismissed'
 const CAMPAIGN_DISMISS_KEY = 'lifemax.campaignPromptDismissed'
 
 export default function App() {
-  const { state, actions, sync } = useStore()
+  const { state, actions, file } = useStore()
+  const stateRef = useRef(state)
+  useEffect(() => { stateRef.current = state }, [state])
   const [expandedId, setExpandedId] = useState(() => {
     const h = location.hash.replace('#', '')
-    return BENTO_MAP[h] ? h : null
+    return sectionById(state, h) ? h : null
   })
   const [navOpen, setNavOpen] = useState(false)
   const [installEvent, setInstallEvent] = useState(null)
-  const [showSync, setShowSync] = useState(false)
+  const [showData, setShowData] = useState(false)
   const fileRef = useRef(null)
 
   // Sunday-evening → Monday weekly-review nudge. Shows once per app open within
@@ -68,7 +70,7 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       const id = location.hash.replace('#', '')
-      const next = BENTO_MAP[id] ? id : null
+      const next = sectionById(stateRef.current, id) ? id : null
       setExpandedId((cur) => (cur === next ? cur : next))
     }
     window.addEventListener('hashchange', onHash)
@@ -96,7 +98,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const pageName = expandedId ? BENTO_MAP[expandedId].name : 'HQ'
+  const pageName = sectionById(state, expandedId)?.name || 'HQ'
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
@@ -138,12 +140,12 @@ export default function App() {
                 <Download size={13} /> Install
               </button>
             )}
-            <button onClick={() => setShowSync(true)} className="btn-ghost" title="Cloud sync across devices">
+            <button onClick={() => setShowData(true)} className="btn-ghost" title="Your data & backups">
               <span className="relative flex items-center gap-1.5">
-                <Cloud size={13} /> {sync.session ? 'Synced' : 'Sync'}
-                {sync.configured && (
+                <HardDrive size={13} /> Data
+                {file.status !== 'off' && (
                   <span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full"
-                    style={{ background: sync.status === 'error' ? '#f43f5e' : sync.status === 'syncing' ? '#38bdf8' : sync.session ? '#22c55e' : '#eab308' }} />
+                    style={{ background: file.status === 'error' ? '#f43f5e' : file.status === 'needs-permission' ? '#eab308' : '#22c55e' }} />
                 )}
               </span>
             </button>
@@ -165,7 +167,10 @@ export default function App() {
         </footer>
       </div>
 
-      {showSync && <SyncModal onClose={() => setShowSync(false)} />}
+      {showData && (
+        <DataModal onClose={() => setShowData(false)} onExport={exportData}
+          onImportClick={() => fileRef.current?.click()} />
+      )}
 
       {showReviewPrompt && !showCampaignPrompt && (
         <Modal title="Weekly review" onClose={dismissReview}>
